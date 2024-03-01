@@ -8,9 +8,8 @@ import (
 )
 
 type device struct {
-	ID       string
-	MetaHash string
-	AttrHash string
+	ID   string
+	Hash string
 	dm_client.Device
 }
 
@@ -21,10 +20,9 @@ func newDevice(id string, d dm_client.Device) device {
 	}
 	slices.Sort(attrPairs)
 	return device{
-		ID:       id,
-		MetaHash: genHash(d.Type, d.State, d.Name, d.ModuleID),
-		AttrHash: genHash(attrPairs...),
-		Device:   dm_client.Device{},
+		ID:     id,
+		Hash:   genHash(d.Type, d.State, d.Name, d.ModuleID, genHash(attrPairs...)),
+		Device: dm_client.Device{},
 	}
 }
 
