@@ -1,0 +1,8 @@
+github.com/SENERGY-Platform/go-base-http-client v0.0.2 h1:sF4QDRkNjhnKQh6d8ujfxQRpeWzSTiBeYIK/aNWWOls=
+github.com/SENERGY-Platform/go-base-http-client v0.0.2/go.mod h1:NfKW/relIVTkMXhz4OqZlzJXYPQUYEKxwqou8D0B/Kw=
+github.com/SENERGY-Platform/go-service-base/util v0.14.1 h1:Dy5JIVIWnVDiq5//RBGRF0JKAIG4TaqFsa80wtlfMKE=
+github.com/SENERGY-Platform/go-service-base/util v0.14.1/go.mod h1:8W+F6aCpUnrP6SsxVStk+0MZqF71wJADGySKmZzkFBM=
+github.com/y-du/go-env-loader v0.5.2 h1:LxubTfx7zl1VpBNzUQidSp3yub3/7mxMg63QSuRlhd4=
+github.com/y-du/go-env-loader v0.5.2/go.mod h1:QBaFGtrTdp4eiMUjg9UFf1F3TzbEbUhWDeHYyEsqs8Y=
+github.com/y-du/go-log-level v0.2.4 h1:COCFNczF7b7yd5leEAVMnO6OYaLZVu9lsrk68Qln6t4=
+github.com/y-du/go-log-level v0.2.4/go.mod h1:lhCvJlDCuSC9GfmtVDXuXc7lbbAd8igxl58qK8SjPX8=
