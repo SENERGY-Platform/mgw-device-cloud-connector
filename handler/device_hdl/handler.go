@@ -101,8 +101,6 @@ func (h *Handler) run() {
 }
 
 func (h *Handler) refreshDevices(ctx context.Context) error {
-	h.apiMu.Lock()
-	defer h.apiMu.Unlock()
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	dmDevices, err := h.dmClient.GetDevices(ctxWt)
@@ -132,11 +130,15 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 			return err
 		}
 	}
+	h.apiMu.Lock()
 	h.devices = devices
+	h.apiMu.Unlock()
 	return nil
 }
 
 func (h *Handler) diffDevices(devices map[string]model.Device) (newDevices, changedDevices []model.Device, missingDevices []string) {
+	h.apiMu.RLock()
+	defer h.apiMu.RUnlock()
 	for id, d1 := range devices {
 		d2, ok := h.devices[id]
 		if !ok {
