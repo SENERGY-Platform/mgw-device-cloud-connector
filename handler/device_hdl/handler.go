@@ -20,7 +20,7 @@ type Handler struct {
 	sChan             chan bool
 	running           bool
 	loopMu            sync.RWMutex
-	apiMu             sync.RWMutex
+	mu                sync.RWMutex
 	newDevicesCbk     func(devices []model.Device) error
 	changedDevicesCbk func(devices []model.Device) error
 	missingDevicesCbk func(ids []string) error
@@ -72,8 +72,8 @@ func (h *Handler) SetMissingDevicesCallback(f func(ids []string) error) {
 }
 
 func (h *Handler) GetDevices() map[string]model.Device {
-	h.apiMu.RLock()
-	defer h.apiMu.RUnlock()
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	devices := make(map[string]model.Device)
 	for id, device := range h.devices {
 		devices[id] = device
@@ -130,15 +130,15 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 			return err
 		}
 	}
-	h.apiMu.Lock()
+	h.mu.Lock()
 	h.devices = devices
-	h.apiMu.Unlock()
+	h.mu.Unlock()
 	return nil
 }
 
 func (h *Handler) diffDevices(devices map[string]model.Device) (newDevices, changedDevices []model.Device, missingDevices []string) {
-	h.apiMu.RLock()
-	defer h.apiMu.RUnlock()
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	for id, d1 := range devices {
 		d2, ok := h.devices[id]
 		if !ok {
