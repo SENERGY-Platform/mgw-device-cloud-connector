@@ -186,12 +186,3 @@ func genHash(str ...string) string {
 	}
 	return hex.EncodeToString(hash.Sum(nil))
 }
-
-/*
-
-mqtt connect to cloud
-	subscribe command topics if device online
-
-
-
-*/
