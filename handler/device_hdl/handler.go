@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
-	"errors"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/dm_client"
@@ -36,15 +35,13 @@ func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration) *Ha
 	}
 }
 
-func (h *Handler) Start() error {
+func (h *Handler) Start() {
 	h.loopMu.Lock()
-	defer h.loopMu.Unlock()
-	if h.running {
-		return errors.New("already running")
+	if !h.running {
+		go h.run()
+		h.running = true
 	}
-	go h.run()
-	h.running = true
-	return nil
+	h.loopMu.Unlock()
 }
 
 func (h *Handler) Running() bool {
