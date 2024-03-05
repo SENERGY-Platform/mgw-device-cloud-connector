@@ -1,0 +1,78 @@
+package cloud_client
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"github.com/SENERGY-Platform/models/go/models"
+	"net/http"
+	"net/url"
+)
+
+const devicesPath = "device-manager/devices"
+
+func (c *Client) CreateDevice(ctx context.Context, device models.Device) (string, error) {
+	u, err := url.JoinPath(c.baseUrl, devicesPath)
+	if err != nil {
+		return "", err
+	}
+	body, err := json.Marshal(device)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewBuffer(body))
+	if err != nil {
+		return "", err
+	}
+	if err = c.setAuthHeader(ctx, req); err != nil {
+		return "", err
+	}
+	var d models.Device
+	err = c.baseClient.ExecRequestJSON(req, &d)
+	if err != nil {
+		return "", err
+	}
+	return d.Id, nil
+}
+
+func (c *Client) GetDevice(ctx context.Context, id string) (models.Device, error) {
+	u, err := url.JoinPath(c.baseUrl, devicesPath, url.QueryEscape(id))
+	if err != nil {
+		return models.Device{}, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return models.Device{}, err
+	}
+	if err = c.setAuthHeader(ctx, req); err != nil {
+		return models.Device{}, err
+	}
+	var device models.Device
+	err = c.baseClient.ExecRequestJSON(req, &device)
+	if err != nil {
+		return models.Device{}, err
+	}
+	return device, nil
+}
+
+func (c *Client) UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error {
+	u, err := url.JoinPath(c.baseUrl, devicesPath, url.QueryEscape(device.Id))
+	if err != nil {
+		return err
+	}
+	if attributeOrigin != "" {
+		u += "?update-only-same-origin-attributes=" + attributeOrigin
+	}
+	body, err := json.Marshal(device)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, u, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	if err = c.setAuthHeader(ctx, req); err != nil {
+		return err
+	}
+	return c.baseClient.ExecRequestVoid(req)
+}
