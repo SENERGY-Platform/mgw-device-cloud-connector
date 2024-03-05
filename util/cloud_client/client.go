@@ -23,6 +23,19 @@ func New(httpClient base_client.HTTPClient, baseUrl string, authClient *auth_cli
 	}
 }
 
+func (c *Client) setAuthHeader(ctx context.Context, req *http.Request) error {
+	if c.authClient != nil {
+		if !c.authClient.SetHeader(req) {
+			err := c.authClient.SetToken(ctx)
+			if err != nil {
+				return err
+			}
+			c.authClient.SetHeader(req)
+		}
+	}
+	return nil
+}
+
 func customError(code int, err error) error {
 	switch code {
 	case http.StatusInternalServerError:
