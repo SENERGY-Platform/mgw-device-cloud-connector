@@ -1,6 +1,7 @@
 package cloud_client
 
 import (
+	"context"
 	base_client "github.com/SENERGY-Platform/go-base-http-client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/auth_client"
 	"net/http"
