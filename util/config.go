@@ -45,12 +45,18 @@ type AuthConfig struct {
 	ClientID string               `json:"client_id" env_var:"CLIENT_ID"`
 }
 
+type CloudHandlerConfig struct {
+	HubID      string `json:"hub_id" env_var:"HUB_ID"`
+	WrkSpcPath string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
+}
+
 type Config struct {
 	Logger               sb_util.LoggerConfig `json:"logger" env_var:"LOGGER_CONFIG"`
-	UpstreamMqttClient   MqttClientConfig     `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT"`
-	DownstreamMqttClient MqttClientConfig     `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT"`
+	UpstreamMqttClient   MqttClientConfig     `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT_CONFIG"`
+	DownstreamMqttClient MqttClientConfig     `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT_CONFIG"`
 	HttpClient           HttpClientConfig     `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
 	Auth                 AuthConfig           `json:"auth" env_var:"AUTH_CONFIG"`
+	CloudHandler         CloudHandlerConfig   `json:"cloud_handler" env_var:"CLOUD_HANDLER_CONFIG"`
 	DeviceQueryInterval  int64                `json:"device_query_interval" env_var:"DEVICE_QUERY_INTERVAL"`
 }
 
@@ -76,6 +82,9 @@ func NewConfig(path string) (*Config, error) {
 		HttpClient: HttpClientConfig{
 			Timeout:      10000000000,
 			CloudTimeout: 30000000000,
+		},
+		CloudHandler: CloudHandlerConfig{
+			WrkSpcPath: "/opt/device-cloud-connector",
 		},
 	}
 	err := sb_util.LoadConfig(path, &cfg, nil, nil, nil)
