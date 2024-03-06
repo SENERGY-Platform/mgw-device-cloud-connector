@@ -31,14 +31,18 @@ func (h *Handler) InitHub(ctx context.Context, id, name string) error {
 	if id != "" {
 		hInfo.ID = id
 	}
+	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+	defer cf()
 	if hInfo.ID != "" {
-		hInfo.DeviceIDMap, err = h.refreshDeviceIDMap(ctx, hInfo.ID, hInfo.DeviceIDMap)
+		hub, err := h.cloudClient.GetHub(ctxWt, hInfo.ID)
+		if err != nil {
+			return err
+		}
+		hInfo.DeviceIDMap, err = h.getDeviceIDMap(ctx, hInfo.DeviceIDMap, hub.DeviceIds)
 		if err != nil {
 			return err
 		}
 	} else {
-		ctxWt, cf := context.WithTimeout(ctx, h.timeout)
-		defer cf()
 		id, err = h.cloudClient.CreateHub(ctxWt, models.Hub{Name: name})
 		if err != nil {
 			return err
@@ -49,19 +53,15 @@ func (h *Handler) InitHub(ctx context.Context, id, name string) error {
 	return writeHubInfo(h.wrkSpacePath, h.hubInfo)
 }
 
-func (h *Handler) refreshDeviceIDMap(ctx context.Context, hID string, oldMap map[string]string) (map[string]string, error) {
+func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, deviceIDs []string) (map[string]string, error) {
 	ch := context_hdl.New()
 	defer ch.CancelAll()
-	hub, err := h.cloudClient.GetHub(ch.Add(context.WithTimeout(ctx, h.timeout)), hID)
-	if err != nil {
-		return nil, err
-	}
 	deviceIDMap := make(map[string]string)
 	rDeviceIDMap := make(map[string]string)
 	for ldID, dID := range oldMap {
 		rDeviceIDMap[dID] = ldID
 	}
-	for _, dID := range hub.DeviceIds {
+	for _, dID := range deviceIDs {
 		ldID, ok := rDeviceIDMap[dID]
 		if !ok {
 			device, err := h.cloudClient.GetDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), dID)
