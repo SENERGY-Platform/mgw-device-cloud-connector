@@ -4,10 +4,17 @@ import (
 	"context"
 	base_client "github.com/SENERGY-Platform/go-base-http-client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/auth_client"
+	"github.com/SENERGY-Platform/models/go/models"
 	"net/http"
 )
 
 type ClientItf interface {
+	CreateHub(ctx context.Context, hub models.Hub) (string, error)
+	GetHub(ctx context.Context, id string) (models.Hub, error)
+	UpdateHub(ctx context.Context, hub models.Hub) error
+	CreateDevice(ctx context.Context, device models.Device) (string, error)
+	GetDevice(ctx context.Context, id string) (models.Device, error)
+	UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error
 }
 
 type Client struct {
