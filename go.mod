@@ -4,6 +4,7 @@ go 1.22.0
 
 require (
 	github.com/SENERGY-Platform/go-base-http-client v0.0.2
+	github.com/SENERGY-Platform/go-service-base/context-hdl v0.0.3
 	github.com/SENERGY-Platform/go-service-base/srv-info-hdl v0.0.3
 	github.com/SENERGY-Platform/go-service-base/util v0.14.1
 	github.com/SENERGY-Platform/go-service-base/watchdog v0.4.2

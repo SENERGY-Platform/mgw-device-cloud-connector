@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	context_hdl "github.com/SENERGY-Platform/go-service-base/context-hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	"github.com/SENERGY-Platform/models/go/models"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -16,8 +17,6 @@ const hubFile = "hub.json"
 
 type hubInfo struct {
 	ID          string            `json:"id"`
-	Name        string            `json:"-"`
-	Hash        string            `json:"-"`
 	DeviceIDMap map[string]string `json:"device_id_map"` // localID:ID
 }
 
@@ -52,51 +51,48 @@ func (h *Handler) InitHub(ctx context.Context, id, name string) error {
 	if id != "" {
 		hInfo.ID = id
 	}
-	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
-	defer cf()
-	deviceIDMap := make(map[string]string)
 	if hInfo.ID != "" {
-		hub, err := h.cloudClient.GetHub(ctxWt, hInfo.ID)
+		hInfo.DeviceIDMap, err = h.refreshDeviceIDMap(ctx, hInfo.ID, hInfo.DeviceIDMap)
 		if err != nil {
 			return err
 		}
-		hInfo.Name = hub.Name
-		hInfo.Hash = hub.Hash
-		rDeviceIDMap := make(map[string]string)
-		for ldID, dID := range hInfo.DeviceIDMap {
-			rDeviceIDMap[dID] = ldID
-		}
-		for _, dID := range hub.DeviceIds {
-			ldID, ok := rDeviceIDMap[dID]
-			if !ok {
-				ldID, err = h.getLocalDeviceID(ctx, dID)
-				if err != nil {
-					return err
-				}
-			}
-			deviceIDMap[ldID] = dID
-		}
 	} else {
+		ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+		defer cf()
 		id, err = h.cloudClient.CreateHub(ctxWt, models.Hub{Name: name})
 		if err != nil {
 			return err
 		}
 		hInfo.ID = id
-		hInfo.Name = name
 	}
-	hInfo.DeviceIDMap = deviceIDMap
 	h.hubInfo = hInfo
 	return writeHubInfo(h.wrkSpacePath, h.hubInfo)
 }
 
-func (h *Handler) getLocalDeviceID(ctx context.Context, dID string) (string, error) {
-	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
-	defer cf()
-	device, err := h.cloudClient.GetDevice(ctxWt, dID)
+func (h *Handler) refreshDeviceIDMap(ctx context.Context, hID string, oldMap map[string]string) (map[string]string, error) {
+	ch := context_hdl.New()
+	defer ch.CancelAll()
+	hub, err := h.cloudClient.GetHub(ch.Add(context.WithTimeout(ctx, h.timeout)), hID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return device.LocalId, nil
+	deviceIDMap := make(map[string]string)
+	rDeviceIDMap := make(map[string]string)
+	for ldID, dID := range oldMap {
+		rDeviceIDMap[dID] = ldID
+	}
+	for _, dID := range hub.DeviceIds {
+		ldID, ok := rDeviceIDMap[dID]
+		if !ok {
+			device, err := h.cloudClient.GetDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), dID)
+			if err != nil {
+				return nil, err
+			}
+			ldID = device.LocalId
+		}
+		deviceIDMap[ldID] = dID
+	}
+	return deviceIDMap, nil
 }
 
 func readHubInfo(p string) (hubInfo, error) {
