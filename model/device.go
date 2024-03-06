@@ -9,9 +9,7 @@ type Device struct {
 	ID         string
 	Name       string
 	State      string
-	LastState  string
 	Type       string
-	Hash       string
 	Attributes []Attribute
 }
 
