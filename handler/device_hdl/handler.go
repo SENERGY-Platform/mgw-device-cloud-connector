@@ -12,18 +12,21 @@ import (
 	"time"
 )
 
+type device struct {
+	model.Device
+	Hash string
+}
+
 type Handler struct {
-	dmClient          dm_client.ClientItf
-	timeout           time.Duration
-	queryInterval     time.Duration
-	devices           map[string]model.Device
-	sChan             chan bool
-	running           bool
-	loopMu            sync.RWMutex
-	mu                sync.RWMutex
-	newDevicesCbk     func(devices []model.Device) error
-	changedDevicesCbk func(devices []model.Device) error
-	missingDevicesCbk func(ids []string) error
+	dmClient      dm_client.ClientItf
+	timeout       time.Duration
+	queryInterval time.Duration
+	devices       map[string]device
+	sChan         chan bool
+	running       bool
+	loopMu        sync.RWMutex
+	mu            sync.RWMutex
+	syncCbk       func(newDevices, changedDevices []model.Device, missingDevices []string, deviceStates map[string]string) error
 }
 
 func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration) *Handler {
@@ -59,24 +62,16 @@ func (h *Handler) Stop() {
 	h.loopMu.Unlock()
 }
 
-func (h *Handler) SetNewDevicesCallback(f func(devices []model.Device) error) {
-	h.newDevicesCbk = f
-}
-
-func (h *Handler) SetChangedDevicesCallback(f func(devices []model.Device) error) {
-	h.changedDevicesCbk = f
-}
-
-func (h *Handler) SetMissingDevicesCallback(f func(ids []string) error) {
-	h.missingDevicesCbk = f
+func (h *Handler) SetSyncCallback(f func(newDevices, changedDevices []model.Device, missingDevices []string, deviceStates map[string]string) error) {
+	h.syncCbk = f
 }
 
 func (h *Handler) GetDevices() map[string]model.Device {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	devices := make(map[string]model.Device)
-	for id, device := range h.devices {
-		devices[id] = device
+	for id, d := range h.devices {
+		devices[id] = d.Device
 	}
 	return devices
 }
@@ -107,25 +102,13 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	devices := make(map[string]model.Device)
+	devices := make(map[string]device)
 	for id, dmDevice := range dmDevices {
 		devices[id] = newDevice(id, dmDevice)
 	}
-	newDevices, changedDevices, missingDevices := h.diffDevices(devices)
-	if h.newDevicesCbk != nil && len(newDevices) > 0 {
-		err = h.newDevicesCbk(newDevices)
-		if err != nil {
-			return err
-		}
-	}
-	if h.changedDevicesCbk != nil && len(changedDevices) > 0 {
-		err = h.changedDevicesCbk(changedDevices)
-		if err != nil {
-			return err
-		}
-	}
-	if h.missingDevicesCbk != nil && len(missingDevices) > 0 {
-		err = h.missingDevicesCbk(missingDevices)
+	newDevices, changedDevices, missingDevices, deviceStates := h.diffDevices(devices)
+	if h.syncCbk != nil && len(newDevices)+len(changedDevices)+len(missingDevices)+len(deviceStates) > 0 {
+		err = h.syncCbk(newDevices, changedDevices, missingDevices, deviceStates)
 		if err != nil {
 			return err
 		}
@@ -136,18 +119,20 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 	return nil
 }
 
-func (h *Handler) diffDevices(devices map[string]model.Device) (newDevices, changedDevices []model.Device, missingDevices []string) {
+func (h *Handler) diffDevices(devices map[string]device) (newDevices, changedDevices []model.Device, missingDevices []string, states map[string]string) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for id, d1 := range devices {
 		d2, ok := h.devices[id]
 		if !ok {
-			newDevices = append(newDevices, d1)
+			newDevices = append(newDevices, d1.Device)
 		} else {
 			if d1.Hash != d2.Hash {
-				d1.LastState = d2.State
-				changedDevices = append(changedDevices, d1)
+				changedDevices = append(changedDevices, d1.Device)
 			}
+		}
+		if d1.State != d2.State {
+			states[id] = d1.State
 		}
 	}
 	for id := range h.devices {
@@ -158,7 +143,7 @@ func (h *Handler) diffDevices(devices map[string]model.Device) (newDevices, chan
 	return
 }
 
-func newDevice(id string, d dm_client.Device) model.Device {
+func newDevice(id string, d dm_client.Device) device {
 	var attrPairs []string
 	var attributes []model.Attribute
 	for _, attr := range d.Attributes {
@@ -169,13 +154,15 @@ func newDevice(id string, d dm_client.Device) model.Device {
 		})
 	}
 	slices.Sort(attrPairs)
-	return model.Device{
-		ID:         id,
-		Name:       d.Name,
-		State:      d.State,
-		Type:       d.Type,
-		Hash:       genHash(d.Type, d.State, d.Name, d.ModuleID, genHash(attrPairs...)),
-		Attributes: attributes,
+	return device{
+		Device: model.Device{
+			ID:         id,
+			Name:       d.Name,
+			State:      d.State,
+			Type:       d.Type,
+			Attributes: attributes,
+		},
+		Hash: genHash(d.Type, d.Name, genHash(attrPairs...)),
 	}
 }
 
