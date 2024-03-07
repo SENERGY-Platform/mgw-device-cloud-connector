@@ -37,13 +37,15 @@ func (h *Handler) InitHub(ctx context.Context, id, name string) error {
 	defer cf()
 	var deviceIDs []string
 	if hb.ID != "" {
-		chb, err := h.cloudClient.GetHub(ctx, hb.ID)
+		chb, err := h.cloudClient.GetHub(ctxWt, hb.ID)
 		if err != nil {
 			var nfe *cloud_client.NotFoundError
 			if !errors.As(err, &nfe) {
 				return err
 			}
-			hb.ID, err = h.cloudClient.CreateHub(ctxWt, models.Hub{Name: name})
+			ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
+			defer cf2()
+			hb.ID, err = h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: name})
 			if err != nil {
 				return err
 			}
@@ -55,7 +57,7 @@ func (h *Handler) InitHub(ctx context.Context, id, name string) error {
 			return err
 		}
 	}
-	hb.DeviceIDMap, err = h.getDeviceIDMap(ctxWt, hb.DeviceIDMap, deviceIDs)
+	hb.DeviceIDMap, err = h.getDeviceIDMap(ctx, hb.DeviceIDMap, deviceIDs)
 	if err != nil {
 		return err
 	}
