@@ -71,19 +71,19 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 		ch := context_hdl.New()
 		defer ch.CancelAll()
 		rDeviceIDMap := make(map[string]string)
-		for ldID, dID := range oldMap {
-			rDeviceIDMap[dID] = ldID
+		for lID, rID := range oldMap {
+			rDeviceIDMap[rID] = lID
 		}
-		for _, dID := range deviceIDs {
-			ldID, ok := rDeviceIDMap[dID]
+		for _, rID := range deviceIDs {
+			lID, ok := rDeviceIDMap[rID]
 			if !ok {
-				device, err := h.cloudClient.GetDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), dID)
+				device, err := h.cloudClient.GetDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), rID)
 				if err != nil {
 					return nil, err
 				}
-				ldID = device.LocalId
+				lID = device.LocalId
 			}
-			deviceIDMap[ldID] = dID
+			deviceIDMap[lID] = rID
 		}
 	}
 	return deviceIDMap, nil
