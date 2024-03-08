@@ -251,7 +251,11 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 			if !ok {
 				device, err := h.cloudClient.GetDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), rID)
 				if err != nil {
-					return nil, err
+					var nfe *cloud_client.NotFoundError
+					if !errors.As(err, &nfe) {
+						return nil, err
+					}
+					continue
 				}
 				lID = device.LocalId
 			}
