@@ -16,6 +16,10 @@ type UnauthorizedError struct {
 	cError
 }
 
+type BadRequestError struct {
+	cError
+}
+
 func (e *cError) Error() string {
 	return e.err.Error()
 }
@@ -34,4 +38,8 @@ func NewNotFoundError(err error) error {
 
 func NewUnauthorizedError(err error) error {
 	return &UnauthorizedError{cError{err: err}}
+}
+
+func NewBadRequestError(err error) error {
+	return &BadRequestError{cError{err: err}}
 }
