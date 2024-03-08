@@ -3,12 +3,15 @@ package cloud_hdl
 import (
 	"context"
 	"errors"
+	"fmt"
 	context_hdl "github.com/SENERGY-Platform/go-service-base/context-hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	"github.com/SENERGY-Platform/models/go/models"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"os"
+	"path"
 	"time"
 )
 
@@ -29,6 +32,53 @@ func New(cloudClient cloud_client.ClientItf, mqttClient mqtt.Client, timeout tim
 		wrkSpacePath: wrkSpacePath,
 		attrOrigin:   attrOrigin,
 	}
+}
+
+func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
+	if !path.IsAbs(h.wrkSpacePath) {
+		return fmt.Errorf("workspace path must be absolute")
+	}
+	if err := os.MkdirAll(h.wrkSpacePath, 0770); err != nil {
+		return err
+	}
+	d, err := readData(h.wrkSpacePath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if hubID != "" {
+		d.HubID = hubID
+	}
+	d.DefaultHubName = hubName
+	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+	defer cf()
+	var deviceIDs []string
+	if d.HubID != "" {
+		hub, err := h.cloudClient.GetHub(ctxWt, d.HubID)
+		if err != nil {
+			var nfe *cloud_client.NotFoundError
+			if !errors.As(err, &nfe) {
+				return err
+			}
+			ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
+			defer cf2()
+			d.HubID, err = h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: hubName})
+			if err != nil {
+				return err
+			}
+		}
+		deviceIDs = hub.DeviceIds
+	} else {
+		d.HubID, err = h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
+		if err != nil {
+			return err
+		}
+	}
+	d.DeviceIDMap, err = h.getDeviceIDMap(ctx, d.DeviceIDMap, deviceIDs)
+	if err != nil {
+		return err
+	}
+	h.data = d
+	return writeData(h.wrkSpacePath, h.data)
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, changed, missing []string) ([]string, error) {
@@ -185,6 +235,30 @@ func (h *Handler) updateOrCreate(ctx context.Context, rID string, device model.D
 		return h.createOrUpdate(ctx, device)
 	}
 	return rID, err
+}
+
+func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, deviceIDs []string) (map[string]string, error) {
+	deviceIDMap := make(map[string]string)
+	if len(deviceIDs) > 0 {
+		ch := context_hdl.New()
+		defer ch.CancelAll()
+		rDeviceIDMap := make(map[string]string)
+		for lID, rID := range oldMap {
+			rDeviceIDMap[rID] = lID
+		}
+		for _, rID := range deviceIDs {
+			lID, ok := rDeviceIDMap[rID]
+			if !ok {
+				device, err := h.cloudClient.GetDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), rID)
+				if err != nil {
+					return nil, err
+				}
+				lID = device.LocalId
+			}
+			deviceIDMap[lID] = rID
+		}
+	}
+	return deviceIDMap, nil
 }
 
 func newDevice(device model.Device, rID, attrOrigin string) models.Device {
