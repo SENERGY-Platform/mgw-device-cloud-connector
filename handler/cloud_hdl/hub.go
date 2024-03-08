@@ -12,32 +12,33 @@ import (
 	"path"
 )
 
-const hubFile = "hub.json"
+const dataFile = "data.json"
 
-type hub struct {
-	ID          string            `json:"id"`
-	DeviceIDMap map[string]string `json:"device_id_map"` // localID:ID
+type data struct {
+	HubID          string            `json:"hub_id"`
+	DefaultHubName string            `json:"-"`
+	DeviceIDMap    map[string]string `json:"device_id_map"` // localID:ID
 }
 
-func (h *Handler) InitHub(ctx context.Context, id, name string) error {
+func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	if !path.IsAbs(h.wrkSpacePath) {
 		return fmt.Errorf("workspace path must be absolute")
 	}
 	if err := os.MkdirAll(h.wrkSpacePath, 0770); err != nil {
 		return err
 	}
-	hb, err := readHub(h.wrkSpacePath)
+	d, err := readData(h.wrkSpacePath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if id != "" {
-		hb.ID = id
+	if hubID != "" {
+		d.HubID = hubID
 	}
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	var deviceIDs []string
-	if hb.ID != "" {
-		chb, err := h.cloudClient.GetHub(ctxWt, hb.ID)
+	if d.HubID != "" {
+		hub, err := h.cloudClient.GetHub(ctxWt, d.HubID)
 		if err != nil {
 			var nfe *cloud_client.NotFoundError
 			if !errors.As(err, &nfe) {
@@ -45,24 +46,24 @@ func (h *Handler) InitHub(ctx context.Context, id, name string) error {
 			}
 			ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
 			defer cf2()
-			hb.ID, err = h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: name})
+			d.HubID, err = h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: hubName})
 			if err != nil {
 				return err
 			}
 		}
-		deviceIDs = chb.DeviceIds
+		deviceIDs = hub.DeviceIds
 	} else {
-		hb.ID, err = h.cloudClient.CreateHub(ctxWt, models.Hub{Name: name})
+		d.HubID, err = h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
 		if err != nil {
 			return err
 		}
 	}
-	hb.DeviceIDMap, err = h.getDeviceIDMap(ctx, hb.DeviceIDMap, deviceIDs)
+	d.DeviceIDMap, err = h.getDeviceIDMap(ctx, d.DeviceIDMap, deviceIDs)
 	if err != nil {
 		return err
 	}
-	h.hub = hb
-	return writeHub(h.wrkSpacePath, h.hub)
+	h.data = d
+	return writeData(h.wrkSpacePath, h.data)
 }
 
 func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, deviceIDs []string) (map[string]string, error) {
@@ -89,22 +90,22 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 	return deviceIDMap, nil
 }
 
-func readHub(p string) (hub, error) {
-	f, err := os.Open(path.Join(p, hubFile))
+func readData(p string) (data, error) {
+	f, err := os.Open(path.Join(p, dataFile))
 	if err != nil {
-		return hub{}, err
+		return data{}, err
 	}
 	defer f.Close()
 	d := json.NewDecoder(f)
-	var hi hub
+	var hi data
 	if err = d.Decode(&hi); err != nil {
-		return hub{}, err
+		return data{}, err
 	}
 	return hi, nil
 }
 
-func writeHub(p string, hi hub) error {
-	f, err := os.OpenFile(path.Join(p, hubFile), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+func writeData(p string, hi data) error {
+	f, err := os.OpenFile(path.Join(p, dataFile), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
 	}
