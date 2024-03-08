@@ -52,6 +52,8 @@ func customError(code int, err error) error {
 		err = NewNotFoundError(err)
 	case http.StatusUnauthorized:
 		err = NewUnauthorizedError(err)
+	case http.StatusBadRequest:
+		err = NewBadRequestError(err)
 	}
 	return err
 }
