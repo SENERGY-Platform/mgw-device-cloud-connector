@@ -48,13 +48,13 @@ func (c *Client) setAuthHeader(ctx context.Context, req *http.Request) error {
 func customError(code int, err error) error {
 	switch code {
 	case http.StatusInternalServerError:
-		err = NewInternalError(err)
+		err = newInternalError(err)
 	case http.StatusNotFound:
-		err = NewNotFoundError(err)
+		err = newNotFoundError(err)
 	case http.StatusUnauthorized:
-		err = NewUnauthorizedError(err)
+		err = newUnauthorizedError(err)
 	case http.StatusBadRequest:
-		err = NewBadRequestError(err)
+		err = newBadRequestError(err)
 	}
 	return err
 }
