@@ -34,6 +34,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	if hubID != "" {
 		d.HubID = hubID
 	}
+	d.DefaultHubName = hubName
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	var deviceIDs []string
