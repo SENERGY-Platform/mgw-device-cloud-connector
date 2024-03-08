@@ -26,7 +26,8 @@ type Handler struct {
 	running       bool
 	loopMu        sync.RWMutex
 	mu            sync.RWMutex
-	syncCbk       func(newDevices, changedDevices []model.Device, missingDevices []string, deviceStates map[string]string) error
+	syncCbk       func(ctx context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error)
+	stateCbk      func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)
 }
 
 func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration) *Handler {
@@ -62,8 +63,12 @@ func (h *Handler) Stop() {
 	h.loopMu.Unlock()
 }
 
-func (h *Handler) SetSyncCallback(f func(newDevices, changedDevices []model.Device, missingDevices []string, deviceStates map[string]string) error) {
+func (h *Handler) SetSyncCallback(f func(ctx context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error)) {
 	h.syncCbk = f
+}
+
+func (h *Handler) SetStateCallback(f func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)) {
+	h.stateCbk = f
 }
 
 func (h *Handler) GetDevices() map[string]model.Device {
@@ -106,11 +111,31 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 	for id, dmDevice := range dmDevices {
 		devices[id] = newDevice(id, dmDevice)
 	}
-	newDevices, changedDevices, missingDevices, deviceStates := h.diffDevices(devices)
-	if h.syncCbk != nil && len(newDevices)+len(changedDevices)+len(missingDevices)+len(deviceStates) > 0 {
-		err = h.syncCbk(newDevices, changedDevices, missingDevices, deviceStates)
+	changedIDs, missingIDs, deviceMap, deviceStates := h.diffDevices(devices)
+	if h.syncCbk != nil {
+		failed, err := h.syncCbk(ctx, deviceMap, changedIDs, missingIDs)
 		if err != nil {
 			return err
+		}
+		for _, id := range failed {
+			delete(devices, id)
+		}
+	}
+	if h.stateCbk != nil && len(deviceStates) > 0 {
+		ds := make(map[string]string)
+		for id, s := range deviceStates {
+			ds[id] = s[1]
+		}
+		failed, err := h.stateCbk(ctx, ds)
+		if err != nil {
+			return err
+		}
+		for _, id := range failed {
+			if s, ok := deviceStates[id]; ok {
+				d := devices[id]
+				d.State = s[0]
+				devices[id] = d
+			}
 		}
 	}
 	h.mu.Lock()
@@ -119,25 +144,25 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 	return nil
 }
 
-func (h *Handler) diffDevices(devices map[string]device) (newDevices, changedDevices []model.Device, missingDevices []string, states map[string]string) {
+func (h *Handler) diffDevices(devices map[string]device) (changedIDs, missingIDs []string, deviceMap map[string]model.Device, states map[string][2]string) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	for id, d1 := range devices {
-		d2, ok := h.devices[id]
-		if !ok {
-			newDevices = append(newDevices, d1.Device)
-		} else {
-			if d1.Hash != d2.Hash {
-				changedDevices = append(changedDevices, d1.Device)
+	deviceMap = make(map[string]model.Device)
+	for id, queriedDevice := range devices {
+		deviceMap[id] = queriedDevice.Device
+		storedDevice, ok := h.devices[id]
+		if ok {
+			if storedDevice.Hash != queriedDevice.Hash {
+				changedIDs = append(changedIDs, id)
 			}
 		}
-		if d1.State != d2.State {
-			states[id] = d1.State
+		if storedDevice.State != queriedDevice.State {
+			states[id] = [2]string{storedDevice.State, queriedDevice.State}
 		}
 	}
 	for id := range h.devices {
 		if _, ok := devices[id]; !ok {
-			missingDevices = append(missingDevices, id)
+			missingIDs = append(missingIDs, id)
 		}
 	}
 	return
