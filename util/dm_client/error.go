@@ -20,10 +20,10 @@ func (e *cError) Unwrap() error {
 	return e.err
 }
 
-func NewInternalError(err error) error {
+func newInternalError(err error) error {
 	return &InternalError{cError{err: err}}
 }
 
-func NewNotFoundError(err error) error {
+func newNotFoundError(err error) error {
 	return &NotFoundError{cError{err: err}}
 }

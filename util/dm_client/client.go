@@ -26,9 +26,9 @@ func New(httpClient base_client.HTTPClient, baseUrl string) *Client {
 func customError(code int, err error) error {
 	switch code {
 	case http.StatusInternalServerError:
-		err = NewInternalError(err)
+		err = newInternalError(err)
 	case http.StatusNotFound:
-		err = NewNotFoundError(err)
+		err = newNotFoundError(err)
 	}
 	return err
 }

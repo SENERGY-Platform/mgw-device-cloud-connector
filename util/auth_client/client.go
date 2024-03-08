@@ -113,9 +113,9 @@ func (c *Client) tokenRequest(ctx context.Context, form url.Values) (*openidToke
 func customError(code int, err error) error {
 	switch code {
 	case http.StatusInternalServerError:
-		err = NewInternalError(err)
+		err = newInternalError(err)
 	case http.StatusNotFound:
-		err = NewNotFoundError(err)
+		err = newNotFoundError(err)
 	}
 	return err
 }
