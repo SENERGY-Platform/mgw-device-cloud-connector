@@ -189,9 +189,9 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 func (h *Handler) syncDevice(ctx context.Context, lID string, device model.Device) (err error) {
 	rID, ok := h.data.DeviceIDMap[lID]
 	if !ok {
-		rID, err = h.createOrUpdate(ctx, device)
+		rID, err = h.createOrUpdateDevice(ctx, device)
 	} else {
-		rID, err = h.updateOrCreate(ctx, rID, device)
+		rID, err = h.updateOrCreateDevice(ctx, rID, device)
 	}
 	if err != nil {
 		return
@@ -200,7 +200,7 @@ func (h *Handler) syncDevice(ctx context.Context, lID string, device model.Devic
 	return
 }
 
-func (h *Handler) createOrUpdate(ctx context.Context, device model.Device) (string, error) {
+func (h *Handler) createOrUpdateDevice(ctx context.Context, device model.Device) (string, error) {
 	ch := context_hdl.New()
 	defer ch.CancelAll()
 	nd := newDevice(device, "", h.attrOrigin)
@@ -223,7 +223,7 @@ func (h *Handler) createOrUpdate(ctx context.Context, device model.Device) (stri
 	return rID, nil
 }
 
-func (h *Handler) updateOrCreate(ctx context.Context, rID string, device model.Device) (string, error) {
+func (h *Handler) updateOrCreateDevice(ctx context.Context, rID string, device model.Device) (string, error) {
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	err := h.cloudClient.UpdateDevice(ctxWt, newDevice(device, rID, h.attrOrigin), h.attrOrigin)
@@ -232,7 +232,7 @@ func (h *Handler) updateOrCreate(ctx context.Context, rID string, device model.D
 		if !errors.As(err, &nfe) {
 			return "", err
 		}
-		return h.createOrUpdate(ctx, device)
+		return h.createOrUpdateDevice(ctx, device)
 	}
 	return rID, err
 }
