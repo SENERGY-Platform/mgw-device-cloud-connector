@@ -9,7 +9,10 @@ import (
 	"net/url"
 )
 
-const devicesPath = "device-manager/devices"
+const (
+	devicesPath      = "device-manager/devices"
+	localDevicesPath = "device-manager/local-devices"
+)
 
 func (c *Client) CreateDevice(ctx context.Context, device models.Device) (string, error) {
 	u, err := url.JoinPath(c.baseUrl, devicesPath)
@@ -40,19 +43,15 @@ func (c *Client) GetDevice(ctx context.Context, id string) (models.Device, error
 	if err != nil {
 		return models.Device{}, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	return c.getDevice(ctx, u)
+}
+
+func (c *Client) GetDeviceL(ctx context.Context, id string) (models.Device, error) {
+	u, err := url.JoinPath(c.baseUrl, localDevicesPath, url.QueryEscape(id))
 	if err != nil {
 		return models.Device{}, err
 	}
-	if err = c.setAuthHeader(ctx, req); err != nil {
-		return models.Device{}, err
-	}
-	var device models.Device
-	err = c.baseClient.ExecRequestJSON(req, &device)
-	if err != nil {
-		return models.Device{}, err
-	}
-	return device, nil
+	return c.getDevice(ctx, u)
 }
 
 func (c *Client) UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error {
@@ -75,4 +74,20 @@ func (c *Client) UpdateDevice(ctx context.Context, device models.Device, attribu
 		return err
 	}
 	return c.baseClient.ExecRequestVoid(req)
+}
+
+func (c *Client) getDevice(ctx context.Context, u string) (models.Device, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return models.Device{}, err
+	}
+	if err = c.setAuthHeader(ctx, req); err != nil {
+		return models.Device{}, err
+	}
+	var device models.Device
+	err = c.baseClient.ExecRequestJSON(req, &device)
+	if err != nil {
+		return models.Device{}, err
+	}
+	return device, nil
 }
