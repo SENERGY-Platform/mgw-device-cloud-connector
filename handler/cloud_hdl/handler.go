@@ -114,7 +114,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 	for lID, device := range devices {
 		var state uint8
 		if _, ok := hubLocalIDSet[lID]; !ok {
-			err = h.syncDevice(ctx, lID, device)
+			err = h.syncDevice(ctx, device)
 			if err != nil {
 				failed = append(failed, lID)
 				continue
@@ -125,7 +125,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 	}
 	for _, lID := range changed {
 		if state, ok := synced[lID]; ok && state == 0 {
-			err = h.syncDevice(ctx, lID, devices[lID])
+			err = h.syncDevice(ctx, devices[lID])
 			if err != nil {
 				failed = append(failed, lID)
 				continue
@@ -186,8 +186,8 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 //	return failed, nil
 //}
 
-func (h *Handler) syncDevice(ctx context.Context, lID string, device model.Device) (err error) {
-	rID, ok := h.data.DeviceIDMap[lID]
+func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err error) {
+	rID, ok := h.data.DeviceIDMap[device.ID]
 	if !ok {
 		rID, err = h.createOrUpdateDevice(ctx, device)
 	} else {
@@ -196,7 +196,7 @@ func (h *Handler) syncDevice(ctx context.Context, lID string, device model.Devic
 	if err != nil {
 		return
 	}
-	h.data.DeviceIDMap[lID] = rID
+	h.data.DeviceIDMap[device.ID] = rID
 	return
 }
 
