@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestNewDevice(t *testing.T) {
+func Test_newDevice(t *testing.T) {
 	a := models.Device{
 		Id:      "rid",
 		LocalId: "lid",
@@ -39,7 +39,7 @@ func TestNewDevice(t *testing.T) {
 	}
 }
 
-func TestCreateOrUpdateDevice(t *testing.T) {
+func TestHandler_createOrUpdateDevice(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
 	h := New(mockCC, nil, 0, "", "test-origin")
 	t.Run("create device", func(t *testing.T) {
@@ -98,7 +98,7 @@ func TestCreateOrUpdateDevice(t *testing.T) {
 	})
 }
 
-func TestUpdateOrCreateDevice(t *testing.T) {
+func TestHandler_updateOrCreateDevice(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
 	h := New(mockCC, nil, 0, "", "test-origin")
 	t.Run("update device", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestUpdateOrCreateDevice(t *testing.T) {
 	})
 }
 
-func TestGetDeviceIDMap(t *testing.T) {
+func TestHandler_getDeviceIDMap(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
 	h := New(mockCC, nil, 0, "", "")
 	t.Run("nil case", func(t *testing.T) {
@@ -281,7 +281,7 @@ func TestGetDeviceIDMap(t *testing.T) {
 	})
 }
 
-func TestSyncDevice(t *testing.T) {
+func TestHandler_syncDevice(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
 	h := New(mockCC, nil, 0, "", "test-origin")
 	hReset := func() {
@@ -337,4 +337,287 @@ func TestSyncDevice(t *testing.T) {
 			t.Error("invalid attribute origin")
 		}
 	})
+}
+
+func TestHandler_Sync(t *testing.T) {
+	mockCC := &cloud_client.Mock{}
+	h := New(mockCC, nil, 0, t.TempDir(), "test-origin")
+	hReset := func() {
+		h.data = data{}
+		h.attrOrigin = ""
+	}
+	devices := map[string]model.Device{
+		"a": {
+			ID:   "a",
+			Name: "Test Device A",
+		},
+		"b": {
+			ID:   "b",
+			Name: "Test Device B",
+		},
+	}
+	t.Run("hub and devices don't exist", func(t *testing.T) {
+		t.Cleanup(mockCC.Reset)
+		t.Cleanup(hReset)
+		mockCC.Devices = make(map[string]models.Device)
+		mockCC.DeviceIDMap = make(map[string]string)
+		mockCC.Hubs = make(map[string]models.Hub)
+		h.data = data{
+			DefaultHubName: "Test Hub",
+			DeviceIDMap:    make(map[string]string),
+		}
+		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(failed) > 0 {
+			t.Error("illegal number of failed devices")
+		}
+		for lID, rID := range h.data.DeviceIDMap {
+			d, ok := mockCC.Devices[rID]
+			if !ok {
+				t.Errorf("device '%s' not created", lID)
+			}
+			if d.LocalId != lID {
+				t.Error("id mismatch")
+			}
+		}
+		hub, ok := mockCC.Hubs[h.data.HubID]
+		if !ok {
+			t.Error("hub not created")
+		}
+		if !inSlice("a", hub.DeviceLocalIds) {
+			t.Error("local id 'a' not in map")
+		}
+		if !inSlice("b", hub.DeviceLocalIds) {
+			t.Error("local id 'b' not in map")
+		}
+		if hub.Name != h.data.DefaultHubName {
+			t.Error("hub default name not set")
+		}
+	})
+	t.Run("hub and devices exist", func(t *testing.T) {
+		t.Cleanup(mockCC.Reset)
+		t.Cleanup(hReset)
+		mockCC.Devices = map[string]models.Device{
+			"1": {
+				Id:      "1",
+				LocalId: "a",
+			},
+			"2": {
+				Id:      "2",
+				LocalId: "b",
+			},
+		}
+		mockCC.DeviceIDMap = map[string]string{"a": "1", "b": "2"}
+		mockCC.Hubs = map[string]models.Hub{
+			"test": {
+				Id:             "test",
+				Name:           "Test Hub",
+				Hash:           "",
+				DeviceLocalIds: []string{"a", "b"},
+				DeviceIds:      []string{"1", "2"},
+			},
+		}
+		h.data = data{
+			HubID:       "test",
+			DeviceIDMap: make(map[string]string),
+		}
+		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(failed) > 0 {
+			t.Error("illegal number of failed devices")
+		}
+		rID, ok := h.data.DeviceIDMap["a"]
+		if !ok {
+			t.Error("local id 'a' not in map")
+		}
+		if rID != "1" {
+			t.Error("id mismatch")
+		}
+		rID, ok = h.data.DeviceIDMap["b"]
+		if !ok {
+			t.Error("local id 'b' not in map")
+		}
+		if rID != "2" {
+			t.Error("id mismatch")
+		}
+		hub := mockCC.Hubs[h.data.HubID]
+		if !inSlice("a", hub.DeviceLocalIds) {
+			t.Error("local id 'a' not in map")
+		}
+		if !inSlice("b", hub.DeviceLocalIds) {
+			t.Error("local id 'b' not in map")
+		}
+		if hub.Name == h.data.DefaultHubName {
+			t.Error("hub default name was set")
+		}
+		if mockCC.CreateDeviceC+mockCC.UpdateDeviceC+mockCC.CreateHubC > 0 {
+			t.Error("illegal number of calls")
+		}
+	})
+	t.Run("only devices exist", func(t *testing.T) {
+		t.Cleanup(mockCC.Reset)
+		t.Cleanup(hReset)
+		mockCC.Devices = map[string]models.Device{
+			"1": {
+				Id:      "1",
+				LocalId: "a",
+			},
+			"2": {
+				Id:      "2",
+				LocalId: "b",
+			},
+		}
+		mockCC.DeviceIDMap = map[string]string{"a": "1", "b": "2"}
+		mockCC.Hubs = make(map[string]models.Hub)
+		h.data.DeviceIDMap = make(map[string]string)
+		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(failed) > 0 {
+			t.Error("illegal number of failed devices")
+		}
+		hub, ok := mockCC.Hubs[h.data.HubID]
+		if !ok {
+			t.Error("hub not created")
+		}
+		if !inSlice("a", hub.DeviceLocalIds) {
+			t.Error("local id 'a' not in map")
+		}
+		if !inSlice("b", hub.DeviceLocalIds) {
+			t.Error("local id 'b' not in map")
+		}
+		if hub.Name != h.data.DefaultHubName {
+			t.Error("hub default name not set")
+		}
+	})
+	t.Run("only hub exists", func(t *testing.T) {
+		t.Cleanup(mockCC.Reset)
+		t.Cleanup(hReset)
+		mockCC.Devices = make(map[string]models.Device)
+		mockCC.DeviceIDMap = make(map[string]string)
+		mockCC.Hubs = map[string]models.Hub{
+			"test": {
+				Id:   "test",
+				Name: "Test Hub",
+			},
+		}
+		h.data = data{
+			HubID:       "test",
+			DeviceIDMap: make(map[string]string),
+		}
+		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(failed) > 0 {
+			t.Error("illegal number of failed devices")
+		}
+		for lID, rID := range h.data.DeviceIDMap {
+			d, ok := mockCC.Devices[rID]
+			if !ok {
+				t.Errorf("device '%s' not created", lID)
+			}
+			if d.LocalId != lID {
+				t.Error("id mismatch")
+			}
+		}
+		hub := mockCC.Hubs[h.data.HubID]
+		if !inSlice("a", hub.DeviceLocalIds) {
+			t.Error("local id 'a' not in map")
+		}
+		if !inSlice("b", hub.DeviceLocalIds) {
+			t.Error("local id 'b' not in map")
+		}
+		if hub.Name == h.data.DefaultHubName {
+			t.Error("hub default name was set")
+		}
+	})
+	t.Run("hub exists ", func(t *testing.T) {
+		t.Cleanup(mockCC.Reset)
+		t.Cleanup(hReset)
+		mockCC.Devices = map[string]models.Device{
+			"1": {
+				Id:      "1",
+				LocalId: "a",
+				Name:    "Test",
+			},
+			"0": {
+				Id:      "0",
+				LocalId: "c",
+			},
+		}
+		mockCC.DeviceIDMap = map[string]string{"a": "1", "c": "0"}
+		mockCC.Hubs = map[string]models.Hub{
+			"test": {
+				Id:             "test",
+				Name:           "Test Hub",
+				Hash:           "",
+				DeviceLocalIds: []string{"a", "c"},
+				DeviceIds:      []string{"1", "0"},
+			},
+		}
+		h.data = data{
+			HubID:       "test",
+			DeviceIDMap: make(map[string]string),
+		}
+		failed, err := h.Sync(context.Background(), devices, []string{"a"}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(failed) > 0 {
+			t.Error("illegal number of failed devices")
+		}
+		rID, ok := h.data.DeviceIDMap["a"]
+		if !ok {
+			t.Error("local id 'a' not in map")
+		}
+		if rID != "1" {
+			t.Error("id mismatch")
+		}
+		rID, ok = h.data.DeviceIDMap["b"]
+		if !ok {
+			t.Error("local id 'b' not in map")
+		}
+		rID, ok = h.data.DeviceIDMap["c"]
+		if !ok {
+			t.Error("local id 'c' not in map")
+		}
+		if rID != "0" {
+			t.Error("id mismatch")
+		}
+		d := mockCC.Devices["1"]
+		if d.Name != "Test Device A" {
+			t.Error("device not updated")
+		}
+		hub := mockCC.Hubs[h.data.HubID]
+		if !inSlice("a", hub.DeviceLocalIds) {
+			t.Error("local id 'a' not in map")
+		}
+		if !inSlice("b", hub.DeviceLocalIds) {
+			t.Error("local id 'b' not in map")
+		}
+		if !inSlice("c", hub.DeviceLocalIds) {
+			t.Error("local id 'b' not in map")
+		}
+		if hub.Name == h.data.DefaultHubName {
+			t.Error("hub default name was set")
+		}
+		if mockCC.CreateHubC > 0 {
+			t.Error("illegal number of calls")
+		}
+	})
+}
+
+func inSlice(s string, sl []string) bool {
+	for _, s2 := range sl {
+		if s2 == s {
+			return true
+		}
+	}
+	return false
 }
