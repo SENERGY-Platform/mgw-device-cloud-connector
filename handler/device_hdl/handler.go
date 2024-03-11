@@ -58,7 +58,6 @@ func (h *Handler) Stop() {
 	h.loopMu.Lock()
 	if h.running {
 		h.sChan <- true
-		h.running = false
 	}
 	h.loopMu.Unlock()
 }
@@ -83,7 +82,12 @@ func (h *Handler) GetDevices() map[string]model.Device {
 
 func (h *Handler) run() {
 	ticker := time.NewTicker(h.queryInterval)
-	defer ticker.Stop()
+	defer func() {
+		ticker.Stop()
+		h.loopMu.Lock()
+		h.running = false
+		h.loopMu.Unlock()
+	}()
 	ctx, cf := context.WithCancel(context.Background())
 	defer cf()
 	var err error
