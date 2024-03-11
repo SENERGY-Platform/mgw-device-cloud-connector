@@ -148,6 +148,7 @@ func (h *Handler) diffDevices(devices map[string]device) (changedIDs, missingIDs
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	deviceMap = make(map[string]model.Device)
+	states = make(map[string][2]string)
 	for id, queriedDevice := range devices {
 		deviceMap[id] = queriedDevice.Device
 		storedDevice, ok := h.devices[id]
