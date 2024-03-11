@@ -4,8 +4,10 @@ import (
 	"context"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/dm_client"
+	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func Test_newDevice(t *testing.T) {
@@ -352,6 +354,50 @@ func Test_refreshDevices(t *testing.T) {
 			t.Error(err)
 		}
 	})
+}
+
+func Test_loop(t *testing.T) {
+	mockDMC := &dm_client.Mock{
+		Devices: map[string]dm_client.Device{
+			"test": {
+				Name:  "Test Device",
+				State: "online",
+			},
+		},
+	}
+	h := New(mockDMC, 0, time.Millisecond*100)
+	syncCall := 0
+	h.SetSyncCallback(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+		syncCall += 1
+		return nil, err
+	})
+	h.Start()
+	time.Sleep(time.Millisecond * 500)
+	h.Stop()
+	ticker := time.NewTicker(time.Millisecond * 100)
+	timer := time.NewTimer(time.Millisecond * 500)
+	defer ticker.Stop()
+	defer func() {
+		if !timer.Stop() {
+			<-timer.C
+		}
+	}()
+	stop := false
+	for !stop {
+		select {
+		case <-timer.C:
+			t.Error("timeout occurred")
+			os.Exit(1)
+		case <-ticker.C:
+			if !h.running {
+				stop = true
+				break
+			}
+		}
+	}
+	if syncCall == 0 {
+		t.Error("no calls")
+	}
 }
 
 func inSlice(s string, sl []string) bool {
