@@ -2,7 +2,9 @@ package cloud_hdl
 
 import (
 	"context"
+	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	"github.com/SENERGY-Platform/models/go/models"
 	"reflect"
@@ -609,6 +611,30 @@ func TestHandler_Sync(t *testing.T) {
 		}
 		if mockCC.CreateHubC > 0 {
 			t.Error("illegal number of calls")
+		}
+	})
+	t.Run("failed devices error case", func(t *testing.T) {
+		t.Cleanup(mockCC.Reset)
+		t.Cleanup(hReset)
+		util.InitLogger(sb_util.LoggerConfig{Terminal: true})
+		mockCC.SetNotFoundErr()
+		h.data.HubID = "test"
+		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(failed) != 2 {
+			t.Error("illegal number of failed devices")
+		}
+	})
+	t.Run("error case", func(t *testing.T) {
+		t.Cleanup(mockCC.Reset)
+		t.Cleanup(hReset)
+		mockCC.SetInternalErr()
+		h.data.HubID = "test"
+		_, err := h.Sync(context.Background(), devices, nil, nil)
+		if err == nil {
+			t.Error(err)
 		}
 	})
 }
