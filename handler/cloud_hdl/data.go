@@ -20,20 +20,20 @@ func readData(p string) (data, error) {
 		return data{}, err
 	}
 	defer f.Close()
-	d := json.NewDecoder(f)
-	var hi data
-	if err = d.Decode(&hi); err != nil {
+	decoder := json.NewDecoder(f)
+	var d data
+	if err = decoder.Decode(&d); err != nil {
 		return data{}, err
 	}
-	return hi, nil
+	return d, nil
 }
 
-func writeData(p string, hi data) error {
+func writeData(p string, d data) error {
 	f, err := os.OpenFile(path.Join(p, dataFile), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	e := json.NewEncoder(f)
-	return e.Encode(hi)
+	encoder := json.NewEncoder(f)
+	return encoder.Encode(d)
 }
