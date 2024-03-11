@@ -537,7 +537,7 @@ func TestHandler_Sync(t *testing.T) {
 			t.Error("hub default name was set")
 		}
 	})
-	t.Run("hub exists ", func(t *testing.T) {
+	t.Run("hub exists, devices partially exist and must be updated", func(t *testing.T) {
 		t.Cleanup(mockCC.Reset)
 		t.Cleanup(hReset)
 		mockCC.Devices = map[string]models.Device{
