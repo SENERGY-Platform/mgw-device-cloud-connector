@@ -26,8 +26,8 @@ type Handler struct {
 	running       bool
 	loopMu        sync.RWMutex
 	mu            sync.RWMutex
-	syncCbk       func(ctx context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error)
-	stateCbk      func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)
+	syncFunc      func(ctx context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error)
+	stateFunc     func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)
 }
 
 func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration) *Handler {
@@ -62,12 +62,12 @@ func (h *Handler) Stop() {
 	h.loopMu.Unlock()
 }
 
-func (h *Handler) SetSyncCallback(f func(ctx context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error)) {
-	h.syncCbk = f
+func (h *Handler) SetSyncFunc(f func(ctx context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error)) {
+	h.syncFunc = f
 }
 
-func (h *Handler) SetStateCallback(f func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)) {
-	h.stateCbk = f
+func (h *Handler) SetStateFunc(f func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)) {
+	h.stateFunc = f
 }
 
 func (h *Handler) GetDevices() map[string]model.Device {
@@ -116,8 +116,8 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 		devices[id] = newDevice(id, dmDevice)
 	}
 	changedIDs, missingIDs, deviceMap, deviceStates := h.diffDevices(devices)
-	if h.syncCbk != nil {
-		failed, err := h.syncCbk(ctx, deviceMap, changedIDs, missingIDs)
+	if h.syncFunc != nil {
+		failed, err := h.syncFunc(ctx, deviceMap, changedIDs, missingIDs)
 		if err != nil {
 			return err
 		}
@@ -125,12 +125,12 @@ func (h *Handler) refreshDevices(ctx context.Context) error {
 			delete(devices, id)
 		}
 	}
-	if h.stateCbk != nil && len(deviceStates) > 0 {
+	if h.stateFunc != nil && len(deviceStates) > 0 {
 		ds := make(map[string]string)
 		for id, s := range deviceStates {
 			ds[id] = s[1]
 		}
-		failed, err := h.stateCbk(ctx, ds)
+		failed, err := h.stateFunc(ctx, ds)
 		if err != nil {
 			return err
 		}

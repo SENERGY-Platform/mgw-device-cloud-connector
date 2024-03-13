@@ -224,7 +224,7 @@ func Test_refreshDevices(t *testing.T) {
 			},
 		}
 		syncCall := 0
-		h.SetSyncCallback(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
 			syncCall += 1
 			for id := range mockDMC.Devices {
 				if _, ok := devices[id]; !ok {
@@ -240,7 +240,7 @@ func Test_refreshDevices(t *testing.T) {
 			return nil, err
 		})
 		stateCall := 0
-		h.SetStateCallback(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
+		h.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
 			stateCall += 1
 			state, ok := deviceStates["a"]
 			if !ok {
@@ -294,7 +294,7 @@ func Test_refreshDevices(t *testing.T) {
 			},
 		}
 		syncCall := 0
-		h.SetSyncCallback(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
 			syncCall += 1
 			for id := range mockDMC.Devices {
 				if _, ok := devices[id]; !ok {
@@ -313,7 +313,7 @@ func Test_refreshDevices(t *testing.T) {
 			return []string{"a", "c"}, nil
 		})
 		stateCall := 0
-		h.SetStateCallback(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
+		h.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
 			stateCall += 1
 			state, ok := deviceStates["a"]
 			if !ok {
@@ -367,7 +367,7 @@ func Test_loop(t *testing.T) {
 	}
 	h := New(mockDMC, 0, time.Millisecond*100)
 	syncCall := 0
-	h.SetSyncCallback(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+	h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
 		syncCall += 1
 		return nil, err
 	})
