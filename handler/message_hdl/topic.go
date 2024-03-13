@@ -18,6 +18,7 @@ func matchTopic(topic, str string, tParts ...*string) bool {
 			return false
 		}
 		switch topic[i] {
+		case str[i+shift]:
 		case singleLvlWildcard:
 			pos := strings.IndexByte(str[i+shift:], slash)
 			if pos < 0 {
@@ -30,7 +31,6 @@ func matchTopic(topic, str string, tParts ...*string) bool {
 		case multiLvlWildcard:
 			*tParts[pCount] = str[i+shift:]
 			return true
-		case str[i+shift]:
 		default:
 			return false
 		}
