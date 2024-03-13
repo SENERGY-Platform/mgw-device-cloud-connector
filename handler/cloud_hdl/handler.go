@@ -16,12 +16,14 @@ import (
 )
 
 type Handler struct {
-	cloudClient  cloud_client.ClientItf
-	mqttClient   mqtt.Client
-	timeout      time.Duration
-	wrkSpacePath string
-	attrOrigin   string
-	data         data
+	cloudClient    cloud_client.ClientItf
+	mqttClient     mqtt.Client
+	timeout        time.Duration
+	wrkSpacePath   string
+	attrOrigin     string
+	data           data
+	connectFunc    func(lID string) error
+	disconnectFunc func(lID string) error
 }
 
 func New(cloudClient cloud_client.ClientItf, mqttClient mqtt.Client, timeout time.Duration, wrkSpacePath, attrOrigin string) *Handler {
@@ -32,6 +34,14 @@ func New(cloudClient cloud_client.ClientItf, mqttClient mqtt.Client, timeout tim
 		wrkSpacePath: wrkSpacePath,
 		attrOrigin:   attrOrigin,
 	}
+}
+
+func (h *Handler) SetConnectFunc(f func(deviceID string) error) {
+	h.connectFunc = f
+}
+
+func (h *Handler) SetDisconnectFunc(f func(deviceID string) error) {
+	h.disconnectFunc = f
 }
 
 func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
@@ -82,18 +92,13 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, changed, missing []string) ([]string, error) {
-	//for _, lID := range missing {
-	//	res := h.mqttClient.Unsubscribe("command/{device_id}/+")
-	//	var err error
-	//	if res.WaitTimeout(h.timeout) {
-	//		err = res.Error()
-	//	} else {
-	//		err = errors.New("timeout occurred, operation may still succeed")
-	//	}
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//}
+	if h.disconnectFunc != nil {
+		for _, lID := range missing {
+			if err := h.disconnectFunc(lID); err != nil {
+				util.Logger.Error(err)
+			}
+		}
+	}
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	hubExists := true
@@ -165,30 +170,25 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 	return failed, nil
 }
 
-//func (h *Handler) UpdateStates(_ context.Context, deviceStates map[string]string) ([]string, error) {
-//	var failed []string
-//	var err error
-//	for ldID, state := range deviceStates {
-//		if _, ok := h.data.DeviceIDMap[ldID]; ok {
-//			var res mqtt.Token
-//			switch state {
-//			case model.Online:
-//				res = h.mqttClient.Subscribe("command/{device_id}/+", 0, nil)
-//			case model.Offline, "":
-//				res = h.mqttClient.Unsubscribe("command/{device_id}/+")
-//			}
-//			if res.WaitTimeout(h.timeout) {
-//				err = res.Error()
-//			} else {
-//				err = errors.New("timeout occurred")
-//			}
-//			if err != nil {
-//				failed = append(failed, ldID)
-//			}
-//		}
-//	}
-//	return failed, nil
-//}
+func (h *Handler) UpdateStates(_ context.Context, deviceStates map[string]string) ([]string, error) {
+	if h.connectFunc != nil && h.disconnectFunc != nil {
+		var failed []string
+		var err error
+		for lID, state := range deviceStates {
+			switch state {
+			case model.Online:
+				err = h.connectFunc(lID)
+			case model.Offline, "":
+				err = h.disconnectFunc(lID)
+			}
+			if err != nil {
+				failed = append(failed, lID)
+			}
+		}
+		return failed, nil
+	}
+	return nil, nil
+}
 
 func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err error) {
 	rID, ok := h.data.DeviceIDMap[device.ID]
