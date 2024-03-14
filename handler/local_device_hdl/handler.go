@@ -1,4 +1,4 @@
-package device_hdl
+package local_device_hdl
 
 import (
 	"context"

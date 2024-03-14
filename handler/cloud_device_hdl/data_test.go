@@ -1,4 +1,4 @@
-package cloud_hdl
+package cloud_device_hdl
 
 import (
 	"os"
