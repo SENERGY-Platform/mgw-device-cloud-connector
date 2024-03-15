@@ -251,7 +251,7 @@ func Test_refreshDevices(t *testing.T) {
 			}
 			return nil, err
 		})
-		err := h.refreshDevices(context.Background())
+		err := h.RefreshDevices(context.Background())
 		if err != nil {
 			t.Error(err)
 		}
@@ -324,11 +324,11 @@ func Test_refreshDevices(t *testing.T) {
 			}
 			return []string{"a"}, nil
 		})
-		err := h.refreshDevices(context.Background())
+		err := h.RefreshDevices(context.Background())
 		if err != nil {
 			t.Error(err)
 		}
-		err = h.refreshDevices(context.Background())
+		err = h.RefreshDevices(context.Background())
 		if err != nil {
 			t.Error(err)
 		}
@@ -349,7 +349,7 @@ func Test_refreshDevices(t *testing.T) {
 		t.Cleanup(mockDMC.Reset)
 		t.Cleanup(hReset)
 		mockDMC.SetInternalErr()
-		err := h.refreshDevices(context.Background())
+		err := h.RefreshDevices(context.Background())
 		if err == nil {
 			t.Error(err)
 		}

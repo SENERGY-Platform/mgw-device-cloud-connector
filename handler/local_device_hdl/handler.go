@@ -96,7 +96,7 @@ func (h *Handler) run() {
 		case <-h.sChan:
 			return
 		case <-ticker.C:
-			err = h.refreshDevices(ctx)
+			err = h.RefreshDevices(ctx)
 			if err != nil {
 				util.Logger.Errorf("refreshing devices failed: %s", err)
 			}
@@ -104,7 +104,7 @@ func (h *Handler) run() {
 	}
 }
 
-func (h *Handler) refreshDevices(ctx context.Context) error {
+func (h *Handler) RefreshDevices(ctx context.Context) error {
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	dmDevices, err := h.dmClient.GetDevices(ctxWt)
