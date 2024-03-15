@@ -32,6 +32,7 @@ type MqttClientConfig struct {
 }
 
 type HttpClientConfig struct {
+	CloudBaseUrl string `json:"cloud_base_url" env_var:"CLOUD_BASE_URL"`
 	DmBaseUrl    string `json:"dm_base_url" env_var:"DM_BASE_URL"`
 	AuthBaseUrl  string `json:"auth_base_url" env_var:"AUTH_BASE_URL"`
 	Timeout      int64  `json:"timeout" env_var:"HTTP_TIMEOUT"`
@@ -46,6 +47,7 @@ type AuthConfig struct {
 
 type CloudHandlerConfig struct {
 	HubID           string `json:"hub_id" env_var:"CH_HUB_ID"`
+	DefaultHubName  string `json:"default_hub_name" env_var:"CH_DEFAULT_HUB_NAME"`
 	WrkSpcPath      string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
 	AttributeOrigin string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
 }
