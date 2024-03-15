@@ -9,7 +9,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	"github.com/SENERGY-Platform/models/go/models"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"os"
 	"path"
 	"time"
@@ -17,7 +16,6 @@ import (
 
 type Handler struct {
 	cloudClient    cloud_client.ClientItf
-	mqttClient     mqtt.Client
 	timeout        time.Duration
 	wrkSpacePath   string
 	attrOrigin     string
@@ -26,10 +24,9 @@ type Handler struct {
 	disconnectFunc func(lID string) error
 }
 
-func New(cloudClient cloud_client.ClientItf, mqttClient mqtt.Client, timeout time.Duration, wrkSpacePath, attrOrigin string) *Handler {
+func New(cloudClient cloud_client.ClientItf, timeout time.Duration, wrkSpacePath, attrOrigin string) *Handler {
 	return &Handler{
 		cloudClient:  cloudClient,
-		mqttClient:   mqttClient,
 		timeout:      timeout,
 		wrkSpacePath: wrkSpacePath,
 		attrOrigin:   attrOrigin,
