@@ -45,8 +45,9 @@ type AuthConfig struct {
 }
 
 type CloudHandlerConfig struct {
-	HubID      string `json:"hub_id" env_var:"HUB_ID"`
-	WrkSpcPath string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
+	HubID           string `json:"hub_id" env_var:"CH_HUB_ID"`
+	WrkSpcPath      string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
+	AttributeOrigin string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
 }
 
 type Config struct {
@@ -57,6 +58,7 @@ type Config struct {
 	Auth                 AuthConfig           `json:"auth" env_var:"AUTH_CONFIG"`
 	CloudHandler         CloudHandlerConfig   `json:"cloud_handler" env_var:"CLOUD_HANDLER_CONFIG"`
 	DeviceQueryInterval  int64                `json:"device_query_interval" env_var:"DEVICE_QUERY_INTERVAL"`
+	MGWDeploymentID      string               `json:"mgw_deployment_id" env_var:"MGW_DID"`
 }
 
 var defaultMqttClientConfig = MqttClientConfig{
@@ -83,7 +85,8 @@ func NewConfig(path string) (*Config, error) {
 			CloudTimeout: 30000000000,
 		},
 		CloudHandler: CloudHandlerConfig{
-			WrkSpcPath: "/opt/device-cloud-connector",
+			WrkSpcPath:      "/opt/device-cloud-connector",
+			AttributeOrigin: "device-cloud-connector",
 		},
 	}
 	err := sb_util.LoadConfig(path, &cfg, nil, nil, nil)
