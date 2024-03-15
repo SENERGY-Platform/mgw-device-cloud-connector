@@ -43,7 +43,7 @@ func Test_newDevice(t *testing.T) {
 
 func TestHandler_createOrUpdateDevice(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
-	h := New(mockCC, nil, 0, "", "test-origin")
+	h := New(mockCC, 0, "", "test-origin")
 	t.Run("create device", func(t *testing.T) {
 		t.Cleanup(mockCC.Reset)
 		mockCC.Devices = make(map[string]models.Device)
@@ -102,7 +102,7 @@ func TestHandler_createOrUpdateDevice(t *testing.T) {
 
 func TestHandler_updateOrCreateDevice(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
-	h := New(mockCC, nil, 0, "", "test-origin")
+	h := New(mockCC, 0, "", "test-origin")
 	t.Run("update device", func(t *testing.T) {
 		t.Cleanup(mockCC.Reset)
 		mockCC.Devices = map[string]models.Device{
@@ -186,7 +186,7 @@ func TestHandler_updateOrCreateDevice(t *testing.T) {
 
 func TestHandler_getDeviceIDMap(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
-	h := New(mockCC, nil, 0, "", "")
+	h := New(mockCC, 0, "", "")
 	t.Run("nil case", func(t *testing.T) {
 		t.Cleanup(mockCC.Reset)
 		deviceIDMap, err := h.getDeviceIDMap(context.Background(), nil, nil)
@@ -285,7 +285,7 @@ func TestHandler_getDeviceIDMap(t *testing.T) {
 
 func TestHandler_syncDevice(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
-	h := New(mockCC, nil, 0, "", "test-origin")
+	h := New(mockCC, 0, "", "test-origin")
 	hReset := func() {
 		h.data.DeviceIDMap = make(map[string]string)
 	}
@@ -343,7 +343,7 @@ func TestHandler_syncDevice(t *testing.T) {
 
 func TestHandler_Sync(t *testing.T) {
 	mockCC := &cloud_client.Mock{}
-	h := New(mockCC, nil, 0, t.TempDir(), "test-origin")
+	h := New(mockCC, 0, t.TempDir(), "test-origin")
 	hReset := func() {
 		h.data = data{}
 		h.attrOrigin = ""
