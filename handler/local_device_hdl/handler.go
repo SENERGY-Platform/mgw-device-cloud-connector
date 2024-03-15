@@ -98,7 +98,7 @@ func (h *Handler) run() {
 		case <-ticker.C:
 			err = h.RefreshDevices(ctx)
 			if err != nil {
-				util.Logger.Errorf("refreshing devices failed: %s", err)
+				util.Logger.Errorf("refreshing local devices failed: %s", err)
 			}
 		}
 	}
