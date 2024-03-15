@@ -23,7 +23,6 @@ import (
 
 type MqttClientConfig struct {
 	Server            string `json:"server" env_var:"MQTT_SERVER"`
-	CleanSession      bool   `json:"clean_session" env_var:"MQTT_CLEAN_SESSION"`
 	KeepAlive         int64  `json:"keep_alive" env_var:"MQTT_KEEP_ALIVE"`
 	PingTimeout       int64  `json:"ping_timeout" env_var:"MQTT_PING_TIMEOUT"`
 	ConnectTimeout    int64  `json:"connect_timeout" env_var:"MQTT_CONNECT_TIMEOUT"`
