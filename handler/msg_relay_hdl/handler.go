@@ -1,4 +1,4 @@
-package message_hdl
+package msg_relay_hdl
 
 import (
 	"errors"
