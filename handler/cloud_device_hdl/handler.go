@@ -11,6 +11,7 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 	"os"
 	"path"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,8 @@ type Handler struct {
 	data           data
 	connectFunc    func(lID string) error
 	disconnectFunc func(lID string) error
+	hubSyncFunc    func(oldID, newID string) error
+	mu             sync.RWMutex
 }
 
 func New(cloudClient cloud_client.ClientItf, timeout time.Duration, wrkSpacePath, attrOrigin string) *Handler {
@@ -39,6 +42,16 @@ func (h *Handler) SetConnectFunc(f func(deviceID string) error) {
 
 func (h *Handler) SetDisconnectFunc(f func(deviceID string) error) {
 	h.disconnectFunc = f
+}
+
+func (h *Handler) SetHubSyncFunc(f func(oldID, newID string) error) {
+	h.hubSyncFunc = f
+}
+
+func (h *Handler) GetHubID() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.data.HubID
 }
 
 func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
@@ -151,15 +164,27 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 	if hubExists {
 		hb.DeviceLocalIds = hubLocalIDs
 		hb.DeviceIds = nil
-		err = h.cloudClient.UpdateHub(ctxWt2, hb)
+		if err = h.cloudClient.UpdateHub(ctxWt2, hb); err != nil {
+			util.Logger.Error(err)
+		}
 	} else {
-		h.data.HubID, err = h.cloudClient.CreateHub(ctxWt2, models.Hub{
+		oldHubID := h.data.HubID
+		newHubID, err := h.cloudClient.CreateHub(ctxWt2, models.Hub{
 			Name:           h.data.DefaultHubName,
 			DeviceLocalIds: hubLocalIDs,
 		})
-	}
-	if err != nil {
-		util.Logger.Error(err)
+		if err != nil {
+			util.Logger.Error(err)
+		} else {
+			h.mu.Lock()
+			h.data.HubID = newHubID
+			h.mu.Unlock()
+			if h.hubSyncFunc != nil {
+				if err = h.hubSyncFunc(oldHubID, newHubID); err != nil {
+					fmt.Println(err)
+				}
+			}
+		}
 	}
 	if err = writeData(h.wrkSpacePath, h.data); err != nil {
 		util.Logger.Error(err)
