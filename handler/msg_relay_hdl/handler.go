@@ -9,14 +9,14 @@ import (
 
 type Handler struct {
 	messages   chan handler.Message
-	handleFunc func(m handler.Message) (topic string, data []byte, err error)
+	handleFunc handler.MessageHandler
 	sendFunc   func(topic string, data []byte) error
 	started    bool
 	closed     bool
 	mu         sync.RWMutex
 }
 
-func New(buffer int, handleFunc func(m handler.Message) (topic string, data []byte, err error), sendFunc func(topic string, data []byte) error) *Handler {
+func New(buffer int, handleFunc handler.MessageHandler, sendFunc func(topic string, data []byte) error) *Handler {
 	return &Handler{
 		messages:   make(chan handler.Message, buffer),
 		handleFunc: handleFunc,
