@@ -1,6 +1,9 @@
 package message_hdl
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	singleLvlWildcard byte = '+'
@@ -39,4 +42,8 @@ func parseTopic(topic, str string, tParts ...*string) bool {
 		return false
 	}
 	return true
+}
+
+func newParseErr(t string) error {
+	return fmt.Errorf("parsing topic '%s' failed", t)
 }
