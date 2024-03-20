@@ -73,18 +73,18 @@ func main() {
 
 	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.DmBaseUrl)
 
-	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.Timeout), time.Duration(config.DeviceQueryInterval))
+	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.Timeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
 
 	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.AuthBaseUrl, config.Auth.User, config.Auth.Password.String(), config.Auth.ClientID))
 
-	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), config.CloudHandler.WrkSpcPath, config.CloudHandler.AttributeOrigin)
+	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
 	localDeviceHdl.SetSyncFunc(cloudDeviceHdl.Sync)
 	localDeviceHdl.SetStateFunc(cloudDeviceHdl.UpdateStates)
 
 	chCtx, cf := context.WithCancel(context.Background())
 	defer cf()
-	if err = cloudDeviceHdl.Init(chCtx, config.CloudHandler.HubID, config.CloudHandler.DefaultHubName); err != nil {
+	if err = cloudDeviceHdl.Init(chCtx, config.CloudDeviceHandler.HubID, config.CloudDeviceHandler.DefaultHubName); err != nil {
 		util.Logger.Error(err)
 		ec = 1
 		return
