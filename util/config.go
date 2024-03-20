@@ -45,22 +45,27 @@ type AuthConfig struct {
 	ClientID string               `json:"client_id" env_var:"CLIENT_ID"`
 }
 
-type CloudHandlerConfig struct {
-	HubID           string `json:"hub_id" env_var:"CH_HUB_ID"`
-	DefaultHubName  string `json:"default_hub_name" env_var:"CH_DEFAULT_HUB_NAME"`
-	WrkSpcPath      string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
-	AttributeOrigin string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
+type CloudDeviceHandlerConfig struct {
+	HubID           string `json:"hub_id" env_var:"CDH_HUB_ID"`
+	DefaultHubName  string `json:"default_hub_name" env_var:"CDH_DEFAULT_HUB_NAME"`
+	WrkSpcPath      string `json:"wrk_spc_path" env_var:"CDH_WRK_SPC_PATH"`
+	AttributeOrigin string `json:"attribute_origin" env_var:"CDH_ATTRIBUTE_ORIGIN"`
+}
+
+type LocalDeviceHandlerConfig struct {
+	IDPrefix      string `json:"id_prefix" env_var:"LDH_ID_PREFIX"`
+	QueryInterval int64  `json:"query_interval" env_var:"LDH_QUERY_INTERVAL"`
 }
 
 type Config struct {
-	Logger               sb_util.LoggerConfig `json:"logger" env_var:"LOGGER_CONFIG"`
-	UpstreamMqttClient   MqttClientConfig     `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT_CONFIG"`
-	DownstreamMqttClient MqttClientConfig     `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT_CONFIG"`
-	HttpClient           HttpClientConfig     `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
-	Auth                 AuthConfig           `json:"auth" env_var:"AUTH_CONFIG"`
-	CloudHandler         CloudHandlerConfig   `json:"cloud_handler" env_var:"CLOUD_HANDLER_CONFIG"`
-	DeviceQueryInterval  int64                `json:"device_query_interval" env_var:"DEVICE_QUERY_INTERVAL"`
-	MGWDeploymentID      string               `json:"mgw_deployment_id" env_var:"MGW_DID"`
+	Logger               sb_util.LoggerConfig     `json:"logger" env_var:"LOGGER_CONFIG"`
+	UpstreamMqttClient   MqttClientConfig         `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT_CONFIG"`
+	DownstreamMqttClient MqttClientConfig         `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT_CONFIG"`
+	HttpClient           HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
+	Auth                 AuthConfig               `json:"auth" env_var:"AUTH_CONFIG"`
+	CloudDeviceHandler   CloudDeviceHandlerConfig `json:"cloud_device_handler" env_var:"CLOUD_DEVICE_HANDLER_CONFIG"`
+	LocalDeviceHandler   LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
+	MGWDeploymentID      string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
 }
 
 var defaultMqttClientConfig = MqttClientConfig{
@@ -86,7 +91,7 @@ func NewConfig(path string) (*Config, error) {
 			Timeout:      10000000000,
 			CloudTimeout: 30000000000,
 		},
-		CloudHandler: CloudHandlerConfig{
+		CloudDeviceHandler: CloudDeviceHandlerConfig{
 			WrkSpcPath:      "/opt/device-cloud-connector",
 			AttributeOrigin: "device-cloud-connector",
 		},
