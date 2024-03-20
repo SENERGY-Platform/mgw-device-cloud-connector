@@ -3,6 +3,7 @@ package msg_relay_hdl
 import (
 	"errors"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"sync"
 )
@@ -54,7 +55,7 @@ func (h *Handler) Stop() {
 func (h *Handler) run() {
 	for message := range h.messages {
 		topic, data, err := h.handleFunc(message)
-		if err != nil {
+		if err != nil && err != model.NoMsgErr {
 			util.Logger.Error(err)
 		} else {
 			if err = h.sendFunc(topic, data); err != nil {
