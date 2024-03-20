@@ -1,4 +1,4 @@
-package util
+package topic
 
 const (
 	CloudDeviceCmdSub          = "command/+/+"       // command/{local_device_id}/+
@@ -12,7 +12,7 @@ const (
 )
 
 const (
-	LocalDeviceEventSub        = "event/#"
+	LocalDeviceEventSub        = "event/+/+" // event/{local_device_id}/{service_id}
 	LocalDeviceCmdResponseSub  = "response/#"
 	LocalProcessesStateSub     = "processes/state/#"
 	LocalDeviceConnectorErrSub = "error/client"
