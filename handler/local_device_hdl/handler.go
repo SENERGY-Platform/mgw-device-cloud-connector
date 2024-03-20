@@ -21,8 +21,9 @@ type Handler struct {
 	dmClient      dm_client.ClientItf
 	timeout       time.Duration
 	queryInterval time.Duration
-	devices       map[string]device
+	idPrefix      string
 	sChan         chan bool
+	devices       map[string]device
 	running       bool
 	loopMu        sync.RWMutex
 	mu            sync.RWMutex
@@ -30,11 +31,12 @@ type Handler struct {
 	stateFunc     func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)
 }
 
-func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration) *Handler {
+func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration, idPrefix string) *Handler {
 	return &Handler{
 		dmClient:      dmClient,
 		timeout:       timeout,
 		queryInterval: queryInterval,
+		idPrefix:      idPrefix,
 		sChan:         make(chan bool, 1),
 	}
 }
@@ -113,7 +115,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	}
 	devices := make(map[string]device)
 	for id, dmDevice := range dmDevices {
-		devices[id] = newDevice(id, dmDevice)
+		devices[h.idPrefix+id] = newDevice(h.idPrefix+id, dmDevice)
 	}
 	changedIDs, missingIDs, deviceMap, deviceStates := h.diffDevices(devices)
 	if h.syncFunc != nil {

@@ -44,7 +44,7 @@ func Test_newDevice(t *testing.T) {
 }
 
 func Test_diffDevices(t *testing.T) {
-	h := New(nil, 0, 0)
+	h := New(nil, 0, 0, "")
 	hReset := func() {
 		h.devices = nil
 	}
@@ -196,7 +196,7 @@ func Test_diffDevices(t *testing.T) {
 
 func Test_refreshDevices(t *testing.T) {
 	mockDMC := &dm_client.Mock{}
-	h := New(mockDMC, 0, 0)
+	h := New(mockDMC, 0, 0, "")
 	hReset := func() {
 		h.devices = nil
 	}
@@ -356,6 +356,84 @@ func Test_refreshDevices(t *testing.T) {
 	})
 }
 
+func Test_refreshDevicesWithPrefix(t *testing.T) {
+	mockDMC := &dm_client.Mock{}
+	h := New(mockDMC, 0, 0, "prefix-")
+	hReset := func() {
+		h.devices = nil
+	}
+	t.Run("new, changed and missing device", func(t *testing.T) {
+		t.Cleanup(mockDMC.Reset)
+		t.Cleanup(hReset)
+		h.devices = map[string]device{
+			"prefix-a": newDevice("prefix-a", dm_client.Device{
+				Name:  "Test Device",
+				State: "offline",
+			}),
+			"prefix-b": newDevice("prefix-b", dm_client.Device{
+				Name:  "Test Device B",
+				State: "offline",
+			}),
+		}
+		mockDMC.Devices = map[string]dm_client.Device{
+			"a": {
+				Name:  "Test Device A",
+				State: "online",
+			},
+			"c": {
+				Name:  "Test Device C",
+				State: "",
+			},
+		}
+		syncCall := 0
+		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+			syncCall += 1
+			for id := range mockDMC.Devices {
+				if _, ok := devices["prefix-"+id]; !ok {
+					t.Errorf("id '%s' not in map", id)
+				}
+			}
+			if !inSlice("prefix-a", changedIDs) {
+				t.Error("missing id")
+			}
+			if !inSlice("prefix-b", missingIDs) {
+				t.Error("missing id")
+			}
+			return nil, err
+		})
+		stateCall := 0
+		h.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
+			stateCall += 1
+			state, ok := deviceStates["prefix-a"]
+			if !ok {
+				t.Error("id not in map")
+			}
+			if state != "online" {
+				t.Error("state mismatch")
+			}
+			return nil, err
+		})
+		err := h.RefreshDevices(context.Background())
+		if err != nil {
+			t.Error(err)
+		}
+		if syncCall != 1 {
+			t.Error("illegal number of sync calls")
+		}
+		if stateCall != 1 {
+			t.Error("illegal number of state change calls")
+		}
+		if len(h.devices) > 2 {
+			t.Error("illegal number of devices")
+		}
+		for id := range mockDMC.Devices {
+			if _, ok := h.devices["prefix-"+id]; !ok {
+				t.Errorf("id '%s' not in map", id)
+			}
+		}
+	})
+}
+
 func Test_loop(t *testing.T) {
 	mockDMC := &dm_client.Mock{
 		Devices: map[string]dm_client.Device{
@@ -365,7 +443,7 @@ func Test_loop(t *testing.T) {
 			},
 		},
 	}
-	h := New(mockDMC, 0, time.Millisecond*100)
+	h := New(mockDMC, 0, time.Millisecond*100, "")
 	syncCall := 0
 	h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
 		syncCall += 1
