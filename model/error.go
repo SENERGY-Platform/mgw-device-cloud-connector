@@ -2,4 +2,4 @@ package model
 
 import "errors"
 
-var DropMsgErr = errors.New("")
+var NoMsgErr = errors.New("")
