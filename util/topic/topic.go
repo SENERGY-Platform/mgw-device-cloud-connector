@@ -12,8 +12,8 @@ const (
 )
 
 const (
-	LocalDeviceEventSub        = "event/+/+" // event/{local_device_id}/{service_id}
-	LocalDeviceCmdResponseSub  = "response/#"
+	LocalDeviceEventSub        = "event/+/+"    // event/{local_device_id}/{service_id}
+	LocalDeviceCmdResponseSub  = "response/+/+" // response/{local_device_id}/{service_id}
 	LocalProcessesStateSub     = "processes/state/#"
 	LocalDeviceConnectorErrSub = "error/client"
 	LocalDeviceErrSub          = "error/device/+"
