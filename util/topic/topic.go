@@ -1,7 +1,7 @@
 package topic
 
 const (
-	CloudDeviceCmdSub          = "command/+/+"       // command/{local_device_id}/+
+	CloudDeviceCmdSub          = "command/+/+"       // command/{local_device_id}/{service_id}
 	CloudProcessesCmdSub       = "processes/+/cmd/#" // processes/{hub_id}/cmd/#
 	CloudDeviceEventPub        = "event"             // event/{local_device_id}/{service_id}
 	CloudDeviceCmdResponsePub  = "response"          // response/{local_device_id}/{service_id}
@@ -18,6 +18,6 @@ const (
 	LocalDeviceConnectorErrSub = "error/client"
 	LocalDeviceErrSub          = "error/device/+"
 	LocalDeviceCmdErrSub       = "error/command/+"
-	LocalDeviceCmdPub          = "command"
+	LocalDeviceCmdPub          = "command" // command/{local_device_id}/{service_id}
 	LocalProcessesCmdPub       = "processes/cmd"
 )
