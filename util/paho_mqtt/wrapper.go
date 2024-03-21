@@ -6,34 +6,44 @@ import (
 	"time"
 )
 
-func Subscribe(c mqtt.Client, timeout time.Duration, topic string, qos byte, callback mqtt.MessageHandler) error {
+const (
+	relayMsgErr  = "relaying message failed: topic=%s err=%s"
+	subscribeErr = "subscribing to '%s' failed: %s"
+)
+
+type wrapper struct {
+	qos     byte
+	timeout time.Duration
+}
+
+func (w *wrapper) Subscribe(c mqtt.Client, topic string, callback mqtt.MessageHandler) error {
 	if !c.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := c.Subscribe(topic, qos, callback)
-	if !t.WaitTimeout(timeout) {
+	t := c.Subscribe(topic, w.qos, callback)
+	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
 	return t.Error()
 }
 
-func Unsubscribe(c mqtt.Client, timeout time.Duration, topics ...string) error {
+func (w *wrapper) Unsubscribe(c mqtt.Client, topics ...string) error {
 	if !c.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
 	t := c.Unsubscribe(topics...)
-	if !t.WaitTimeout(timeout) {
+	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
 	return t.Error()
 }
 
-func Publish(c mqtt.Client, timeout time.Duration, topic string, qos byte, retained bool, payload any) error {
+func (w *wrapper) Publish(c mqtt.Client, topic string, retained bool, payload any) error {
 	if !c.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := c.Publish(topic, qos, retained, payload)
-	if !t.WaitTimeout(timeout) {
+	t := c.Publish(topic, w.qos, retained, payload)
+	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
 	return t.Error()
