@@ -16,15 +16,13 @@ import (
 )
 
 type Handler struct {
-	cloudClient    cloud_client.ClientItf
-	timeout        time.Duration
-	wrkSpacePath   string
-	attrOrigin     string
-	data           data
-	connectFunc    func(lID string) error
-	disconnectFunc func(lID string) error
-	hubSyncFunc    func(oldID, newID string) error
-	mu             sync.RWMutex
+	cloudClient  cloud_client.ClientItf
+	timeout      time.Duration
+	wrkSpacePath string
+	attrOrigin   string
+	data         data
+	hubSyncFunc  func(oldID, newID string) error
+	mu           sync.RWMutex
 }
 
 func New(cloudClient cloud_client.ClientItf, timeout time.Duration, wrkSpacePath, attrOrigin string) *Handler {
@@ -34,14 +32,6 @@ func New(cloudClient cloud_client.ClientItf, timeout time.Duration, wrkSpacePath
 		wrkSpacePath: wrkSpacePath,
 		attrOrigin:   attrOrigin,
 	}
-}
-
-func (h *Handler) SetConnectFunc(f func(deviceID string) error) {
-	h.connectFunc = f
-}
-
-func (h *Handler) SetDisconnectFunc(f func(deviceID string) error) {
-	h.disconnectFunc = f
 }
 
 func (h *Handler) SetHubSyncFunc(f func(oldID, newID string) error) {
@@ -101,14 +91,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	return writeData(h.wrkSpacePath, h.data)
 }
 
-func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, changed, missing []string) ([]string, error) {
-	if h.disconnectFunc != nil {
-		for _, lID := range missing {
-			if err := h.disconnectFunc(lID); err != nil {
-				util.Logger.Error(err)
-			}
-		}
-	}
+func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, changed []string) ([]string, error) {
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	hubExists := true
@@ -190,26 +173,6 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 		util.Logger.Error(err)
 	}
 	return failed, nil
-}
-
-func (h *Handler) UpdateStates(_ context.Context, deviceStates map[string]string) ([]string, error) {
-	if h.connectFunc != nil && h.disconnectFunc != nil {
-		var failed []string
-		var err error
-		for lID, state := range deviceStates {
-			switch state {
-			case model.Online:
-				err = h.connectFunc(lID)
-			case model.Offline, "":
-				err = h.disconnectFunc(lID)
-			}
-			if err != nil {
-				failed = append(failed, lID)
-			}
-		}
-		return failed, nil
-	}
-	return nil, nil
 }
 
 func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err error) {

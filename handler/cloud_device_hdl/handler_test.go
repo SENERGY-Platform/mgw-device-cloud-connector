@@ -368,7 +368,7 @@ func TestHandler_Sync(t *testing.T) {
 			DefaultHubName: "Test Hub",
 			DeviceIDMap:    make(map[string]string),
 		}
-		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		failed, err := h.Sync(context.Background(), devices, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -425,7 +425,7 @@ func TestHandler_Sync(t *testing.T) {
 			HubID:       "test",
 			DeviceIDMap: make(map[string]string),
 		}
-		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		failed, err := h.Sync(context.Background(), devices, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -476,7 +476,7 @@ func TestHandler_Sync(t *testing.T) {
 		mockCC.DeviceIDMap = map[string]string{"a": "1", "b": "2"}
 		mockCC.Hubs = make(map[string]models.Hub)
 		h.data.DeviceIDMap = make(map[string]string)
-		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		failed, err := h.Sync(context.Background(), devices, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -512,7 +512,7 @@ func TestHandler_Sync(t *testing.T) {
 			HubID:       "test",
 			DeviceIDMap: make(map[string]string),
 		}
-		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		failed, err := h.Sync(context.Background(), devices, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -567,7 +567,7 @@ func TestHandler_Sync(t *testing.T) {
 			HubID:       "test",
 			DeviceIDMap: make(map[string]string),
 		}
-		failed, err := h.Sync(context.Background(), devices, []string{"a"}, nil)
+		failed, err := h.Sync(context.Background(), devices, []string{"a"})
 		if err != nil {
 			t.Error(err)
 		}
@@ -619,7 +619,7 @@ func TestHandler_Sync(t *testing.T) {
 		util.InitLogger(sb_util.LoggerConfig{Terminal: true})
 		mockCC.SetNotFoundErr()
 		h.data.HubID = "test"
-		failed, err := h.Sync(context.Background(), devices, nil, nil)
+		failed, err := h.Sync(context.Background(), devices, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -632,7 +632,7 @@ func TestHandler_Sync(t *testing.T) {
 		t.Cleanup(hReset)
 		mockCC.SetInternalErr()
 		h.data.HubID = "test"
-		_, err := h.Sync(context.Background(), devices, nil, nil)
+		_, err := h.Sync(context.Background(), devices, nil)
 		if err == nil {
 			t.Error(err)
 		}
