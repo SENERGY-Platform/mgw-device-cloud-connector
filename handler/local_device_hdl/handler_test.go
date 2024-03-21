@@ -224,7 +224,7 @@ func Test_refreshDevices(t *testing.T) {
 			},
 		}
 		syncCall := 0
-		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs []string) (failed []string, err error) {
 			syncCall += 1
 			for id := range mockDMC.Devices {
 				if _, ok := devices[id]; !ok {
@@ -234,10 +234,15 @@ func Test_refreshDevices(t *testing.T) {
 			if !inSlice("a", changedIDs) {
 				t.Error("missing id")
 			}
+			return nil, err
+		})
+		missingCall := 0
+		h.SetMissingFunc(func(_ context.Context, missingIDs []string) error {
+			missingCall += 1
 			if !inSlice("b", missingIDs) {
 				t.Error("missing id")
 			}
-			return nil, err
+			return nil
 		})
 		stateCall := 0
 		h.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
@@ -257,6 +262,9 @@ func Test_refreshDevices(t *testing.T) {
 		}
 		if syncCall != 1 {
 			t.Error("illegal number of sync calls")
+		}
+		if missingCall != 1 {
+			t.Error("illegal number of missing calls")
 		}
 		if stateCall != 1 {
 			t.Error("illegal number of state change calls")
@@ -294,7 +302,7 @@ func Test_refreshDevices(t *testing.T) {
 			},
 		}
 		syncCall := 0
-		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs []string) (failed []string, err error) {
 			syncCall += 1
 			for id := range mockDMC.Devices {
 				if _, ok := devices[id]; !ok {
@@ -304,13 +312,15 @@ func Test_refreshDevices(t *testing.T) {
 			if !inSlice("a", changedIDs) {
 				t.Error("missing id")
 			}
-			if syncCall == 1 && !inSlice("b", missingIDs) {
+			return []string{"a", "c"}, nil
+		})
+		missingCall := 0
+		h.SetMissingFunc(func(_ context.Context, missingIDs []string) error {
+			missingCall += 1
+			if !inSlice("b", missingIDs) {
 				t.Error("missing id")
 			}
-			if syncCall == 2 && len(missingIDs) > 0 {
-				t.Error("illegal number of ids")
-			}
-			return []string{"a", "c"}, nil
+			return nil
 		})
 		stateCall := 0
 		h.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
@@ -334,6 +344,9 @@ func Test_refreshDevices(t *testing.T) {
 		}
 		if syncCall != 2 {
 			t.Error("illegal number of sync calls")
+		}
+		if missingCall != 1 {
+			t.Error("illegal number of missing calls")
 		}
 		if stateCall != 2 {
 			t.Error("illegal number of state change calls")
@@ -386,7 +399,7 @@ func Test_refreshDevicesWithPrefix(t *testing.T) {
 			},
 		}
 		syncCall := 0
-		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+		h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs []string) (failed []string, err error) {
 			syncCall += 1
 			for id := range mockDMC.Devices {
 				if _, ok := devices["prefix-"+id]; !ok {
@@ -396,10 +409,16 @@ func Test_refreshDevicesWithPrefix(t *testing.T) {
 			if !inSlice("prefix-a", changedIDs) {
 				t.Error("missing id")
 			}
+
+			return nil, err
+		})
+		missingCall := 0
+		h.SetMissingFunc(func(_ context.Context, missingIDs []string) error {
+			missingCall += 1
 			if !inSlice("prefix-b", missingIDs) {
 				t.Error("missing id")
 			}
-			return nil, err
+			return nil
 		})
 		stateCall := 0
 		h.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
@@ -419,6 +438,9 @@ func Test_refreshDevicesWithPrefix(t *testing.T) {
 		}
 		if syncCall != 1 {
 			t.Error("illegal number of sync calls")
+		}
+		if missingCall != 1 {
+			t.Error("illegal number of missing calls")
 		}
 		if stateCall != 1 {
 			t.Error("illegal number of state change calls")
@@ -445,7 +467,7 @@ func Test_loop(t *testing.T) {
 	}
 	h := New(mockDMC, 0, time.Millisecond*100, "")
 	syncCall := 0
-	h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs, missingIDs []string) (failed []string, err error) {
+	h.SetSyncFunc(func(_ context.Context, devices map[string]model.Device, changedIDs []string) (failed []string, err error) {
 		syncCall += 1
 		return nil, err
 	})
