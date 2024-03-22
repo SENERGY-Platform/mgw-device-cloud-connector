@@ -12,14 +12,14 @@ type Handler struct {
 	localDeviceHdl          handler.LocalDeviceHandler
 	deviceCmdMsgRelayHdl    handler.MessageRelayHandler
 	processesCmdMsgRelayHdl handler.MessageRelayHandler
+	qos                     byte
 }
 
-func New(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler, deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl handler.MessageRelayHandler) *Handler {
+func New(qos byte, cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler) *Handler {
 	return &Handler{
-		cloudDeviceHdl:          cloudDeviceHdl,
-		localDeviceHdl:          localDeviceHdl,
-		deviceCmdMsgRelayHdl:    deviceCmdMsgRelayHdl,
-		processesCmdMsgRelayHdl: processesCmdMsgRelayHdl,
+		qos:            qos,
+		cloudDeviceHdl: cloudDeviceHdl,
+		localDeviceHdl: localDeviceHdl,
 	}
 }
 
@@ -32,7 +32,7 @@ func (h *Handler) HandleSubscriptions() {
 	for id, device := range devices {
 		if device.State == model.Online {
 			t := "command" + id + "/+"
-			err := h.client.Subscribe(t, func(m handler.Message) {
+			err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 					util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 				}
@@ -44,7 +44,7 @@ func (h *Handler) HandleSubscriptions() {
 	}
 	if hubID := h.cloudDeviceHdl.GetHubID(); hubID != "" {
 		t := "processes/" + hubID + "/cmd/#"
-		err := h.client.Subscribe(t, func(m handler.Message) {
+		err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
 			if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 				util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 			}
@@ -70,7 +70,7 @@ func (h *Handler) HandleDeviceStates(deviceStates map[string]string) (failed []s
 		t := "command" + id + "/+"
 		switch state {
 		case model.Online:
-			err = h.client.Subscribe(t, func(m handler.Message) {
+			err = h.client.Subscribe(t, h.qos, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 					util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 				}
@@ -92,7 +92,7 @@ func (h *Handler) HandleDeviceStates(deviceStates map[string]string) (failed []s
 
 func (h *Handler) HandleHubIDChange(oldID, newID string) error {
 	t := "processes/" + newID + "/cmd/#"
-	err := h.client.Subscribe(t, func(m handler.Message) {
+	err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 		}
