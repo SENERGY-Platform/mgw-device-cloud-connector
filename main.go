@@ -63,14 +63,6 @@ func main() {
 
 	paho_mqtt.SetLogger()
 
-	localMqttClientOpt := mqtt.NewClientOptions()
-	paho_mqtt.SetClientOptions(localMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.UpstreamMqttClient, nil, nil)
-	localMqttClient := mqtt.NewClient(localMqttClientOpt)
-
-	cloudMqttClientOpt := mqtt.NewClientOptions()
-	paho_mqtt.SetClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.UpstreamMqttClient, &config.Auth, &tls.Config{InsecureSkipVerify: true})
-	cloudMqttClient := mqtt.NewClient(cloudMqttClientOpt)
-
 	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.DmBaseUrl)
 
 	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.Timeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
@@ -80,7 +72,14 @@ func main() {
 	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
 	localDeviceHdl.SetSyncFunc(cloudDeviceHdl.Sync)
-	localDeviceHdl.SetStateFunc(cloudDeviceHdl.UpdateStates)
+
+	localMqttClientOpt := mqtt.NewClientOptions()
+	paho_mqtt.SetClientOptions(localMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.UpstreamMqttClient, nil, nil)
+	localMqttClient := mqtt.NewClient(localMqttClientOpt)
+
+	cloudMqttClientOpt := mqtt.NewClientOptions()
+	paho_mqtt.SetClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.UpstreamMqttClient, &config.Auth, &tls.Config{InsecureSkipVerify: true})
+	cloudMqttClient := mqtt.NewClient(cloudMqttClientOpt)
 
 	chCtx, cf := context.WithCancel(context.Background())
 	defer cf()
