@@ -96,7 +96,10 @@ func NewConfig(path string) (*Config, error) {
 		},
 		CloudDeviceHandler: CloudDeviceHandlerConfig{
 			WrkSpcPath:      "/opt/device-cloud-connector",
-			AttributeOrigin: "device-cloud-connector",
+			AttributeOrigin: "dcc",
+		},
+		LocalDeviceHandler: LocalDeviceHandlerConfig{
+			QueryInterval: 5000000000, // 5s
 		},
 		MessageRelayBuffer: 5000,
 	}
