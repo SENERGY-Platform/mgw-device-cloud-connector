@@ -2,6 +2,7 @@ package paho_mqtt
 
 import (
 	"errors"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/eclipse/paho.mqtt.golang"
 	"time"
 )
@@ -20,22 +21,24 @@ func NewWrapper(client mqtt.Client, qos byte, timeout time.Duration) *Wrapper {
 	}
 }
 
-func (w *Wrapper) Subscribe(topic string, callback mqtt.MessageHandler) error {
+func (w *Wrapper) Subscribe(topic string, msgHandler func(m handler.Message)) error {
 	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := w.client.Subscribe(topic, w.qos, callback)
+	t := w.client.Subscribe(topic, w.qos, func(_ mqtt.Client, message mqtt.Message) {
+		msgHandler(message)
+	})
 	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
 	return t.Error()
 }
 
-func (w *Wrapper) Unsubscribe(topics ...string) error {
+func (w *Wrapper) Unsubscribe(topic string) error {
 	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := w.client.Unsubscribe(topics...)
+	t := w.client.Unsubscribe(topic)
 	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
