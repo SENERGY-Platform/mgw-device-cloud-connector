@@ -91,3 +91,20 @@ func (h *CloudHandler) HandleDeviceStates(deviceStates map[string]string) (faile
 	}
 	return failed, nil
 }
+
+func (h *CloudHandler) HandleHubIDChange(oldID, newID string) error {
+	t := "processes/" + newID + "/cmd/#"
+	err := h.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
+		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
+			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
+		}
+	})
+	if err != nil {
+		util.Logger.Errorf(subscribeErr, t, err)
+	}
+	t = "processes/" + oldID + "/cmd/#"
+	if err = h.Unsubscribe(t); err != nil {
+		util.Logger.Errorf(unsubscribeErr, t, err)
+	}
+	return nil
+}
