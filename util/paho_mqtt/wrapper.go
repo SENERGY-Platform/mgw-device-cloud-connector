@@ -6,12 +6,6 @@ import (
 	"time"
 )
 
-const (
-	relayMsgErr    = "relaying message failed: topic=%s err=%s"
-	subscribeErr   = "subscribing to '%s' failed: %s"
-	unsubscribeErr = "unsubscribing from '%s' failed: %s"
-)
-
 type Wrapper struct {
 	client  mqtt.Client
 	qos     byte
