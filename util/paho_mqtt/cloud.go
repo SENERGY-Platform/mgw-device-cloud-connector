@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type UpstreamHandler struct {
+type CloudHandler struct {
 	wrapper
 	cloudDeviceHdl          handler.CloudDeviceHandler
 	localDeviceHdl          handler.LocalDeviceHandler
@@ -16,8 +16,8 @@ type UpstreamHandler struct {
 	processesCmdMsgRelayHdl handler.MessageRelayHandler
 }
 
-func NewUpstreamHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler, deviceCmdMsgRelayHdl handler.MessageRelayHandler, processesCmdMsgRelayHdl handler.MessageRelayHandler, qos byte, timeout time.Duration) *UpstreamHandler {
-	return &UpstreamHandler{
+func NewCloudHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler, deviceCmdMsgRelayHdl handler.MessageRelayHandler, processesCmdMsgRelayHdl handler.MessageRelayHandler, qos byte, timeout time.Duration) *CloudHandler {
+	return &CloudHandler{
 		wrapper: wrapper{
 			qos:     qos,
 			timeout: timeout,
@@ -29,7 +29,7 @@ func NewUpstreamHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl ha
 	}
 }
 
-func (h *UpstreamHandler) HandleSubscriptions(client mqtt.Client) {
+func (h *CloudHandler) HandleSubscriptions(client mqtt.Client) {
 	devices := h.localDeviceHdl.GetDevices()
 	for id, device := range devices {
 		if device.State == model.Online {
@@ -57,7 +57,7 @@ func (h *UpstreamHandler) HandleSubscriptions(client mqtt.Client) {
 	}
 }
 
-func (h *UpstreamHandler) HandleMissingDevices(client mqtt.Client, missing []string) error {
+func (h *CloudHandler) HandleMissingDevices(client mqtt.Client, missing []string) error {
 	for _, id := range missing {
 		t := "command" + id + "/+"
 		if err := h.Unsubscribe(client, t); err != nil {
@@ -67,7 +67,7 @@ func (h *UpstreamHandler) HandleMissingDevices(client mqtt.Client, missing []str
 	return nil
 }
 
-func (h *UpstreamHandler) HandleDeviceStates(client mqtt.Client, deviceStates map[string]string) (failed []string, err error) {
+func (h *CloudHandler) HandleDeviceStates(client mqtt.Client, deviceStates map[string]string) (failed []string, err error) {
 	for id, state := range deviceStates {
 		t := "command" + id + "/+"
 		switch state {
