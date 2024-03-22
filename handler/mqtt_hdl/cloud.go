@@ -34,11 +34,11 @@ func (h *CloudMqttHandler) HandleSubscriptions() {
 			t := "command" + id + "/+"
 			err := h.client.Subscribe(t, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-					util.Logger.Errorf(relayMsgErr, m.Topic(), err)
+					util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 				}
 			})
 			if err != nil {
-				util.Logger.Errorf(subscribeErr, t, err)
+				util.Logger.Errorf(model.SubscribeErrString, t, err)
 			}
 		}
 	}
@@ -46,11 +46,11 @@ func (h *CloudMqttHandler) HandleSubscriptions() {
 		t := "processes/" + hubID + "/cmd/#"
 		err := h.client.Subscribe(t, func(m handler.Message) {
 			if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
-				util.Logger.Errorf(relayMsgErr, m.Topic(), err)
+				util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 			}
 		})
 		if err != nil {
-			util.Logger.Errorf(subscribeErr, t, err)
+			util.Logger.Errorf(model.SubscribeErrString, t, err)
 		}
 	}
 }
@@ -59,7 +59,7 @@ func (h *CloudMqttHandler) HandleMissingDevices(missing []string) error {
 	for _, id := range missing {
 		t := "command" + id + "/+"
 		if err := h.client.Unsubscribe(t); err != nil {
-			util.Logger.Errorf(unsubscribeErr, t, err)
+			util.Logger.Errorf(model.UnsubscribeErrString, t, err)
 		}
 	}
 	return nil
@@ -72,15 +72,15 @@ func (h *CloudMqttHandler) HandleDeviceStates(deviceStates map[string]string) (f
 		case model.Online:
 			err = h.client.Subscribe(t, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-					util.Logger.Errorf(relayMsgErr, m.Topic(), err)
+					util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 				}
 			})
 			if err != nil {
-				util.Logger.Errorf(subscribeErr, t, err)
+				util.Logger.Errorf(model.SubscribeErrString, t, err)
 			}
 		case model.Offline, "":
 			if err = h.client.Unsubscribe(t); err != nil {
-				util.Logger.Errorf(unsubscribeErr, t, err)
+				util.Logger.Errorf(model.UnsubscribeErrString, t, err)
 			}
 		}
 		if err != nil {
@@ -94,15 +94,15 @@ func (h *CloudMqttHandler) HandleHubIDChange(oldID, newID string) error {
 	t := "processes/" + newID + "/cmd/#"
 	err := h.client.Subscribe(t, func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
-			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
+			util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
 		}
 	})
 	if err != nil {
-		util.Logger.Errorf(subscribeErr, t, err)
+		util.Logger.Errorf(model.SubscribeErrString, t, err)
 	}
 	t = "processes/" + oldID + "/cmd/#"
 	if err = h.client.Unsubscribe(t); err != nil {
-		util.Logger.Errorf(unsubscribeErr, t, err)
+		util.Logger.Errorf(model.UnsubscribeErrString, t, err)
 	}
 	return nil
 }
