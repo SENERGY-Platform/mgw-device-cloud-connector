@@ -99,7 +99,7 @@ func main() {
 
 	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
 	processesCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamProcessesCmd, localMqttClientPubF)
-	deviceEventMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF)
+	deviceEventMsgRelayHdl := msg_relay_hdl.New(config.EventMessageRelayBuffer, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF)
 	deviceCmdRespMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamDeviceCmdResponse, cloudMqttClientPubF)
 	processesStateMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamProcessesState, cloudMqttClientPubF)
 	deviceConnectorErrMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandlerUpstreamDeviceConnectorErr, cloudMqttClientPubF)
