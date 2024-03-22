@@ -66,6 +66,7 @@ type Config struct {
 	Auth               AuthConfig               `json:"auth" env_var:"AUTH_CONFIG"`
 	CloudDeviceHandler CloudDeviceHandlerConfig `json:"cloud_device_handler" env_var:"CLOUD_DEVICE_HANDLER_CONFIG"`
 	LocalDeviceHandler LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
+	MessageRelayBuffer int                      `json:"message_relay_buffer" env_var:"MESSAGE_RELAY_BUFFER"`
 	MGWDeploymentID    string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
 }
 
@@ -97,6 +98,7 @@ func NewConfig(path string) (*Config, error) {
 			WrkSpcPath:      "/opt/device-cloud-connector",
 			AttributeOrigin: "device-cloud-connector",
 		},
+		MessageRelayBuffer: 5000,
 	}
 	err := sb_util.LoadConfig(path, &cfg, nil, nil, nil)
 	return &cfg, err
