@@ -28,6 +28,7 @@ type MqttClientConfig struct {
 	ConnectTimeout    int64  `json:"connect_timeout" env_var:"MQTT_CONNECT_TIMEOUT"`
 	ConnectRetryDelay int64  `json:"connect_retry_delay" env_var:"MQTT_CONNECT_RETRY_DELAY"`
 	MaxReconnectDelay int64  `json:"max_reconnect_delay" env_var:"MQTT_MAX_RECONNECT_DELAY"`
+	WaitTimeout       int64  `json:"wait_timeout" env_var:"MQTT_WAIT_TIMEOUT"`
 	QOSLevel          byte   `json:"qos_level" env_var:"MQTT_QOS_LEVEL"`
 }
 
@@ -74,6 +75,7 @@ var defaultMqttClientConfig = MqttClientConfig{
 	ConnectTimeout:    30000000000,  // 30s
 	ConnectRetryDelay: 30000000000,  // 30s
 	MaxReconnectDelay: 300000000000, // 5m
+	WaitTimeout:       5000000000,   // 5s
 	QOSLevel:          2,
 }
 
