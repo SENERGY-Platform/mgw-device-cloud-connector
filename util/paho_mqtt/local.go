@@ -5,11 +5,10 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"time"
 )
 
-type LocalHandler struct {
-	wrapper
+type LocalMqttHandler struct {
+	client                        *Wrapper
 	deviceEventMsgRelayHdl        handler.MessageRelayHandler
 	deviceCmdRespMsgRelayHdl      handler.MessageRelayHandler
 	processesStateMsgRelayHdl     handler.MessageRelayHandler
@@ -18,13 +17,8 @@ type LocalHandler struct {
 	deviceCmdErrMsgRelayHdl       handler.MessageRelayHandler
 }
 
-func NewLocalHandler(client mqtt.Client, qos byte, timeout time.Duration, deviceEventMsgRelayHdl, deviceCmdRespMsgRelayHdl, processesStateMsgRelayHdl, deviceConnectorErrMsgRelayHdl, deviceErrMsgRelayHdl, deviceCmdErrMsgRelayHdl handler.MessageRelayHandler) *LocalHandler {
-	return &LocalHandler{
-		wrapper: wrapper{
-			client:  client,
-			qos:     qos,
-			timeout: timeout,
-		},
+func NewLocalMqttHandler(deviceEventMsgRelayHdl, deviceCmdRespMsgRelayHdl, processesStateMsgRelayHdl, deviceConnectorErrMsgRelayHdl, deviceErrMsgRelayHdl, deviceCmdErrMsgRelayHdl handler.MessageRelayHandler) *LocalMqttHandler {
+	return &LocalMqttHandler{
 		deviceEventMsgRelayHdl:        deviceEventMsgRelayHdl,
 		deviceCmdRespMsgRelayHdl:      deviceCmdRespMsgRelayHdl,
 		processesStateMsgRelayHdl:     processesStateMsgRelayHdl,
@@ -34,8 +28,12 @@ func NewLocalHandler(client mqtt.Client, qos byte, timeout time.Duration, device
 	}
 }
 
-func (h *LocalHandler) HandleSubscriptions(_ mqtt.Client) {
-	err := h.Subscribe(topic.LocalDeviceEventSub, func(_ mqtt.Client, m mqtt.Message) {
+func (h *LocalMqttHandler) SetMqttClient(w *Wrapper) {
+	h.client = w
+}
+
+func (h *LocalMqttHandler) HandleSubscriptions(_ mqtt.Client) {
+	err := h.client.Subscribe(topic.LocalDeviceEventSub, func(_ mqtt.Client, m mqtt.Message) {
 		if err := h.deviceEventMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 		}
@@ -43,7 +41,7 @@ func (h *LocalHandler) HandleSubscriptions(_ mqtt.Client) {
 	if err != nil {
 		util.Logger.Errorf(subscribeErr, topic.LocalDeviceEventSub, err)
 	}
-	err = h.Subscribe(topic.LocalDeviceCmdResponseSub, func(_ mqtt.Client, m mqtt.Message) {
+	err = h.client.Subscribe(topic.LocalDeviceCmdResponseSub, func(_ mqtt.Client, m mqtt.Message) {
 		if err := h.deviceCmdRespMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 		}
@@ -51,7 +49,7 @@ func (h *LocalHandler) HandleSubscriptions(_ mqtt.Client) {
 	if err != nil {
 		util.Logger.Errorf(subscribeErr, topic.LocalDeviceCmdResponseSub, err)
 	}
-	err = h.Subscribe(topic.LocalProcessesStateSub, func(_ mqtt.Client, m mqtt.Message) {
+	err = h.client.Subscribe(topic.LocalProcessesStateSub, func(_ mqtt.Client, m mqtt.Message) {
 		if err := h.processesStateMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 		}
@@ -59,7 +57,7 @@ func (h *LocalHandler) HandleSubscriptions(_ mqtt.Client) {
 	if err != nil {
 		util.Logger.Errorf(subscribeErr, topic.LocalProcessesStateSub, err)
 	}
-	err = h.Subscribe(topic.LocalDeviceConnectorErrSub, func(_ mqtt.Client, m mqtt.Message) {
+	err = h.client.Subscribe(topic.LocalDeviceConnectorErrSub, func(_ mqtt.Client, m mqtt.Message) {
 		if err := h.deviceConnectorErrMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 		}
@@ -67,7 +65,7 @@ func (h *LocalHandler) HandleSubscriptions(_ mqtt.Client) {
 	if err != nil {
 		util.Logger.Errorf(subscribeErr, topic.LocalDeviceConnectorErrSub, err)
 	}
-	err = h.Subscribe(topic.LocalDeviceErrSub, func(_ mqtt.Client, m mqtt.Message) {
+	err = h.client.Subscribe(topic.LocalDeviceErrSub, func(_ mqtt.Client, m mqtt.Message) {
 		if err := h.deviceErrMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 		}
@@ -75,7 +73,7 @@ func (h *LocalHandler) HandleSubscriptions(_ mqtt.Client) {
 	if err != nil {
 		util.Logger.Errorf(subscribeErr, topic.LocalDeviceErrSub, err)
 	}
-	err = h.Subscribe(topic.LocalDeviceCmdErrSub, func(_ mqtt.Client, m mqtt.Message) {
+	err = h.client.Subscribe(topic.LocalDeviceCmdErrSub, func(_ mqtt.Client, m mqtt.Message) {
 		if err := h.deviceCmdErrMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 		}

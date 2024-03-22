@@ -12,13 +12,21 @@ const (
 	unsubscribeErr = "unsubscribing from '%s' failed: %s"
 )
 
-type wrapper struct {
+type Wrapper struct {
 	client  mqtt.Client
 	qos     byte
 	timeout time.Duration
 }
 
-func (w *wrapper) Subscribe(topic string, callback mqtt.MessageHandler) error {
+func NewWrapper(client mqtt.Client, qos byte, timeout time.Duration) *Wrapper {
+	return &Wrapper{
+		client:  client,
+		qos:     qos,
+		timeout: timeout,
+	}
+}
+
+func (w *Wrapper) Subscribe(topic string, callback mqtt.MessageHandler) error {
 	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
@@ -29,7 +37,7 @@ func (w *wrapper) Subscribe(topic string, callback mqtt.MessageHandler) error {
 	return t.Error()
 }
 
-func (w *wrapper) Unsubscribe(topics ...string) error {
+func (w *Wrapper) Unsubscribe(topics ...string) error {
 	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
@@ -40,7 +48,7 @@ func (w *wrapper) Unsubscribe(topics ...string) error {
 	return t.Error()
 }
 
-func (w *wrapper) Publish(topic string, retained bool, payload any) error {
+func (w *Wrapper) Publish(topic string, retained bool, payload any) error {
 	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
