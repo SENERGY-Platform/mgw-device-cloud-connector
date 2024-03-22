@@ -21,7 +21,7 @@ type Handler struct {
 	wrkSpacePath string
 	attrOrigin   string
 	data         data
-	hubSyncFunc  func(oldID, newID string) error
+	hubSyncFunc  func(ctx context.Context, oldID, newID string) error
 	mu           sync.RWMutex
 }
 
@@ -34,7 +34,7 @@ func New(cloudClient cloud_client.ClientItf, timeout time.Duration, wrkSpacePath
 	}
 }
 
-func (h *Handler) SetHubSyncFunc(f func(oldID, newID string) error) {
+func (h *Handler) SetHubSyncFunc(f func(ctx context.Context, oldID, newID string) error) {
 	h.hubSyncFunc = f
 }
 
@@ -163,7 +163,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 			h.data.HubID = newHubID
 			h.mu.Unlock()
 			if h.hubSyncFunc != nil {
-				if err = h.hubSyncFunc(oldHubID, newHubID); err != nil {
+				if err = h.hubSyncFunc(ctx, oldHubID, newHubID); err != nil {
 					fmt.Println(err)
 				}
 			}
