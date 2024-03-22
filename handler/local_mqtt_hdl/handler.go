@@ -28,6 +28,15 @@ func (h *Handler) SetMqttClient(c handler.MqttClient) {
 	h.client = c
 }
 
+func (h *Handler) SetMessageRelayHdl(deviceEventMsgRelayHdl, deviceCmdRespMsgRelayHdl, processesStateMsgRelayHdl, deviceConnectorErrMsgRelayHdl, deviceErrMsgRelayHdl, deviceCmdErrMsgRelayHdl handler.MessageRelayHandler) {
+	h.deviceEventMsgRelayHdl = deviceEventMsgRelayHdl
+	h.deviceCmdRespMsgRelayHdl = deviceCmdRespMsgRelayHdl
+	h.processesStateMsgRelayHdl = processesStateMsgRelayHdl
+	h.deviceConnectorErrMsgRelayHdl = deviceConnectorErrMsgRelayHdl
+	h.deviceErrMsgRelayHdl = deviceErrMsgRelayHdl
+	h.deviceCmdErrMsgRelayHdl = deviceCmdErrMsgRelayHdl
+}
+
 func (h *Handler) HandleSubscriptions() {
 	err := h.client.Subscribe(topic.LocalDeviceEventSub, h.qos, func(m handler.Message) {
 		if err := h.deviceEventMsgRelayHdl.Put(m); err != nil {

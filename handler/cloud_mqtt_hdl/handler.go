@@ -27,6 +27,11 @@ func (h *Handler) SetMqttClient(c handler.MqttClient) {
 	h.client = c
 }
 
+func (h *Handler) SetMessageRelayHdl(deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl handler.MessageRelayHandler) {
+	h.deviceCmdMsgRelayHdl = deviceCmdMsgRelayHdl
+	h.processesCmdMsgRelayHdl = processesCmdMsgRelayHdl
+}
+
 func (h *Handler) HandleSubscriptions() {
 	devices := h.localDeviceHdl.GetDevices()
 	for id, device := range devices {
