@@ -53,3 +53,11 @@ func (w *Wrapper) Publish(topic string, qos byte, retained bool, payload any) er
 	}
 	return t.Error()
 }
+
+func (w *Wrapper) Connect() mqtt.Token {
+	return w.client.Connect()
+}
+
+func (w *Wrapper) Disconnect(quiesce uint) {
+	w.client.Disconnect(quiesce)
+}
