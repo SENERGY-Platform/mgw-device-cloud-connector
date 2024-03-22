@@ -16,9 +16,10 @@ type CloudHandler struct {
 	processesCmdMsgRelayHdl handler.MessageRelayHandler
 }
 
-func NewCloudHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler, deviceCmdMsgRelayHdl handler.MessageRelayHandler, processesCmdMsgRelayHdl handler.MessageRelayHandler, qos byte, timeout time.Duration) *CloudHandler {
+func NewCloudHdl(client mqtt.Client, qos byte, timeout time.Duration, cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler, deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl handler.MessageRelayHandler) *CloudHandler {
 	return &CloudHandler{
 		wrapper: wrapper{
+			client:  client,
 			qos:     qos,
 			timeout: timeout,
 		},
