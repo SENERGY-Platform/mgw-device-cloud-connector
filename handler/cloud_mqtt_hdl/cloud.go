@@ -1,4 +1,4 @@
-package mqtt_hdl
+package cloud_mqtt_hdl
 
 import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
