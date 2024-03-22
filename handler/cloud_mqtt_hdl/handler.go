@@ -6,7 +6,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 )
 
-type CloudMqttHandler struct {
+type Handler struct {
 	client                  handler.MqttClient
 	cloudDeviceHdl          handler.CloudDeviceHandler
 	localDeviceHdl          handler.LocalDeviceHandler
@@ -14,8 +14,8 @@ type CloudMqttHandler struct {
 	processesCmdMsgRelayHdl handler.MessageRelayHandler
 }
 
-func NewCloudMqttHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler, deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl handler.MessageRelayHandler) *CloudMqttHandler {
-	return &CloudMqttHandler{
+func New(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handler.LocalDeviceHandler, deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl handler.MessageRelayHandler) *Handler {
+	return &Handler{
 		cloudDeviceHdl:          cloudDeviceHdl,
 		localDeviceHdl:          localDeviceHdl,
 		deviceCmdMsgRelayHdl:    deviceCmdMsgRelayHdl,
@@ -23,11 +23,11 @@ func NewCloudMqttHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl h
 	}
 }
 
-func (h *CloudMqttHandler) SetMqttClient(c handler.MqttClient) {
+func (h *Handler) SetMqttClient(c handler.MqttClient) {
 	h.client = c
 }
 
-func (h *CloudMqttHandler) HandleSubscriptions() {
+func (h *Handler) HandleSubscriptions() {
 	devices := h.localDeviceHdl.GetDevices()
 	for id, device := range devices {
 		if device.State == model.Online {
@@ -55,7 +55,7 @@ func (h *CloudMqttHandler) HandleSubscriptions() {
 	}
 }
 
-func (h *CloudMqttHandler) HandleMissingDevices(missing []string) error {
+func (h *Handler) HandleMissingDevices(missing []string) error {
 	for _, id := range missing {
 		t := "command" + id + "/+"
 		if err := h.client.Unsubscribe(t); err != nil {
@@ -65,7 +65,7 @@ func (h *CloudMqttHandler) HandleMissingDevices(missing []string) error {
 	return nil
 }
 
-func (h *CloudMqttHandler) HandleDeviceStates(deviceStates map[string]string) (failed []string, err error) {
+func (h *Handler) HandleDeviceStates(deviceStates map[string]string) (failed []string, err error) {
 	for id, state := range deviceStates {
 		t := "command" + id + "/+"
 		switch state {
@@ -90,7 +90,7 @@ func (h *CloudMqttHandler) HandleDeviceStates(deviceStates map[string]string) (f
 	return failed, nil
 }
 
-func (h *CloudMqttHandler) HandleHubIDChange(oldID, newID string) error {
+func (h *Handler) HandleHubIDChange(oldID, newID string) error {
 	t := "processes/" + newID + "/cmd/#"
 	err := h.client.Subscribe(t, func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {

@@ -7,7 +7,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 )
 
-type LocalMqttHandler struct {
+type Handler struct {
 	client                        handler.MqttClient
 	deviceEventMsgRelayHdl        handler.MessageRelayHandler
 	deviceCmdRespMsgRelayHdl      handler.MessageRelayHandler
@@ -17,8 +17,8 @@ type LocalMqttHandler struct {
 	deviceCmdErrMsgRelayHdl       handler.MessageRelayHandler
 }
 
-func NewLocalMqttHandler(deviceEventMsgRelayHdl, deviceCmdRespMsgRelayHdl, processesStateMsgRelayHdl, deviceConnectorErrMsgRelayHdl, deviceErrMsgRelayHdl, deviceCmdErrMsgRelayHdl handler.MessageRelayHandler) *LocalMqttHandler {
-	return &LocalMqttHandler{
+func New(deviceEventMsgRelayHdl, deviceCmdRespMsgRelayHdl, processesStateMsgRelayHdl, deviceConnectorErrMsgRelayHdl, deviceErrMsgRelayHdl, deviceCmdErrMsgRelayHdl handler.MessageRelayHandler) *Handler {
+	return &Handler{
 		deviceEventMsgRelayHdl:        deviceEventMsgRelayHdl,
 		deviceCmdRespMsgRelayHdl:      deviceCmdRespMsgRelayHdl,
 		processesStateMsgRelayHdl:     processesStateMsgRelayHdl,
@@ -28,11 +28,11 @@ func NewLocalMqttHandler(deviceEventMsgRelayHdl, deviceCmdRespMsgRelayHdl, proce
 	}
 }
 
-func (h *LocalMqttHandler) SetMqttClient(c handler.MqttClient) {
+func (h *Handler) SetMqttClient(c handler.MqttClient) {
 	h.client = c
 }
 
-func (h *LocalMqttHandler) HandleSubscriptions() {
+func (h *Handler) HandleSubscriptions() {
 	err := h.client.Subscribe(topic.LocalDeviceEventSub, func(m handler.Message) {
 		if err := h.deviceEventMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
