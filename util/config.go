@@ -28,7 +28,7 @@ type MqttClientConfig struct {
 	ConnectTimeout    int64  `json:"connect_timeout" env_var:"MQTT_CONNECT_TIMEOUT"`
 	ConnectRetryDelay int64  `json:"connect_retry_delay" env_var:"MQTT_CONNECT_RETRY_DELAY"`
 	MaxReconnectDelay int64  `json:"max_reconnect_delay" env_var:"MQTT_MAX_RECONNECT_DELAY"`
-	PublishTimeout    int64  `json:"publish_timeout" env_var:"MQTT_PUBLISH_TIMEOUT"`
+	QOSLevel          byte   `json:"qos_level" env_var:"MQTT_QOS_LEVEL"`
 }
 
 type HttpClientConfig struct {
@@ -58,14 +58,14 @@ type LocalDeviceHandlerConfig struct {
 }
 
 type Config struct {
-	Logger               sb_util.LoggerConfig     `json:"logger" env_var:"LOGGER_CONFIG"`
-	UpstreamMqttClient   MqttClientConfig         `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT_CONFIG"`
-	DownstreamMqttClient MqttClientConfig         `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT_CONFIG"`
-	HttpClient           HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
-	Auth                 AuthConfig               `json:"auth" env_var:"AUTH_CONFIG"`
-	CloudDeviceHandler   CloudDeviceHandlerConfig `json:"cloud_device_handler" env_var:"CLOUD_DEVICE_HANDLER_CONFIG"`
-	LocalDeviceHandler   LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
-	MGWDeploymentID      string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
+	Logger             sb_util.LoggerConfig     `json:"logger" env_var:"LOGGER_CONFIG"`
+	CloudMqttClient    MqttClientConfig         `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT_CONFIG"`
+	LocalMqttClient    MqttClientConfig         `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT_CONFIG"`
+	HttpClient         HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
+	Auth               AuthConfig               `json:"auth" env_var:"AUTH_CONFIG"`
+	CloudDeviceHandler CloudDeviceHandlerConfig `json:"cloud_device_handler" env_var:"CLOUD_DEVICE_HANDLER_CONFIG"`
+	LocalDeviceHandler LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
+	MGWDeploymentID    string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
 }
 
 var defaultMqttClientConfig = MqttClientConfig{
@@ -74,7 +74,7 @@ var defaultMqttClientConfig = MqttClientConfig{
 	ConnectTimeout:    30000000000,  // 30s
 	ConnectRetryDelay: 30000000000,  // 30s
 	MaxReconnectDelay: 300000000000, // 5m
-	PublishTimeout:    0,
+	QOSLevel:          2,
 }
 
 func NewConfig(path string) (*Config, error) {
@@ -85,8 +85,8 @@ func NewConfig(path string) (*Config, error) {
 			Microseconds: true,
 			Terminal:     true,
 		},
-		UpstreamMqttClient:   defaultMqttClientConfig,
-		DownstreamMqttClient: defaultMqttClientConfig,
+		CloudMqttClient: defaultMqttClientConfig,
+		LocalMqttClient: defaultMqttClientConfig,
 		HttpClient: HttpClientConfig{
 			Timeout:      10000000000,
 			CloudTimeout: 30000000000,
