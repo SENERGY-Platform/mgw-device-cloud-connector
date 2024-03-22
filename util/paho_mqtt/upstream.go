@@ -56,3 +56,38 @@ func (h *UpstreamHandler) HandleSubscriptions(client mqtt.Client) {
 		}
 	}
 }
+
+func (h *UpstreamHandler) HandleMissingDevices(client mqtt.Client, missing []string) error {
+	for _, id := range missing {
+		t := "command" + id + "/+"
+		if err := h.Unsubscribe(client, t); err != nil {
+			util.Logger.Errorf(unsubscribeErr, t, err)
+		}
+	}
+	return nil
+}
+
+func (h *UpstreamHandler) HandleDeviceStates(client mqtt.Client, deviceStates map[string]string) (failed []string, err error) {
+	for id, state := range deviceStates {
+		t := "command" + id + "/+"
+		switch state {
+		case model.Online:
+			err = h.Subscribe(client, t, func(_ mqtt.Client, m mqtt.Message) {
+				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
+					util.Logger.Errorf(relayMsgErr, m.Topic(), err)
+				}
+			})
+			if err != nil {
+				util.Logger.Errorf(subscribeErr, t, err)
+			}
+		case model.Offline, "":
+			if err = h.Unsubscribe(client, t); err != nil {
+				util.Logger.Errorf(unsubscribeErr, t, err)
+			}
+		}
+		if err != nil {
+			failed = append(failed, id)
+		}
+	}
+	return failed, nil
+}
