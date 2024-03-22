@@ -9,23 +9,21 @@ import (
 
 type Wrapper struct {
 	client  mqtt.Client
-	qos     byte
 	timeout time.Duration
 }
 
-func NewWrapper(client mqtt.Client, qos byte, timeout time.Duration) *Wrapper {
+func NewWrapper(client mqtt.Client, timeout time.Duration) *Wrapper {
 	return &Wrapper{
 		client:  client,
-		qos:     qos,
 		timeout: timeout,
 	}
 }
 
-func (w *Wrapper) Subscribe(topic string, msgHandler func(m handler.Message)) error {
+func (w *Wrapper) Subscribe(topic string, qos byte, msgHandler func(m handler.Message)) error {
 	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := w.client.Subscribe(topic, w.qos, func(_ mqtt.Client, message mqtt.Message) {
+	t := w.client.Subscribe(topic, qos, func(_ mqtt.Client, message mqtt.Message) {
 		msgHandler(message)
 	})
 	if !t.WaitTimeout(w.timeout) {
@@ -45,11 +43,11 @@ func (w *Wrapper) Unsubscribe(topic string) error {
 	return t.Error()
 }
 
-func (w *Wrapper) Publish(topic string, retained bool, payload any) error {
+func (w *Wrapper) Publish(topic string, qos byte, retained bool, payload any) error {
 	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := w.client.Publish(topic, w.qos, retained, payload)
+	t := w.client.Publish(topic, qos, retained, payload)
 	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
