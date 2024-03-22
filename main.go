@@ -97,6 +97,9 @@ func main() {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.QOSLevel, false, data)
 	}
 
+	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
+	message_hdl.DeviceCommandMaxAge = time.Duration(config.MaxDeviceCmdAge)
+
 	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
 	processesCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamProcessesCmd, localMqttClientPubF)
 	deviceEventMsgRelayHdl := msg_relay_hdl.New(config.EventMessageRelayBuffer, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF)
