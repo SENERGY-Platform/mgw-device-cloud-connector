@@ -20,3 +20,9 @@ type CloudDeviceHandler interface {
 type LocalDeviceHandler interface {
 	GetDevices() map[string]model.Device
 }
+
+type MqttClient interface {
+	Subscribe(topic string, messageHandler func(m Message)) error
+	Unsubscribe(topic string) error
+	Publish(topic string, retained bool, payload any) error
+}
