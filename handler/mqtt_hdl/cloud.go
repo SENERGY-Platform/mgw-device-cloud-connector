@@ -1,4 +1,4 @@
-package paho_mqtt
+package mqtt_hdl
 
 import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
@@ -8,7 +8,7 @@ import (
 )
 
 type CloudMqttHandler struct {
-	client                  *Wrapper
+	client                  handler.MqttClient
 	cloudDeviceHdl          handler.CloudDeviceHandler
 	localDeviceHdl          handler.LocalDeviceHandler
 	deviceCmdMsgRelayHdl    handler.MessageRelayHandler
@@ -24,8 +24,8 @@ func NewCloudMqttHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl h
 	}
 }
 
-func (h *CloudMqttHandler) SetMqttClient(w *Wrapper) {
-	h.client = w
+func (h *CloudMqttHandler) SetMqttClient(c handler.MqttClient) {
+	h.client = c
 }
 
 func (h *CloudMqttHandler) HandleSubscriptions(_ mqtt.Client) {
@@ -33,7 +33,7 @@ func (h *CloudMqttHandler) HandleSubscriptions(_ mqtt.Client) {
 	for id, device := range devices {
 		if device.State == model.Online {
 			t := "command" + id + "/+"
-			err := h.client.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
+			err := h.client.Subscribe(t, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 					util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 				}
@@ -45,7 +45,7 @@ func (h *CloudMqttHandler) HandleSubscriptions(_ mqtt.Client) {
 	}
 	if hubID := h.cloudDeviceHdl.GetHubID(); hubID != "" {
 		t := "processes/" + hubID + "/cmd/#"
-		err := h.client.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
+		err := h.client.Subscribe(t, func(m handler.Message) {
 			if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 				util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 			}
@@ -71,7 +71,7 @@ func (h *CloudMqttHandler) HandleDeviceStates(deviceStates map[string]string) (f
 		t := "command" + id + "/+"
 		switch state {
 		case model.Online:
-			err = h.client.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
+			err = h.client.Subscribe(t, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 					util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 				}
@@ -93,7 +93,7 @@ func (h *CloudMqttHandler) HandleDeviceStates(deviceStates map[string]string) (f
 
 func (h *CloudMqttHandler) HandleHubIDChange(oldID, newID string) error {
 	t := "processes/" + newID + "/cmd/#"
-	err := h.client.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
+	err := h.client.Subscribe(t, func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 		}
