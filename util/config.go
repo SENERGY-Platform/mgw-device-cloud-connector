@@ -36,7 +36,7 @@ type HttpClientConfig struct {
 	CloudBaseUrl string `json:"cloud_base_url" env_var:"CLOUD_BASE_URL"`
 	DmBaseUrl    string `json:"dm_base_url" env_var:"DM_BASE_URL"`
 	AuthBaseUrl  string `json:"auth_base_url" env_var:"AUTH_BASE_URL"`
-	Timeout      int64  `json:"timeout" env_var:"HTTP_TIMEOUT"`
+	LocalTimeout int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
 	CloudTimeout int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
 }
 
@@ -91,8 +91,8 @@ func NewConfig(path string) (*Config, error) {
 		CloudMqttClient: defaultMqttClientConfig,
 		LocalMqttClient: defaultMqttClientConfig,
 		HttpClient: HttpClientConfig{
-			Timeout:      10000000000,
-			CloudTimeout: 30000000000,
+			LocalTimeout: 10000000000, // 10s
+			CloudTimeout: 30000000000, // 30s
 		},
 		CloudDeviceHandler: CloudDeviceHandlerConfig{
 			WrkSpcPath:      "/opt/device-cloud-connector",
