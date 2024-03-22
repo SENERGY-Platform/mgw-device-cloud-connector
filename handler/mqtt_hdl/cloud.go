@@ -4,7 +4,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
-	"github.com/eclipse/paho.mqtt.golang"
 )
 
 type CloudMqttHandler struct {
@@ -28,7 +27,7 @@ func (h *CloudMqttHandler) SetMqttClient(c handler.MqttClient) {
 	h.client = c
 }
 
-func (h *CloudMqttHandler) HandleSubscriptions(_ mqtt.Client) {
+func (h *CloudMqttHandler) HandleSubscriptions() {
 	devices := h.localDeviceHdl.GetDevices()
 	for id, device := range devices {
 		if device.State == model.Online {

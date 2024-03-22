@@ -4,7 +4,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type LocalMqttHandler struct {
@@ -32,7 +31,7 @@ func (h *LocalMqttHandler) SetMqttClient(c handler.MqttClient) {
 	h.client = c
 }
 
-func (h *LocalMqttHandler) HandleSubscriptions(_ mqtt.Client) {
+func (h *LocalMqttHandler) HandleSubscriptions() {
 	err := h.client.Subscribe(topic.LocalDeviceEventSub, func(m handler.Message) {
 		if err := h.deviceEventMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(relayMsgErr, m.Topic(), err)
