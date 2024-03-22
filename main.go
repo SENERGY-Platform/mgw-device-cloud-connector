@@ -9,7 +9,11 @@ import (
 	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/go-service-base/watchdog"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_device_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_device_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_mqtt_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/message_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/msg_relay_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/auth_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
@@ -64,20 +68,66 @@ func main() {
 	paho_mqtt.SetLogger()
 
 	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.DmBaseUrl)
-	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.Timeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
+	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
 
 	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.AuthBaseUrl, config.Auth.User, config.Auth.Password.String(), config.Auth.ClientID))
 	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
-	localDeviceHdl.SetSyncFunc(cloudDeviceHdl.Sync)
+	localMqttHdl := local_mqtt_hdl.New(config.LocalMqttClient.QOSLevel)
 
 	localMqttClientOpt := mqtt.NewClientOptions()
-	paho_mqtt.SetClientOptions(localMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.UpstreamMqttClient, nil, nil)
-	localMqttClient := mqtt.NewClient(localMqttClientOpt)
+	localMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
+		localMqttHdl.HandleSubscriptions()
+	})
+	paho_mqtt.SetClientOptions(localMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.LocalMqttClient, nil, nil)
+	localMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(localMqttClientOpt), time.Duration(config.LocalMqttClient.WaitTimeout))
+	localMqttClientPubF := func(topic string, data []byte) error {
+		return localMqttClient.Publish(topic, config.LocalMqttClient.QOSLevel, false, data)
+	}
+
+	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.QOSLevel, cloudDeviceHdl, localDeviceHdl)
 
 	cloudMqttClientOpt := mqtt.NewClientOptions()
-	paho_mqtt.SetClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.UpstreamMqttClient, &config.Auth, &tls.Config{InsecureSkipVerify: true})
-	cloudMqttClient := mqtt.NewClient(cloudMqttClientOpt)
+	cloudMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
+		cloudMqttHdl.HandleSubscriptions()
+	})
+	paho_mqtt.SetClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.CloudMqttClient, &config.Auth, &tls.Config{InsecureSkipVerify: true})
+	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
+	cloudMqttClientPubF := func(topic string, data []byte) error {
+		return cloudMqttClient.Publish(topic, config.CloudMqttClient.QOSLevel, false, data)
+	}
+
+	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
+	processesCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamProcessesCmd, localMqttClientPubF)
+	deviceEventMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF)
+	deviceCmdRespMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamDeviceCmdResponse, cloudMqttClientPubF)
+	processesStateMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamProcessesState, cloudMqttClientPubF)
+	deviceConnectorErrMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandlerUpstreamDeviceConnectorErr, cloudMqttClientPubF)
+	deviceErrMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandlerUpstreamDeviceErr, cloudMqttClientPubF)
+	deviceCmdErrMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandlerUpstreamDeviceCmdErr, cloudMqttClientPubF)
+
+	localMqttHdl.SetMqttClient(localMqttClient)
+	localMqttHdl.SetMessageRelayHdl(
+		deviceEventMsgRelayHdl,
+		deviceCmdRespMsgRelayHdl,
+		processesStateMsgRelayHdl,
+		deviceConnectorErrMsgRelayHdl,
+		deviceErrMsgRelayHdl,
+		deviceCmdErrMsgRelayHdl)
+	cloudMqttHdl.SetMqttClient(cloudMqttClient)
+	cloudMqttHdl.SetMessageRelayHdl(deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl)
+
+	localDeviceHdl.SetSyncFunc(cloudDeviceHdl.Sync)
+	localDeviceHdl.SetMissingFunc(func(_ context.Context, missingIDs []string) error {
+		return cloudMqttHdl.HandleMissingDevices(missingIDs)
+	})
+	localDeviceHdl.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
+		return cloudMqttHdl.HandleDeviceStates(deviceStates)
+	})
+
+	cloudDeviceHdl.SetHubSyncFunc(func(_ context.Context, oldID, newID string) error {
+		return cloudMqttHdl.HandleHubIDChange(oldID, newID)
+	})
 
 	chCtx, cf := context.WithCancel(context.Background())
 	defer cf()
@@ -94,6 +144,15 @@ func main() {
 	}
 	localDeviceHdl.Start()
 
+	deviceCmdMsgRelayHdl.Start()
+	processesCmdMsgRelayHdl.Start()
+	deviceEventMsgRelayHdl.Start()
+	deviceCmdRespMsgRelayHdl.Start()
+	processesStateMsgRelayHdl.Start()
+	deviceConnectorErrMsgRelayHdl.Start()
+	deviceErrMsgRelayHdl.Start()
+	deviceCmdErrMsgRelayHdl.Start()
+
 	localMqttClient.Connect()
 	cloudMqttClient.Connect()
 
@@ -103,11 +162,19 @@ func main() {
 		return nil
 	})
 	wtchdg.RegisterStopFunc(func() error {
-		cloudMqttClient.Disconnect(500)
+		localMqttClient.Disconnect(1000)
+		cloudMqttClient.Disconnect(1000)
 		return nil
 	})
 	wtchdg.RegisterStopFunc(func() error {
-		localMqttClient.Disconnect(500)
+		deviceCmdMsgRelayHdl.Stop()
+		processesCmdMsgRelayHdl.Stop()
+		deviceEventMsgRelayHdl.Stop()
+		deviceCmdRespMsgRelayHdl.Stop()
+		processesStateMsgRelayHdl.Stop()
+		deviceConnectorErrMsgRelayHdl.Stop()
+		deviceErrMsgRelayHdl.Stop()
+		deviceCmdErrMsgRelayHdl.Stop()
 		return nil
 	})
 
