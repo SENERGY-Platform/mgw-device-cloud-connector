@@ -22,7 +22,7 @@ type LocalDeviceHandler interface {
 }
 
 type MqttClient interface {
-	Subscribe(topic string, messageHandler func(m Message)) error
+	Subscribe(topic string, qos byte, messageHandler func(m Message)) error
 	Unsubscribe(topic string) error
-	Publish(topic string, retained bool, payload any) error
+	Publish(topic string, qos byte, retained bool, payload any) error
 }
