@@ -13,37 +13,38 @@ const (
 )
 
 type wrapper struct {
+	client  mqtt.Client
 	qos     byte
 	timeout time.Duration
 }
 
-func (w *wrapper) Subscribe(c mqtt.Client, topic string, callback mqtt.MessageHandler) error {
-	if !c.IsConnectionOpen() {
+func (w *wrapper) Subscribe(topic string, callback mqtt.MessageHandler) error {
+	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := c.Subscribe(topic, w.qos, callback)
+	t := w.client.Subscribe(topic, w.qos, callback)
 	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
 	return t.Error()
 }
 
-func (w *wrapper) Unsubscribe(c mqtt.Client, topics ...string) error {
-	if !c.IsConnectionOpen() {
+func (w *wrapper) Unsubscribe(topics ...string) error {
+	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := c.Unsubscribe(topics...)
+	t := w.client.Unsubscribe(topics...)
 	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}
 	return t.Error()
 }
 
-func (w *wrapper) Publish(c mqtt.Client, topic string, retained bool, payload any) error {
-	if !c.IsConnectionOpen() {
+func (w *wrapper) Publish(topic string, retained bool, payload any) error {
+	if !w.client.IsConnectionOpen() {
 		return errors.New("not connected")
 	}
-	t := c.Publish(topic, w.qos, retained, payload)
+	t := w.client.Publish(topic, w.qos, retained, payload)
 	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
 	}

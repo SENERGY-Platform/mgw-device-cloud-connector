@@ -29,12 +29,12 @@ func NewCloudHdl(cloudDeviceHdl handler.CloudDeviceHandler, localDeviceHdl handl
 	}
 }
 
-func (h *CloudHandler) HandleSubscriptions(client mqtt.Client) {
+func (h *CloudHandler) HandleSubscriptions(_ mqtt.Client) {
 	devices := h.localDeviceHdl.GetDevices()
 	for id, device := range devices {
 		if device.State == model.Online {
 			t := "command" + id + "/+"
-			err := h.Subscribe(client, t, func(_ mqtt.Client, m mqtt.Message) {
+			err := h.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 					util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 				}
@@ -46,7 +46,7 @@ func (h *CloudHandler) HandleSubscriptions(client mqtt.Client) {
 	}
 	if hubID := h.cloudDeviceHdl.GetHubID(); hubID != "" {
 		t := "processes/" + hubID + "/cmd/#"
-		err := h.Subscribe(client, t, func(_ mqtt.Client, m mqtt.Message) {
+		err := h.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
 			if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 				util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 			}
@@ -57,22 +57,22 @@ func (h *CloudHandler) HandleSubscriptions(client mqtt.Client) {
 	}
 }
 
-func (h *CloudHandler) HandleMissingDevices(client mqtt.Client, missing []string) error {
+func (h *CloudHandler) HandleMissingDevices(missing []string) error {
 	for _, id := range missing {
 		t := "command" + id + "/+"
-		if err := h.Unsubscribe(client, t); err != nil {
+		if err := h.Unsubscribe(t); err != nil {
 			util.Logger.Errorf(unsubscribeErr, t, err)
 		}
 	}
 	return nil
 }
 
-func (h *CloudHandler) HandleDeviceStates(client mqtt.Client, deviceStates map[string]string) (failed []string, err error) {
+func (h *CloudHandler) HandleDeviceStates(deviceStates map[string]string) (failed []string, err error) {
 	for id, state := range deviceStates {
 		t := "command" + id + "/+"
 		switch state {
 		case model.Online:
-			err = h.Subscribe(client, t, func(_ mqtt.Client, m mqtt.Message) {
+			err = h.Subscribe(t, func(_ mqtt.Client, m mqtt.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 					util.Logger.Errorf(relayMsgErr, m.Topic(), err)
 				}
@@ -81,7 +81,7 @@ func (h *CloudHandler) HandleDeviceStates(client mqtt.Client, deviceStates map[s
 				util.Logger.Errorf(subscribeErr, t, err)
 			}
 		case model.Offline, "":
-			if err = h.Unsubscribe(client, t); err != nil {
+			if err = h.Unsubscribe(t); err != nil {
 				util.Logger.Errorf(unsubscribeErr, t, err)
 			}
 		}
