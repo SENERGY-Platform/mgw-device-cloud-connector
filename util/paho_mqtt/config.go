@@ -15,7 +15,7 @@ func SetClientOptions(co *mqtt.ClientOptions, clientID string, mqttConf util.Mqt
 	co.SetConnectTimeout(time.Duration(mqttConf.ConnectTimeout))
 	co.SetConnectRetryInterval(time.Duration(mqttConf.ConnectRetryDelay))
 	co.SetMaxReconnectInterval(time.Duration(mqttConf.MaxReconnectDelay))
-	co.SetWriteTimeout(time.Duration(mqttConf.PublishTimeout))
+	co.SetWriteTimeout(time.Second * 5)
 	co.ConnectRetry = true
 	co.AutoReconnect = true
 	if authConf != nil {
