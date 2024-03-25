@@ -21,15 +21,26 @@ import (
 	"github.com/y-du/go-log-level/level"
 )
 
-type MqttClientConfig struct {
-	Server            string `json:"server" env_var:"MQTT_SERVER"`
-	KeepAlive         int64  `json:"keep_alive" env_var:"MQTT_KEEP_ALIVE"`
-	PingTimeout       int64  `json:"ping_timeout" env_var:"MQTT_PING_TIMEOUT"`
-	ConnectTimeout    int64  `json:"connect_timeout" env_var:"MQTT_CONNECT_TIMEOUT"`
-	ConnectRetryDelay int64  `json:"connect_retry_delay" env_var:"MQTT_CONNECT_RETRY_DELAY"`
-	MaxReconnectDelay int64  `json:"max_reconnect_delay" env_var:"MQTT_MAX_RECONNECT_DELAY"`
-	WaitTimeout       int64  `json:"wait_timeout" env_var:"MQTT_WAIT_TIMEOUT"`
-	QOSLevel          byte   `json:"qos_level" env_var:"MQTT_QOS_LEVEL"`
+type CloudMqttClientConfig struct {
+	Server            string `json:"server" env_var:"CLOUD_MQTT_SERVER"`
+	KeepAlive         int64  `json:"keep_alive" env_var:"CLOUD_MQTT_KEEP_ALIVE"`
+	PingTimeout       int64  `json:"ping_timeout" env_var:"CLOUD_MQTT_PING_TIMEOUT"`
+	ConnectTimeout    int64  `json:"connect_timeout" env_var:"CLOUD_MQTT_CONNECT_TIMEOUT"`
+	ConnectRetryDelay int64  `json:"connect_retry_delay" env_var:"CLOUD_MQTT_CONNECT_RETRY_DELAY"`
+	MaxReconnectDelay int64  `json:"max_reconnect_delay" env_var:"CLOUD_MQTT_MAX_RECONNECT_DELAY"`
+	WaitTimeout       int64  `json:"wait_timeout" env_var:"CLOUD_MQTT_WAIT_TIMEOUT"`
+	QOSLevel          byte   `json:"qos_level" env_var:"CLOUD_MQTT_QOS_LEVEL"`
+}
+
+type LocalMqttClientConfig struct {
+	Server            string `json:"server" env_var:"LOCAL_MQTT_SERVER"`
+	KeepAlive         int64  `json:"keep_alive" env_var:"LOCAL_MQTT_KEEP_ALIVE"`
+	PingTimeout       int64  `json:"ping_timeout" env_var:"LOCAL_MQTT_PING_TIMEOUT"`
+	ConnectTimeout    int64  `json:"connect_timeout" env_var:"LOCAL_MQTT_CONNECT_TIMEOUT"`
+	ConnectRetryDelay int64  `json:"connect_retry_delay" env_var:"LOCAL_MQTT_CONNECT_RETRY_DELAY"`
+	MaxReconnectDelay int64  `json:"max_reconnect_delay" env_var:"LOCAL_MQTT_MAX_RECONNECT_DELAY"`
+	WaitTimeout       int64  `json:"wait_timeout" env_var:"LOCAL_MQTT_WAIT_TIMEOUT"`
+	QOSLevel          byte   `json:"qos_level" env_var:"LOCAL_MQTT_QOS_LEVEL"`
 }
 
 type HttpClientConfig struct {
@@ -60,8 +71,8 @@ type LocalDeviceHandlerConfig struct {
 
 type Config struct {
 	Logger                  sb_util.LoggerConfig     `json:"logger" env_var:"LOGGER_CONFIG"`
-	CloudMqttClient         MqttClientConfig         `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT_CONFIG"`
-	LocalMqttClient         MqttClientConfig         `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT_CONFIG"`
+	CloudMqttClient         CloudMqttClientConfig    `json:"cloud_mqtt_client" env_var:"CLOUD_MQTT_CLIENT_CONFIG"`
+	LocalMqttClient         LocalMqttClientConfig    `json:"local_mqtt_client" env_var:"LOCAL_MQTT_CLIENT_CONFIG"`
 	HttpClient              HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
 	CloudAuth               CloudAuthConfig          `json:"cloud_auth" env_var:"CLOUD_AUTH_CONFIG"`
 	CloudDeviceHandler      CloudDeviceHandlerConfig `json:"cloud_device_handler" env_var:"CLOUD_DEVICE_HANDLER_CONFIG"`
@@ -72,13 +83,23 @@ type Config struct {
 	MaxDeviceCmdAge         int64                    `json:"max_device_cmd_age" env_var:"MAX_DEVICE_CMD_AGE"`
 }
 
-var defaultMqttClientConfig = MqttClientConfig{
+var defaultCloudMqttClientConfig = CloudMqttClientConfig{
 	KeepAlive:         30,
 	PingTimeout:       15000000000,  // 15s
 	ConnectTimeout:    30000000000,  // 30s
 	ConnectRetryDelay: 30000000000,  // 30s
-	MaxReconnectDelay: 300000000000, // 5m
+	MaxReconnectDelay: 180000000000, // 3m
 	WaitTimeout:       5000000000,   // 5s
+	QOSLevel:          2,
+}
+
+var defaultLocalMqttClientConfig = LocalMqttClientConfig{
+	KeepAlive:         30,
+	PingTimeout:       15000000000, // 15s
+	ConnectTimeout:    30000000000, // 30s
+	ConnectRetryDelay: 15000000000, // 30s
+	MaxReconnectDelay: 60000000000, // 1m
+	WaitTimeout:       5000000000,  // 5s
 	QOSLevel:          2,
 }
 
@@ -90,8 +111,8 @@ func NewConfig(path string) (*Config, error) {
 			Microseconds: true,
 			Terminal:     true,
 		},
-		CloudMqttClient: defaultMqttClientConfig,
-		LocalMqttClient: defaultMqttClientConfig,
+		CloudMqttClient: defaultCloudMqttClientConfig,
+		LocalMqttClient: defaultLocalMqttClientConfig,
 		HttpClient: HttpClientConfig{
 			LocalTimeout: 10000000000, // 10s
 			CloudTimeout: 30000000000, // 30s
