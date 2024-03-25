@@ -79,7 +79,7 @@ func main() {
 	localMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
 		localMqttHdl.HandleSubscriptions()
 	})
-	paho_mqtt.SetClientOptions(localMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.LocalMqttClient, nil, nil)
+	paho_mqtt.SetLocalClientOptions(localMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.LocalMqttClient)
 	localMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(localMqttClientOpt), time.Duration(config.LocalMqttClient.WaitTimeout))
 	localMqttClientPubF := func(topic string, data []byte) error {
 		return localMqttClient.Publish(topic, config.LocalMqttClient.QOSLevel, false, data)
@@ -91,7 +91,7 @@ func main() {
 	cloudMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
 		cloudMqttHdl.HandleSubscriptions()
 	})
-	paho_mqtt.SetClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
+	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
 	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
 	cloudMqttClientPubF := func(topic string, data []byte) error {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.QOSLevel, false, data)
