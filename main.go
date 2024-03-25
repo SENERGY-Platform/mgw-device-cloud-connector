@@ -67,10 +67,10 @@ func main() {
 
 	paho_mqtt.SetLogger()
 
-	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.DmBaseUrl)
+	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.LocalDmBaseUrl)
 	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
 
-	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.AuthBaseUrl, config.Auth.User, config.Auth.Password.String(), config.Auth.ClientID))
+	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudDmBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.AuthBaseUrl, config.Auth.User, config.Auth.Password.String(), config.Auth.ClientID))
 	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
 	localMqttHdl := local_mqtt_hdl.New(config.LocalMqttClient.QOSLevel)

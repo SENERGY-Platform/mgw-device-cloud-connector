@@ -33,11 +33,11 @@ type MqttClientConfig struct {
 }
 
 type HttpClientConfig struct {
-	CloudBaseUrl string `json:"cloud_base_url" env_var:"CLOUD_BASE_URL"`
-	DmBaseUrl    string `json:"dm_base_url" env_var:"DM_BASE_URL"`
-	AuthBaseUrl  string `json:"auth_base_url" env_var:"AUTH_BASE_URL"`
-	LocalTimeout int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
-	CloudTimeout int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
+	CloudDmBaseUrl string `json:"cloud_dm_base_url" env_var:"CLOUD_DM_BASE_URL"`
+	LocalDmBaseUrl string `json:"local_dm_base_url" env_var:"LOCAL_DM_BASE_URL"`
+	AuthBaseUrl    string `json:"auth_base_url" env_var:"AUTH_BASE_URL"`
+	LocalTimeout   int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
+	CloudTimeout   int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
 }
 
 type AuthConfig struct {
