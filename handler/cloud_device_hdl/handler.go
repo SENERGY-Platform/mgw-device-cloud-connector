@@ -71,17 +71,19 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 			}
 			ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
 			defer cf2()
-			d.HubID, err = h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: hubName})
+			hID, err := h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: hubName})
 			if err != nil {
 				return err
 			}
+			d.HubID = hID
 		}
 		deviceIDs = hub.DeviceIds
 	} else {
-		d.HubID, err = h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
+		hID, err := h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
 		if err != nil {
 			return err
 		}
+		d.HubID = hID
 	}
 	d.DeviceIDMap, err = h.getDeviceIDMap(ctx, d.DeviceIDMap, deviceIDs)
 	if err != nil {
