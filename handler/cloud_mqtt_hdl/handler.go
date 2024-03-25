@@ -36,7 +36,7 @@ func (h *Handler) HandleSubscriptions() {
 	devices := h.localDeviceHdl.GetDevices()
 	for id, device := range devices {
 		if device.State == model.Online {
-			t := "command" + id + "/+"
+			t := "command/" + id + "/+"
 			err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 					util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
@@ -62,7 +62,7 @@ func (h *Handler) HandleSubscriptions() {
 
 func (h *Handler) HandleMissingDevices(missing []string) error {
 	for _, id := range missing {
-		t := "command" + id + "/+"
+		t := "command/" + id + "/+"
 		if err := h.client.Unsubscribe(t); err != nil {
 			util.Logger.Errorf(model.UnsubscribeErrString, t, err)
 		}
@@ -72,7 +72,7 @@ func (h *Handler) HandleMissingDevices(missing []string) error {
 
 func (h *Handler) HandleDeviceStates(deviceStates map[string]string) (failed []string, err error) {
 	for id, state := range deviceStates {
-		t := "command" + id + "/+"
+		t := "command/" + id + "/+"
 		switch state {
 		case model.Online:
 			err = h.client.Subscribe(t, h.qos, func(m handler.Message) {
