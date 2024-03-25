@@ -44,8 +44,8 @@ type LocalMqttClientConfig struct {
 }
 
 type HttpClientConfig struct {
-	CloudApiBaseUrl  string `json:"cloud_api_base_url" env_var:"CLOUD_API_BASE_URL"`
 	LocalDmBaseUrl   string `json:"local_dm_base_url" env_var:"LOCAL_DM_BASE_URL"`
+	CloudApiBaseUrl  string `json:"cloud_api_base_url" env_var:"CLOUD_API_BASE_URL"`
 	CloudAuthBaseUrl string `json:"cloud_auth_base_url" env_var:"CLOUD_AUTH_BASE_URL"`
 	LocalTimeout     int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
 	CloudTimeout     int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
