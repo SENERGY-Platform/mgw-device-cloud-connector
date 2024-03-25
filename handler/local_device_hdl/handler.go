@@ -27,7 +27,7 @@ type Handler struct {
 	running       bool
 	loopMu        sync.RWMutex
 	mu            sync.RWMutex
-	syncFunc      func(ctx context.Context, devices map[string]model.Device, changedIDs []string) (failed []string, err error)
+	syncFunc      func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs []string) (failed []string, err error)
 	missingFunc   func(ctx context.Context, missingIDs []string) error
 	stateFunc     func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)
 }
@@ -65,7 +65,7 @@ func (h *Handler) Stop() {
 	h.loopMu.Unlock()
 }
 
-func (h *Handler) SetSyncFunc(f func(ctx context.Context, devices map[string]model.Device, changedIDs []string) (failed []string, err error)) {
+func (h *Handler) SetSyncFunc(f func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs []string) (failed []string, err error)) {
 	h.syncFunc = f
 }
 
@@ -122,9 +122,9 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	for id, dmDevice := range dmDevices {
 		devices[h.idPrefix+id] = newDevice(h.idPrefix+id, dmDevice)
 	}
-	changedIDs, missingIDs, deviceMap, deviceStates := h.diffDevices(devices)
-	if h.syncFunc != nil {
-		failed, err := h.syncFunc(ctx, deviceMap, changedIDs)
+	newIDs, changedIDs, missingIDs, deviceMap, deviceStates := h.diffDevices(devices)
+	if h.syncFunc != nil && len(newIDs)+len(changedIDs) > 0 {
+		failed, err := h.syncFunc(ctx, deviceMap, newIDs, changedIDs)
 		if err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	return nil
 }
 
-func (h *Handler) diffDevices(devices map[string]device) (changedIDs, missingIDs []string, deviceMap map[string]model.Device, states map[string][2]string) {
+func (h *Handler) diffDevices(devices map[string]device) (newIDs, changedIDs, missingIDs []string, deviceMap map[string]model.Device, states map[string][2]string) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	deviceMap = make(map[string]model.Device)
@@ -173,6 +173,8 @@ func (h *Handler) diffDevices(devices map[string]device) (changedIDs, missingIDs
 			if storedDevice.Hash != queriedDevice.Hash {
 				changedIDs = append(changedIDs, id)
 			}
+		} else {
+			newIDs = append(newIDs, id)
 		}
 		if storedDevice.State != queriedDevice.State {
 			states[id] = [2]string{storedDevice.State, queriedDevice.State}
