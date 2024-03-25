@@ -97,7 +97,7 @@ func NewConfig(path string) (*Config, error) {
 			CloudTimeout: 30000000000, // 30s
 		},
 		CloudDeviceHandler: CloudDeviceHandlerConfig{
-			WrkSpcPath:      "/opt/device-cloud-connector",
+			WrkSpcPath:      "/opt/connector/cdh-data",
 			AttributeOrigin: "dcc",
 		},
 		LocalDeviceHandler: LocalDeviceHandlerConfig{
