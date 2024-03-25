@@ -33,17 +33,17 @@ type MqttClientConfig struct {
 }
 
 type HttpClientConfig struct {
-	CloudDmBaseUrl string `json:"cloud_dm_base_url" env_var:"CLOUD_DM_BASE_URL"`
-	LocalDmBaseUrl string `json:"local_dm_base_url" env_var:"LOCAL_DM_BASE_URL"`
-	AuthBaseUrl    string `json:"auth_base_url" env_var:"AUTH_BASE_URL"`
-	LocalTimeout   int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
-	CloudTimeout   int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
+	CloudApiBaseUrl  string `json:"cloud_api_base_url" env_var:"CLOUD_API_BASE_URL"`
+	LocalDmBaseUrl   string `json:"local_dm_base_url" env_var:"LOCAL_DM_BASE_URL"`
+	CloudAuthBaseUrl string `json:"cloud_auth_base_url" env_var:"CLOUD_AUTH_BASE_URL"`
+	LocalTimeout     int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
+	CloudTimeout     int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
 }
 
-type AuthConfig struct {
-	User     string               `json:"user" env_var:"USER"`
-	Password sb_util.SecretString `json:"password" env_var:"PASSWORD"`
-	ClientID string               `json:"client_id" env_var:"CLIENT_ID"`
+type CloudAuthConfig struct {
+	User     string               `json:"user" env_var:"CLOUD_USER"`
+	Password sb_util.SecretString `json:"password" env_var:"CLOUD_PASSWORD"`
+	ClientID string               `json:"client_id" env_var:"CLOUD_CLIENT_ID"`
 }
 
 type CloudDeviceHandlerConfig struct {
@@ -63,7 +63,7 @@ type Config struct {
 	CloudMqttClient         MqttClientConfig         `json:"upstream_mqtt_client" env_var:"UPSTREAM_MQTT_CLIENT_CONFIG"`
 	LocalMqttClient         MqttClientConfig         `json:"downstream_mqtt_client" env_var:"DOWNSTREAM_MQTT_CLIENT_CONFIG"`
 	HttpClient              HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
-	Auth                    AuthConfig               `json:"auth" env_var:"AUTH_CONFIG"`
+	CloudAuth               CloudAuthConfig          `json:"cloud_auth" env_var:"CLOUD_AUTH_CONFIG"`
 	CloudDeviceHandler      CloudDeviceHandlerConfig `json:"cloud_device_handler" env_var:"CLOUD_DEVICE_HANDLER_CONFIG"`
 	LocalDeviceHandler      LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
 	MessageRelayBuffer      int                      `json:"message_relay_buffer" env_var:"MESSAGE_RELAY_BUFFER"`

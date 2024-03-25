@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func SetClientOptions(co *mqtt.ClientOptions, clientID string, mqttConf util.MqttClientConfig, authConf *util.AuthConfig, tlsConf *tls.Config) {
+func SetClientOptions(co *mqtt.ClientOptions, clientID string, mqttConf util.MqttClientConfig, authConf *util.CloudAuthConfig, tlsConf *tls.Config) {
 	co.AddBroker(mqttConf.Server)
 	co.SetClientID(clientID)
 	co.SetKeepAlive(time.Duration(mqttConf.KeepAlive))

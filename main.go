@@ -70,7 +70,7 @@ func main() {
 	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.LocalDmBaseUrl)
 	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
 
-	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudDmBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.AuthBaseUrl, config.Auth.User, config.Auth.Password.String(), config.Auth.ClientID))
+	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
 	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
 	localMqttHdl := local_mqtt_hdl.New(config.LocalMqttClient.QOSLevel)
@@ -91,7 +91,7 @@ func main() {
 	cloudMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
 		cloudMqttHdl.HandleSubscriptions()
 	})
-	paho_mqtt.SetClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.CloudMqttClient, &config.Auth, &tls.Config{InsecureSkipVerify: true})
+	paho_mqtt.SetClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
 	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
 	cloudMqttClientPubF := func(topic string, data []byte) error {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.QOSLevel, false, data)
