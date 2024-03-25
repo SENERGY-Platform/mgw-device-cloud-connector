@@ -17,7 +17,7 @@ func (l *mqttLogger) Printf(format string, v ...any) {
 	l.printf(format, v...)
 }
 
-func SetLogger() {
+func SetLogger(debug bool) {
 	mqtt.ERROR = &mqttLogger{
 		println: util.Logger.Errorln,
 		printf:  util.Logger.Errorf,
@@ -30,8 +30,10 @@ func SetLogger() {
 		println: util.Logger.Warningln,
 		printf:  util.Logger.Warningf,
 	}
-	mqtt.DEBUG = &mqttLogger{
-		println: util.Logger.Debugln,
-		printf:  util.Logger.Debugf,
+	if debug {
+		mqtt.DEBUG = &mqttLogger{
+			println: util.Logger.Debugln,
+			printf:  util.Logger.Debugf,
+		}
 	}
 }

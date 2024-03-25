@@ -65,7 +65,7 @@ func main() {
 	watchdog.Logger = util.Logger
 	wtchdg := watchdog.New(syscall.SIGINT, syscall.SIGTERM)
 
-	paho_mqtt.SetLogger()
+	paho_mqtt.SetLogger(config.MQTTDebugLog)
 
 	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.LocalDmBaseUrl)
 	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
