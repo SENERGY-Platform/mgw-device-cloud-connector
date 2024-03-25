@@ -93,7 +93,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	return writeData(h.wrkSpacePath, h.data)
 }
 
-func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, changed []string) ([]string, error) {
+func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, changedIDs []string) ([]string, error) {
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
 	hubExists := true
@@ -127,7 +127,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 		}
 		synced[lID] = state
 	}
-	for _, lID := range changed {
+	for _, lID := range changedIDs {
 		if state, ok := synced[lID]; ok && state == 0 {
 			err = h.syncDevice(ctx, devices[lID])
 			if err != nil {
