@@ -84,7 +84,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		util.Logger.Debug("creating new hub")
 		hID, err := h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
 		if err != nil {
-			return fmt.Errorf("creating hub failed: %s", err)
+			return fmt.Errorf("creating hub in cloud failed: %s", err)
 		}
 		d.HubID = hID
 		util.Logger.Infof("created hub '%s' in cloud", hID)
