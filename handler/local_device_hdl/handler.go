@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/dm_client"
@@ -105,7 +106,7 @@ func (h *Handler) run() {
 		case <-ticker.C:
 			err = h.RefreshDevices(ctx)
 			if err != nil {
-				util.Logger.Errorf("refreshing local devices failed: %s", err)
+				util.Logger.Error(err)
 			}
 		}
 	}
@@ -116,7 +117,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	defer cf()
 	dmDevices, err := h.dmClient.GetDevices(ctxWt)
 	if err != nil {
-		return err
+		return fmt.Errorf("retreiving local devices failed: %s", err)
 	}
 	devices := make(map[string]device)
 	for id, dmDevice := range dmDevices {
@@ -126,7 +127,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	if h.syncFunc != nil && len(newIDs)+len(changedIDs) > 0 {
 		failed, err := h.syncFunc(ctx, deviceMap, newIDs, changedIDs)
 		if err != nil {
-			return err
+			return fmt.Errorf("synchronising devices failed: %s", err)
 		}
 		for _, id := range failed {
 			delete(devices, id)
@@ -135,7 +136,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	if h.missingFunc != nil && len(missingIDs) > 0 {
 		err = h.missingFunc(ctx, missingIDs)
 		if err != nil {
-			return err
+			return fmt.Errorf("handling missing devices faild: %s", err)
 		}
 	}
 	if h.stateFunc != nil && len(deviceStates) > 0 {
@@ -145,7 +146,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 		}
 		failed, err := h.stateFunc(ctx, ds)
 		if err != nil {
-			return err
+			return fmt.Errorf("handling device states faild: %s", err)
 		}
 		for _, id := range failed {
 			if s, ok := deviceStates[id]; ok {
