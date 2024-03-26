@@ -124,7 +124,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 		devices[h.idPrefix+id] = newDevice(h.idPrefix+id, dmDevice)
 	}
 	newIDs, changedIDs, missingIDs, deviceMap, deviceStates := h.diffDevices(devices)
-	if h.syncFunc != nil && len(newIDs)+len(changedIDs) > 0 {
+	if h.syncFunc != nil {
 		failed, err := h.syncFunc(ctx, deviceMap, newIDs, changedIDs)
 		if err != nil {
 			return fmt.Errorf("synchronising devices failed: %s", err)
