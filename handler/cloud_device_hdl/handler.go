@@ -97,7 +97,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	return writeData(h.wrkSpacePath, h.data)
 }
 
-func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, changedIDs []string) ([]string, error) {
+func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs []string) ([]string, error) {
 	util.Logger.Debug("synchronising devices and hub")
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
