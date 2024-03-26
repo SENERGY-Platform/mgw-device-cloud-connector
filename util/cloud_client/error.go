@@ -20,6 +20,10 @@ type BadRequestError struct {
 	cError
 }
 
+type ForbiddenError struct {
+	cError
+}
+
 func (e *cError) Error() string {
 	return e.err.Error()
 }
@@ -42,4 +46,8 @@ func newUnauthorizedError(err error) error {
 
 func newBadRequestError(err error) error {
 	return &BadRequestError{cError{err: err}}
+}
+
+func newForbiddenError(err error) error {
+	return &ForbiddenError{cError{err: err}}
 }
