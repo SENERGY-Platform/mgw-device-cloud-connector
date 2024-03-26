@@ -181,7 +181,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		}
 	}
 	if err = writeData(h.wrkSpacePath, h.data); err != nil {
-		util.Logger.Error(err)
+		return nil, err
 	}
 	return failed, nil
 }
