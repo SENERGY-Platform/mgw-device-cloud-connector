@@ -130,9 +130,9 @@ func main() {
 		return cloudMqttHdl.HandleDeviceStates(deviceStates)
 	})
 
-	cloudDeviceHdl.SetHubSyncFunc(func(_ context.Context, oldID, newID string) error {
-		return cloudMqttHdl.HandleHubIDChange(oldID, newID)
-	})
+	//cloudDeviceHdl.SetHubSyncFunc(func(_ context.Context, oldID, newID string) error {
+	//	return cloudMqttHdl.HandleHubIDChange(oldID, newID)
+	//})
 
 	chCtx, cf := context.WithCancel(context.Background())
 	defer cf()
