@@ -85,10 +85,11 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		}
 		d.HubID = hID
 	}
-	d.DeviceIDMap, err = h.getDeviceIDMap(ctx, d.DeviceIDMap, deviceIDs)
+	deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, deviceIDs)
 	if err != nil {
-		return err
+		return fmt.Errorf("refreshing device ID cache failed: %s", err)
 	}
+	d.DeviceIDMap = deviceIDMap
 	h.data = d
 	return writeData(h.wrkSpacePath, h.data)
 }
