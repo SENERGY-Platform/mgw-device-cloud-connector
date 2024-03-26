@@ -108,21 +108,21 @@ func (h *Handler) HandleDeviceStates(deviceStates map[string]string) (failed []s
 	return failed, nil
 }
 
-func (h *Handler) HandleHubIDChange(oldID, newID string) error {
-	t := "processes/" + newID + "/cmd/#"
-	util.Logger.Debugf(SubscribeString, t)
-	err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
-		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
-			util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
-		}
-	})
-	if err != nil {
-		util.Logger.Errorf(SubscribeErrString, t, err)
-	}
-	t = "processes/" + oldID + "/cmd/#"
-	util.Logger.Debugf(UnsubscribeString, t)
-	if err = h.client.Unsubscribe(t); err != nil {
-		util.Logger.Errorf(UnsubscribeErrString, t, err)
-	}
-	return nil
-}
+//func (h *Handler) HandleHubIDChange(oldID, newID string) error {
+//	t := "processes/" + newID + "/cmd/#"
+//	util.Logger.Debugf(SubscribeString, t)
+//	err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
+//		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
+//			util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
+//		}
+//	})
+//	if err != nil {
+//		util.Logger.Errorf(SubscribeErrString, t, err)
+//	}
+//	t = "processes/" + oldID + "/cmd/#"
+//	util.Logger.Debugf(UnsubscribeString, t)
+//	if err = h.client.Unsubscribe(t); err != nil {
+//		util.Logger.Errorf(UnsubscribeErrString, t, err)
+//	}
+//	return nil
+//}
