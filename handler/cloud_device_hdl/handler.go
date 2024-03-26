@@ -21,14 +21,17 @@ type Handler struct {
 	wrkSpacePath string
 	attrOrigin   string
 	data         data
+	lastSync     time.Time
+	syncInterval time.Duration
 	hubSyncFunc  func(ctx context.Context, oldID, newID string) error
 	mu           sync.RWMutex
 }
 
-func New(cloudClient cloud_client.ClientItf, timeout time.Duration, wrkSpacePath, attrOrigin string) *Handler {
+func New(cloudClient cloud_client.ClientItf, timeout, syncInterval time.Duration, wrkSpacePath, attrOrigin string) *Handler {
 	return &Handler{
 		cloudClient:  cloudClient,
 		timeout:      timeout,
+		syncInterval: syncInterval,
 		wrkSpacePath: wrkSpacePath,
 		attrOrigin:   attrOrigin,
 	}
@@ -92,7 +95,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs []string) ([]string, error) {
-	if len(newIDs)+len(changedIDs) == 0 {
+	if len(newIDs)+len(changedIDs) == 0 && time.Since(h.lastSync) < h.syncInterval {
 		return nil, nil
 	}
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
@@ -184,6 +187,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	if err = writeData(h.wrkSpacePath, h.data); err != nil {
 		return nil, err
 	}
+	h.lastSync = time.Now()
 	return failed, nil
 }
 
