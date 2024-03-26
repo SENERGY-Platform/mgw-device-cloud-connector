@@ -59,29 +59,27 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		d.HubID = hubID
 	}
 	d.DefaultHubName = hubName
-	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
-	defer cf()
-	var deviceIDs []string
 	if d.HubID != "" {
-		util.Logger.Debugf("initialising hub '%s'", d.HubID)
-		hub, err := h.cloudClient.GetHub(ctxWt, d.HubID)
-		if err != nil {
+		ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+		defer cf()
+		if _, err := h.cloudClient.GetHub(ctxWt, d.HubID); err != nil {
 			var nfe *cloud_client.NotFoundError
-			if !errors.As(err, &nfe) {
-				return fmt.Errorf("retreiving hub failed: %s", err)
+			var fe *cloud_client.ForbiddenError
+			isForbidden := errors.As(err, &fe)
+			if !errors.As(err, &nfe) && !isForbidden {
+				return fmt.Errorf("retreiving hub '%s' from cloud failed: %s", d.HubID, err)
 			}
-			util.Logger.Warningf("hub '%s' not found", d.HubID)
-			ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
-			defer cf2()
-			hID, err := h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: hubName})
-			if err != nil {
-				return fmt.Errorf("creating hub failed: %s", err)
+			if isForbidden {
+				util.Logger.Warningf("retreiving hub '%s' from cloud failed: %s", d.HubID, err)
+			} else {
+				util.Logger.Warningf("hub '%s' not found in cloud", d.HubID)
+				d.HubID = ""
 			}
-			d.HubID = hID
 		}
-		deviceIDs = hub.DeviceIds
-	} else {
-		util.Logger.Debug("creating new hub")
+	}
+	if d.HubID == "" {
+		ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+		defer cf()
 		hID, err := h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
 		if err != nil {
 			return fmt.Errorf("creating hub in cloud failed: %s", err)
