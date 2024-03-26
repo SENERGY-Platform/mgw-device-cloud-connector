@@ -260,6 +260,7 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 					continue
 				}
 				lID = device.LocalId
+				util.Logger.Debugf("adding '%s' -> '%s' to device ID cache", lID, rID)
 			}
 			deviceIDMap[lID] = rID
 		}
