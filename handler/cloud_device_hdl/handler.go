@@ -105,7 +105,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
 		if !errors.As(err, &nfe) {
-			return nil, err
+			return nil, fmt.Errorf("retireving hub '%s' from cloud failed: %s", h.data.HubID, err)
 		}
 		hubExists = false
 	}
