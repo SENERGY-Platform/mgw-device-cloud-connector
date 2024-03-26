@@ -108,6 +108,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 			return nil, fmt.Errorf("retireving hub '%s' from cloud failed: %s", h.data.HubID, err)
 		}
 		hubExists = false
+		util.Logger.Warningf("hub '%s' not found", h.data.HubID)
 	}
 	deviceIDMap, err := h.getDeviceIDMap(ctx, h.data.DeviceIDMap, hb.DeviceIds)
 	if err != nil {
@@ -152,19 +153,21 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 	ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
 	defer cf2()
 	if hubExists {
+		util.Logger.Debugf("synchronising hub '%s'", hb.Id)
 		hb.DeviceLocalIds = hubLocalIDs
 		hb.DeviceIds = nil
 		if err = h.cloudClient.UpdateHub(ctxWt2, hb); err != nil {
-			util.Logger.Error(err)
+			util.Logger.Errorf("updating hub '%s' failed: %s", hb.Id, err)
 		}
 	} else {
+		util.Logger.Debug("creating new hub")
 		oldHubID := h.data.HubID
 		newHubID, err := h.cloudClient.CreateHub(ctxWt2, models.Hub{
 			Name:           h.data.DefaultHubName,
 			DeviceLocalIds: hubLocalIDs,
 		})
 		if err != nil {
-			util.Logger.Error(err)
+			util.Logger.Errorf("creating hub failed: %s", err)
 		} else {
 			h.mu.Lock()
 			h.data.HubID = newHubID
@@ -183,6 +186,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 }
 
 func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err error) {
+	util.Logger.Debugf("synchronising device '%s'", device.ID)
 	rID, ok := h.data.DeviceIDMap[device.ID]
 	if !ok {
 		rID, err = h.createOrUpdateDevice(ctx, device)
