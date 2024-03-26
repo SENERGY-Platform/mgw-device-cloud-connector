@@ -81,6 +81,7 @@ type Config struct {
 	EventMessageRelayBuffer int                      `json:"event_message_relay_buffer" env_var:"EVENT_MESSAGE_RELAY_BUFFER"`
 	MGWDeploymentID         string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
 	MaxDeviceCmdAge         int64                    `json:"max_device_cmd_age" env_var:"MAX_DEVICE_CMD_AGE"`
+	MQTTLog                 bool                     `json:"mqtt_log" env_var:"MQTT_LOG"`
 	MQTTDebugLog            bool                     `json:"mqtt_debug_log" env_var:"MQTT_DEBUG_LOG"`
 }
 
@@ -128,6 +129,7 @@ func NewConfig(path string) (*Config, error) {
 		MessageRelayBuffer:      2500,
 		EventMessageRelayBuffer: 5000,
 		MaxDeviceCmdAge:         60000000000, // 60s
+		MQTTLog:                 true,
 	}
 	err := sb_util.LoadConfig(path, &cfg, nil, nil, nil)
 	return &cfg, err
