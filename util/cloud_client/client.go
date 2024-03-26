@@ -57,6 +57,8 @@ func customError(code int, err error) error {
 		err = newBadRequestError(err)
 	case http.StatusForbidden:
 		err = newForbiddenError(err)
+	case http.StatusMethodNotAllowed:
+		err = newNotAllowedError(err)
 	}
 	return err
 }

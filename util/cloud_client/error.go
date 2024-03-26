@@ -24,6 +24,10 @@ type ForbiddenError struct {
 	cError
 }
 
+type NotAllowedError struct {
+	cError
+}
+
 func (e *cError) Error() string {
 	return e.err.Error()
 }
@@ -50,4 +54,8 @@ func newBadRequestError(err error) error {
 
 func newForbiddenError(err error) error {
 	return &ForbiddenError{cError{err: err}}
+}
+
+func newNotAllowedError(err error) error {
+	return &NotAllowedError{cError{err: err}}
 }
