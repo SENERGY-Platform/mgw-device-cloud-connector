@@ -6,6 +6,14 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 )
 
+const (
+	RelayMsgErrString    = "relaying message failed: topic=%s err=%s"
+	SubscribeString      = "subscribing to cloud topic '%s'"
+	SubscribeErrString   = "subscribing to cloud topic '%s' failed: %s"
+	UnsubscribeString    = "unsubscribing from cloud topic '%s'"
+	UnsubscribeErrString = "unsubscribing from cloud topic '%s' failed: %s"
+)
+
 type Handler struct {
 	client                  handler.MqttClient
 	cloudDeviceHdl          handler.CloudDeviceHandler
@@ -39,11 +47,11 @@ func (h *Handler) HandleSubscriptions() {
 			t := "command/" + id + "/+"
 			err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-					util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
+					util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
 				}
 			})
 			if err != nil {
-				util.Logger.Errorf(model.SubscribeErrString, t, err)
+				util.Logger.Errorf(SubscribeErrString, t, err)
 			}
 		}
 	}
@@ -51,11 +59,11 @@ func (h *Handler) HandleSubscriptions() {
 		t := "processes/" + hubID + "/cmd/#"
 		err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
 			if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
-				util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
+				util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
 			}
 		})
 		if err != nil {
-			util.Logger.Errorf(model.SubscribeErrString, t, err)
+			util.Logger.Errorf(SubscribeErrString, t, err)
 		}
 	}
 }
@@ -64,7 +72,7 @@ func (h *Handler) HandleMissingDevices(missing []string) error {
 	for _, id := range missing {
 		t := "command/" + id + "/+"
 		if err := h.client.Unsubscribe(t); err != nil {
-			util.Logger.Errorf(model.UnsubscribeErrString, t, err)
+			util.Logger.Errorf(UnsubscribeErrString, t, err)
 		}
 	}
 	return nil
@@ -77,15 +85,15 @@ func (h *Handler) HandleDeviceStates(deviceStates map[string]string) (failed []s
 		case model.Online:
 			err = h.client.Subscribe(t, h.qos, func(m handler.Message) {
 				if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-					util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
+					util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
 				}
 			})
 			if err != nil {
-				util.Logger.Errorf(model.SubscribeErrString, t, err)
+				util.Logger.Errorf(SubscribeErrString, t, err)
 			}
 		case model.Offline, "":
 			if err = h.client.Unsubscribe(t); err != nil {
-				util.Logger.Errorf(model.UnsubscribeErrString, t, err)
+				util.Logger.Errorf(UnsubscribeErrString, t, err)
 			}
 		}
 		if err != nil {
@@ -99,15 +107,15 @@ func (h *Handler) HandleHubIDChange(oldID, newID string) error {
 	t := "processes/" + newID + "/cmd/#"
 	err := h.client.Subscribe(t, h.qos, func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
-			util.Logger.Errorf(model.RelayMsgErrString, m.Topic(), err)
+			util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
 		}
 	})
 	if err != nil {
-		util.Logger.Errorf(model.SubscribeErrString, t, err)
+		util.Logger.Errorf(SubscribeErrString, t, err)
 	}
 	t = "processes/" + oldID + "/cmd/#"
 	if err = h.client.Unsubscribe(t); err != nil {
-		util.Logger.Errorf(model.UnsubscribeErrString, t, err)
+		util.Logger.Errorf(UnsubscribeErrString, t, err)
 	}
 	return nil
 }
