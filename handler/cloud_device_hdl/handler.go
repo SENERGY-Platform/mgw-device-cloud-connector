@@ -87,6 +87,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 			return fmt.Errorf("creating hub failed: %s", err)
 		}
 		d.HubID = hID
+		util.Logger.Infof("created hub '%s' in cloud", hID)
 	}
 	h.data = d
 	return writeData(h.wrkSpacePath, h.data)
