@@ -23,8 +23,8 @@ type Handler struct {
 	data         data
 	lastSync     time.Time
 	syncInterval time.Duration
-	hubSyncFunc  func(ctx context.Context, oldID, newID string) error
-	mu           sync.RWMutex
+	//hubSyncFunc  func(ctx context.Context, oldID, newID string) error
+	mu sync.RWMutex
 }
 
 func New(cloudClient cloud_client.ClientItf, timeout, syncInterval time.Duration, wrkSpacePath, attrOrigin string) *Handler {
@@ -37,9 +37,9 @@ func New(cloudClient cloud_client.ClientItf, timeout, syncInterval time.Duration
 	}
 }
 
-func (h *Handler) SetHubSyncFunc(f func(ctx context.Context, oldID, newID string) error) {
-	h.hubSyncFunc = f
-}
+//func (h *Handler) SetHubSyncFunc(f func(ctx context.Context, oldID, newID string) error) {
+//	h.hubSyncFunc = f
+//}
 
 func (h *Handler) GetHubID() string {
 	h.mu.RLock()
@@ -110,7 +110,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		}
 		if isForbidden {
 			util.Logger.Warningf("retreiving hub '%s' from cloud failed: %s", h.data.HubID, err)
-			hb.Id = h.data.HubID
+			//hb.Id = h.data.HubID
 		} else {
 			util.Logger.Warningf("hub '%s' not found in cloud", h.data.HubID)
 		}
@@ -157,33 +157,44 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	}
 	ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
 	defer cf2()
-	if hb.Id != "" {
-		util.Logger.Debugf("synchronising hub '%s' in cloud", hb.Id)
-		hb.DeviceLocalIds = hubLocalIDs
-		hb.DeviceIds = nil
-		if err = h.cloudClient.UpdateHub(ctxWt2, hb); err != nil {
-			return nil, fmt.Errorf("updating hub '%s' failed: %s", hb.Id, err)
+	hb.DeviceLocalIds = hubLocalIDs
+	hb.DeviceIds = nil
+	if err = h.cloudClient.UpdateHub(ctxWt2, hb); err != nil {
+		var nfe *cloud_client.NotFoundError
+		var fe *cloud_client.ForbiddenError
+		var nae *cloud_client.NotAllowedError
+		if !errors.As(err, &nfe) && !errors.As(err, &fe) && !errors.As(err, &nae) {
+			return nil, fmt.Errorf("updating hub '%s' in cloud failed: %s", h.data.HubID, err)
 		}
-	} else {
-		oldHubID := h.data.HubID
-		newHubID, err := h.cloudClient.CreateHub(ctxWt2, models.Hub{
-			Name:           h.data.DefaultHubName,
-			DeviceLocalIds: hubLocalIDs,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("creating hub in cloud failed: %s", err)
-		}
-		util.Logger.Infof("created hub '%s' in cloud", newHubID)
-		h.mu.Lock()
-		h.data.HubID = newHubID
-		h.mu.Unlock()
-		if h.hubSyncFunc != nil {
-			if err = h.hubSyncFunc(ctx, oldHubID, newHubID); err != nil {
-				// TODO handle error
-				fmt.Println(err)
-			}
-		}
+		util.Logger.Warningf("updating hub '%s' in cloud failed: %s", h.data.HubID, err)
 	}
+	//if hb.Id != "" {
+	//	util.Logger.Debugf("synchronising hub '%s' in cloud", hb.Id)
+	//	hb.DeviceLocalIds = hubLocalIDs
+	//	hb.DeviceIds = nil
+	//	if err = h.cloudClient.UpdateHub(ctxWt2, hb); err != nil {
+	//		return nil, fmt.Errorf("updating hub '%s' failed: %s", hb.Id, err)
+	//	}
+	//} else {
+	//	oldHubID := h.data.HubID
+	//	newHubID, err := h.cloudClient.CreateHub(ctxWt2, models.Hub{
+	//		Name:           h.data.DefaultHubName,
+	//		DeviceLocalIds: hubLocalIDs,
+	//	})
+	//	if err != nil {
+	//		return nil, fmt.Errorf("creating hub in cloud failed: %s", err)
+	//	}
+	//	util.Logger.Infof("created hub '%s' in cloud", newHubID)
+	//	h.mu.Lock()
+	//	h.data.HubID = newHubID
+	//	h.mu.Unlock()
+	//	if h.hubSyncFunc != nil {
+	//		if err = h.hubSyncFunc(ctx, oldHubID, newHubID); err != nil {
+	//			// TODO handle error
+	//			fmt.Println(err)
+	//		}
+	//	}
+	//}
 	if err = writeData(h.wrkSpacePath, h.data); err != nil {
 		return nil, err
 	}
