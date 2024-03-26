@@ -67,13 +67,13 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		if err != nil {
 			var nfe *cloud_client.NotFoundError
 			if !errors.As(err, &nfe) {
-				return err
+				return fmt.Errorf("retreiving hub failed: %s", err)
 			}
 			ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
 			defer cf2()
 			hID, err := h.cloudClient.CreateHub(ctxWt2, models.Hub{Name: hubName})
 			if err != nil {
-				return err
+				return fmt.Errorf("creating hub failed: %s", err)
 			}
 			d.HubID = hID
 		}
@@ -81,7 +81,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	} else {
 		hID, err := h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
 		if err != nil {
-			return err
+			return fmt.Errorf("creating hub failed: %s", err)
 		}
 		d.HubID = hID
 	}
