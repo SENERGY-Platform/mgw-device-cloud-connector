@@ -109,10 +109,11 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 		}
 		hubExists = false
 	}
-	h.data.DeviceIDMap, err = h.getDeviceIDMap(ctx, h.data.DeviceIDMap, hb.DeviceIds)
+	deviceIDMap, err := h.getDeviceIDMap(ctx, h.data.DeviceIDMap, hb.DeviceIds)
 	if err != nil {
 		return nil, err
 	}
+	h.data.DeviceIDMap = deviceIDMap
 	hubLocalIDSet := make(map[string]struct{})
 	for _, lID := range hb.DeviceLocalIds {
 		hubLocalIDSet[lID] = struct{}{}
