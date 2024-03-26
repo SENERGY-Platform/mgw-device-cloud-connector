@@ -111,7 +111,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, cha
 	}
 	deviceIDMap, err := h.getDeviceIDMap(ctx, h.data.DeviceIDMap, hb.DeviceIds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("refreshing device ID cache failed: %s", err)
 	}
 	h.data.DeviceIDMap = deviceIDMap
 	hubLocalIDSet := make(map[string]struct{})
@@ -204,16 +204,16 @@ func (h *Handler) createOrUpdateDevice(ctx context.Context, device model.Device)
 	if err != nil {
 		var bre *cloud_client.BadRequestError
 		if !errors.As(err, &bre) {
-			return "", err
+			return "", fmt.Errorf("creating device '%s' in cloud failed: %s", device.ID, err)
 		}
 		d, err := h.cloudClient.GetDeviceL(ch.Add(context.WithTimeout(ctx, h.timeout)), device.ID)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("retrieving device '%s' from cloud failed: %s", device.ID, err)
 		}
 		rID = d.Id
 		nd.Id = d.Id
 		if err = h.cloudClient.UpdateDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), nd, h.attrOrigin); err != nil {
-			return "", err
+			return "", fmt.Errorf("updating device '%s' in cloud failed: %s", device.ID, err)
 		}
 	}
 	return rID, nil
@@ -226,7 +226,7 @@ func (h *Handler) updateOrCreateDevice(ctx context.Context, rID string, device m
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
 		if !errors.As(err, &nfe) {
-			return "", err
+			return "", fmt.Errorf("updating device '%s' in cloud failed: %s", device.ID, err)
 		}
 		return h.createOrUpdateDevice(ctx, device)
 	}
@@ -249,7 +249,7 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 				if err != nil {
 					var nfe *cloud_client.NotFoundError
 					if !errors.As(err, &nfe) {
-						return nil, err
+						return nil, fmt.Errorf("retrieving device '%s' from cloud failed: %s", rID, err)
 					}
 					continue
 				}
