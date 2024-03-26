@@ -62,6 +62,7 @@ type CloudDeviceHandlerConfig struct {
 	DefaultHubName  string `json:"default_hub_name" env_var:"CDH_DEFAULT_HUB_NAME"`
 	WrkSpcPath      string `json:"wrk_spc_path" env_var:"CDH_WRK_SPC_PATH"`
 	AttributeOrigin string `json:"attribute_origin" env_var:"CDH_ATTRIBUTE_ORIGIN"`
+	SyncInterval    int64  `json:"sync_interval" env_var:"CDH_SYNC_INTERVAL"`
 }
 
 type LocalDeviceHandlerConfig struct {
@@ -122,6 +123,7 @@ func NewConfig(path string) (*Config, error) {
 		CloudDeviceHandler: CloudDeviceHandlerConfig{
 			WrkSpcPath:      "/opt/connector/cdh-data",
 			AttributeOrigin: "dcc",
+			SyncInterval:    1800000000000, // 30m
 		},
 		LocalDeviceHandler: LocalDeviceHandlerConfig{
 			QueryInterval: 5000000000, // 5s
