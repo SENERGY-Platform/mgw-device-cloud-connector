@@ -89,9 +89,14 @@ func (h *Handler) GetDevices() map[string]model.Device {
 }
 
 func (h *Handler) run() {
-	ticker := time.NewTicker(h.queryInterval)
+	timer := time.NewTimer(h.queryInterval)
 	defer func() {
-		ticker.Stop()
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
 		h.loopMu.Lock()
 		h.running = false
 		h.loopMu.Unlock()
@@ -103,11 +108,12 @@ func (h *Handler) run() {
 		select {
 		case <-h.sChan:
 			return
-		case <-ticker.C:
+		case <-timer.C:
 			err = h.RefreshDevices(ctx)
 			if err != nil {
 				util.Logger.Error(err)
 			}
+			timer.Reset(h.queryInterval)
 		}
 	}
 }
@@ -174,11 +180,14 @@ func (h *Handler) diffDevices(devices map[string]device) (newIDs, changedIDs, mi
 			if storedDevice.Hash != queriedDevice.Hash {
 				changedIDs = append(changedIDs, id)
 			}
+			if storedDevice.State != queriedDevice.State {
+				states[id] = [2]string{storedDevice.State, queriedDevice.State}
+			}
 		} else {
 			newIDs = append(newIDs, id)
-		}
-		if storedDevice.State != queriedDevice.State {
-			states[id] = [2]string{storedDevice.State, queriedDevice.State}
+			if queriedDevice.State == model.Online {
+				states[id] = [2]string{"", queriedDevice.State}
+			}
 		}
 	}
 	for id := range h.devices {
