@@ -73,7 +73,16 @@ func main() {
 	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
 
 	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
-	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
+	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), time.Duration(config.CloudDeviceHandler.SyncInterval), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
+
+	chCtx, cf := context.WithCancel(context.Background())
+	defer cf()
+	hubID, err := cloudDeviceHdl.Init(chCtx, config.CloudDeviceHandler.HubID, config.CloudDeviceHandler.DefaultHubName)
+	if err != nil {
+		util.Logger.Error(err)
+		ec = 1
+		return
+	}
 
 	localMqttHdl := local_mqtt_hdl.New(config.LocalMqttClient.QOSLevel)
 
@@ -87,13 +96,13 @@ func main() {
 		return localMqttClient.Publish(topic, config.LocalMqttClient.QOSLevel, false, data)
 	}
 
-	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.QOSLevel, cloudDeviceHdl, localDeviceHdl)
+	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.QOSLevel, hubID)
 
 	cloudMqttClientOpt := mqtt.NewClientOptions()
-	cloudMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
-		cloudMqttHdl.HandleSubscriptions()
+	cloudMqttClientOpt.SetConnectionLostHandler(func(_ mqtt.Client, _ error) {
+		cloudMqttHdl.HandleOnDisconnect()
 	})
-	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
+	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, hubID, config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
 	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
 	cloudMqttClientPubF := func(topic string, data []byte) error {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.QOSLevel, false, data)
@@ -122,31 +131,9 @@ func main() {
 	cloudMqttHdl.SetMqttClient(cloudMqttClient)
 	cloudMqttHdl.SetMessageRelayHdl(deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl)
 
-	localDeviceHdl.SetSyncFunc(cloudDeviceHdl.Sync)
-	localDeviceHdl.SetMissingFunc(func(_ context.Context, missingIDs []string) error {
-		return cloudMqttHdl.HandleMissingDevices(missingIDs)
-	})
-	localDeviceHdl.SetStateFunc(func(_ context.Context, deviceStates map[string]string) (failed []string, err error) {
-		return cloudMqttHdl.HandleDeviceStates(deviceStates)
-	})
+	localDeviceHdl.SetDeviceSyncFunc(cloudDeviceHdl.Sync)
+	localDeviceHdl.SetDeviceStateSyncFunc(cloudMqttHdl.HandleSubscriptions)
 
-	//cloudDeviceHdl.SetHubSyncFunc(func(_ context.Context, oldID, newID string) error {
-	//	return cloudMqttHdl.HandleHubIDChange(oldID, newID)
-	//})
-
-	chCtx, cf := context.WithCancel(context.Background())
-	defer cf()
-	if err = cloudDeviceHdl.Init(chCtx, config.CloudDeviceHandler.HubID, config.CloudDeviceHandler.DefaultHubName); err != nil {
-		util.Logger.Error(err)
-		ec = 1
-		return
-	}
-
-	ldhCtx, cf := context.WithCancel(context.Background())
-	defer cf()
-	if err = localDeviceHdl.RefreshDevices(ldhCtx); err != nil {
-		util.Logger.Errorf("initial local device refresh failed: %s", err)
-	}
 	localDeviceHdl.Start()
 
 	deviceCmdMsgRelayHdl.Start()
@@ -162,6 +149,7 @@ func main() {
 	cloudMqttClient.Connect()
 
 	wtchdg.RegisterHealthFunc(localDeviceHdl.Running)
+	wtchdg.RegisterHealthFunc(cloudDeviceHdl.HasHub)
 	wtchdg.RegisterStopFunc(func() error {
 		localDeviceHdl.Stop()
 		return nil
