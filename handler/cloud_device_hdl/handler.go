@@ -205,16 +205,20 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err error) {
 	util.Logger.Debugf("synchronising device '%s' in cloud", device.ID)
 	rID, ok := h.data.DeviceIDMap[device.ID]
+	var rIDNew string
 	if !ok {
-		rID, err = h.createOrUpdateDevice(ctx, device)
+		rIDNew, err = h.createOrUpdateDevice(ctx, device)
 	} else {
-		rID, err = h.updateOrCreateDevice(ctx, rID, device)
+		rIDNew, err = h.updateOrCreateDevice(ctx, rID, device)
 	}
 	if err != nil {
 		util.Logger.Error(err)
 		return
 	}
-	h.data.DeviceIDMap[device.ID] = rID
+	if rIDNew != rID {
+		util.Logger.Debugf("updating device ID cache '%s' -> '%s'", device.ID, rIDNew)
+		h.data.DeviceIDMap[device.ID] = rIDNew
+	}
 	return
 }
 
