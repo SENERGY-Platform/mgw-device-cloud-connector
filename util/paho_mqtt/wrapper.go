@@ -2,6 +2,7 @@ package paho_mqtt
 
 import (
 	"errors"
+	"fmt"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/eclipse/paho.mqtt.golang"
 	"time"
@@ -28,6 +29,14 @@ func (w *Wrapper) Subscribe(topic string, qos byte, msgHandler func(m handler.Me
 	})
 	if !t.WaitTimeout(w.timeout) {
 		return errors.New("timeout")
+	}
+	res := t.(*mqtt.SubscribeToken).Result()
+	c, ok := res[topic]
+	if !ok {
+		return errors.New("no result")
+	}
+	if c < 0 || c > 2 {
+		return fmt.Errorf("code=%d", c)
 	}
 	return t.Error()
 }
