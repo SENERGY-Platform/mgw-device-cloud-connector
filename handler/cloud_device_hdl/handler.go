@@ -103,7 +103,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	return writeData(h.wrkSpacePath, h.data)
 }
 
-func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs []string) ([]string, error) {
+func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, error) {
 	if len(newIDs)+len(changedIDs) == 0 && time.Since(h.lastSync) < h.syncInterval {
 		return nil, nil
 	}

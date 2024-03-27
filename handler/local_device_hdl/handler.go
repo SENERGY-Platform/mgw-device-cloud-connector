@@ -28,7 +28,7 @@ type Handler struct {
 	running       bool
 	loopMu        sync.RWMutex
 	mu            sync.RWMutex
-	syncFunc      func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs []string) (failed []string, err error)
+	syncFunc      func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (failed []string, err error)
 	missingFunc   func(ctx context.Context, missingIDs []string) error
 	stateFunc     func(ctx context.Context, deviceStates map[string]string) (failed []string, err error)
 }
@@ -66,7 +66,7 @@ func (h *Handler) Stop() {
 	h.loopMu.Unlock()
 }
 
-func (h *Handler) SetSyncFunc(f func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs []string) (failed []string, err error)) {
+func (h *Handler) SetSyncFunc(f func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (failed []string, err error)) {
 	h.syncFunc = f
 }
 
@@ -133,7 +133,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	}
 	newIDs, changedIDs, missingIDs, deviceMap, deviceStates := h.diffDevices(devices)
 	if h.syncFunc != nil {
-		failed, err := h.syncFunc(ctx, deviceMap, newIDs, changedIDs)
+		failed, err := h.syncFunc(ctx, deviceMap, newIDs, changedIDs, missingIDs)
 		if err != nil {
 			return fmt.Errorf("synchronising devices failed: %s", err)
 		}
