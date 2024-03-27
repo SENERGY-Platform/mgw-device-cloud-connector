@@ -144,7 +144,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	if h.missingFunc != nil && len(missingIDs) > 0 {
 		err = h.missingFunc(ctx, missingIDs)
 		if err != nil {
-			return fmt.Errorf("handling missing devices faild: %s", err)
+			return fmt.Errorf("handling missing devices failed: %s", err)
 		}
 	}
 	if h.stateFunc != nil && len(deviceStates) > 0 {
@@ -154,7 +154,7 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 		}
 		failed, err := h.stateFunc(ctx, ds)
 		if err != nil {
-			return fmt.Errorf("handling device states faild: %s", err)
+			return fmt.Errorf("handling device states failed: %s", err)
 		}
 		for _, id := range failed {
 			if s, ok := deviceStates[id]; ok {
