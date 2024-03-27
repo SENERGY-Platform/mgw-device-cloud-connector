@@ -37,26 +37,16 @@ func New(cloudClient cloud_client.ClientItf, timeout, syncInterval time.Duration
 	}
 }
 
-//func (h *Handler) SetHubSyncFunc(f func(ctx context.Context, oldID, newID string) error) {
-//	h.hubSyncFunc = f
-//}
-
-func (h *Handler) GetHubID() string {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.data.HubID
-}
-
-func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
+func (h *Handler) Init(ctx context.Context, hubID, hubName string) (string, error) {
 	if !path.IsAbs(h.wrkSpacePath) {
-		return fmt.Errorf("workspace path must be absolute")
+		return "", fmt.Errorf("workspace path must be absolute")
 	}
 	if err := os.MkdirAll(h.wrkSpacePath, 0770); err != nil {
-		return err
+		return "", err
 	}
 	d, err := readData(h.wrkSpacePath)
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		return "", err
 	}
 	if hubID != "" {
 		d.HubID = hubID
@@ -67,17 +57,11 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		defer cf()
 		if hb, err := h.cloudClient.GetHub(ctxWt, d.HubID); err != nil {
 			var nfe *cloud_client.NotFoundError
-			var fe *cloud_client.ForbiddenError
-			isForbidden := errors.As(err, &fe)
-			if !errors.As(err, &nfe) && !isForbidden {
-				return fmt.Errorf("retreiving hub '%s' from cloud failed: %s", d.HubID, err)
+			if !errors.As(err, &nfe) {
+				return "", fmt.Errorf("retreiving hub '%s' from cloud failed: %s", d.HubID, err)
 			}
-			if isForbidden {
-				util.Logger.Warningf("retreiving hub '%s' from cloud failed: %s", d.HubID, err)
-			} else {
-				util.Logger.Warningf("hub '%s' not found in cloud", d.HubID)
-				d.HubID = ""
-			}
+			util.Logger.Warningf("hub '%s' not found in cloud", d.HubID)
+			d.HubID = ""
 		} else {
 			if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
 				d.DeviceIDMap = deviceIDMap
@@ -91,7 +75,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		defer cf()
 		hID, err := h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
 		if err != nil {
-			return fmt.Errorf("creating hub in cloud failed: %s", err)
+			return "", fmt.Errorf("creating hub in cloud failed: %s", err)
 		}
 		d.HubID = hID
 		util.Logger.Infof("created hub '%s' in cloud", hID)
@@ -100,7 +84,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		d.DeviceIDMap = make(map[string]string)
 	}
 	h.data = d
-	return writeData(h.wrkSpacePath, h.data)
+	return d.HubID, writeData(h.wrkSpacePath, h.data)
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, error) {
