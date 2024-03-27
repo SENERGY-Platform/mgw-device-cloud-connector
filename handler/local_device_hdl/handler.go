@@ -27,8 +27,8 @@ type Handler struct {
 	devices             map[string]device
 	running             bool
 	loopMu              sync.RWMutex
-	deviceSyncFunc      func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (createFailed, updateFailed, deleteFailed []string, err error)
-	deviceStateSyncFunc func(ctx context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs []string) (failed []string, err error)
+	deviceSyncFunc      func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (recreated, createFailed, updateFailed, deleteFailed []string, err error)
+	deviceStateSyncFunc func(ctx context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string) (failed []string, err error)
 }
 
 func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration, idPrefix string) *Handler {
@@ -64,11 +64,11 @@ func (h *Handler) Stop() {
 	h.loopMu.Unlock()
 }
 
-func (h *Handler) SetDeviceSyncFunc(f func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (createFailed, updateFailed, deleteFailed []string, err error)) {
+func (h *Handler) SetDeviceSyncFunc(f func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (recreated, createFailed, updateFailed, deleteFailed []string, err error)) {
 	h.deviceSyncFunc = f
 }
 
-func (h *Handler) SetDeviceStateSyncFunc(f func(ctx context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs []string) (failed []string, err error)) {
+func (h *Handler) SetDeviceStateSyncFunc(f func(ctx context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string) (failed []string, err error)) {
 	h.deviceStateSyncFunc = f
 }
 
@@ -115,12 +115,14 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	for id, dmDevice := range dmDevices {
 		devices[h.idPrefix+id] = newDevice(h.idPrefix+id, dmDevice)
 	}
+	var recreatedIDs []string
 	if h.deviceSyncFunc != nil {
 		newIDs, changedIDs, missingIDs, deviceMap := h.diffDevices(devices)
-		createFailed, updateFailed, deleteFailed, err := h.deviceSyncFunc(ctx, deviceMap, newIDs, changedIDs, missingIDs)
+		recreated, createFailed, updateFailed, deleteFailed, err := h.deviceSyncFunc(ctx, deviceMap, newIDs, changedIDs, missingIDs)
 		if err != nil {
 			return fmt.Errorf("synchronising devices failed: %s", err)
 		}
+		recreatedIDs = recreated
 		for _, id := range createFailed {
 			delete(devices, id)
 		}
@@ -136,8 +138,8 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 		}
 	}
 	if h.deviceStateSyncFunc != nil {
-		isOnlineIDs, isOfflineIDs, deviceMap := h.diffDeviceStates(devices)
-		failed, err := h.deviceStateSyncFunc(ctx, deviceMap, isOnlineIDs, isOfflineIDs)
+		isOnlineIDs, isOfflineIDs, isOnlineAgainIDs, deviceMap := h.diffDeviceStates(devices, recreatedIDs)
+		failed, err := h.deviceStateSyncFunc(ctx, deviceMap, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs)
 		if err != nil {
 			return fmt.Errorf("synchronising device states failed: %s", err)
 		}
@@ -145,7 +147,11 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 			d := devices[id]
 			od, ok := h.devices[id]
 			if ok {
-				d.State = od.State
+				if d.State != od.State {
+					d.State = od.State
+				} else {
+					d.State = model.Offline
+				}
 			} else {
 				d.State = ""
 			}
@@ -177,7 +183,7 @@ func (h *Handler) diffDevices(devices map[string]device) (newIDs, changedIDs, mi
 	return
 }
 
-func (h *Handler) diffDeviceStates(devices map[string]device) (isOnlineIDs, isOfflineIDs []string, deviceMap map[string]model.Device) {
+func (h *Handler) diffDeviceStates(devices map[string]device, recreated []string) (isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string, deviceMap map[string]model.Device) {
 	deviceMap = make(map[string]model.Device)
 	for id, queriedDevice := range devices {
 		deviceMap[id] = queriedDevice.Device
@@ -200,6 +206,11 @@ func (h *Handler) diffDeviceStates(devices map[string]device) (isOnlineIDs, isOf
 	for id := range h.devices {
 		if _, ok := devices[id]; !ok {
 			isOfflineIDs = append(isOfflineIDs, id)
+		}
+	}
+	for _, id := range recreated {
+		if d, ok := devices[id]; ok && d.State == model.Online {
+			isOnlineAgainIDs = append(isOnlineAgainIDs, id)
 		}
 	}
 	return

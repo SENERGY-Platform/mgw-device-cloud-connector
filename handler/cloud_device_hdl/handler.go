@@ -87,12 +87,12 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) (string, erro
 	return d.HubID, writeData(h.wrkSpacePath, h.data)
 }
 
-func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, []string, []string, error) {
+func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, []string, []string, []string, error) {
 	for _, lID := range missingIDs {
 		delete(h.data.DeviceIDMap, lID)
 	}
 	if len(newIDs)+len(changedIDs) == 0 && time.Since(h.lastSync) < h.syncInterval {
-		return nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 	defer cf()
@@ -104,45 +104,50 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			h.noHub = true
 			h.mu.Unlock()
 		}
-		return nil, nil, nil, fmt.Errorf("retireving hub '%s' from cloud failed: %s", h.data.HubID, err)
+		return nil, nil, nil, nil, fmt.Errorf("retireving hub '%s' from cloud failed: %s", h.data.HubID, err)
 	}
 	var createFailed []string
-	syncedIDs := make(map[string]struct{})
+	syncResults := make(map[string]bool)
 	for _, lID := range newIDs {
 		err = h.syncDevice(ctx, devices[lID])
 		if err != nil {
 			createFailed = append(createFailed, lID)
+			syncResults[lID] = false
 			continue
 		}
-		syncedIDs[lID] = struct{}{}
+		syncResults[lID] = true
 	}
 	var updateFailed []string
 	for _, lID := range changedIDs {
 		err = h.syncDevice(ctx, devices[lID])
 		if err != nil {
 			updateFailed = append(updateFailed, lID)
+			syncResults[lID] = false
 			continue
 		}
-		syncedIDs[lID] = struct{}{}
+		syncResults[lID] = true
 	}
+	var recreated []string
 	hubLocalIDSet := make(map[string]struct{})
 	for _, lID := range hb.DeviceLocalIds {
 		hubLocalIDSet[lID] = struct{}{}
 	}
 	for lID, device := range devices {
-		if _, ok := syncedIDs[lID]; !ok {
+		if _, ok := syncResults[lID]; !ok {
 			if _, ok := hubLocalIDSet[lID]; !ok {
 				err = h.syncDevice(ctx, device)
 				if err != nil {
 					createFailed = append(createFailed, lID)
+					syncResults[lID] = false
 					continue
 				}
-				syncedIDs[lID] = struct{}{}
+				recreated = append(recreated, lID)
+				syncResults[lID] = true
 			}
 		}
 	}
-	for lID := range syncedIDs {
-		if _, ok := hubLocalIDSet[lID]; !ok {
+	for lID, synced := range syncResults {
+		if _, ok := hubLocalIDSet[lID]; !ok && synced {
 			hb.DeviceLocalIds = append(hb.DeviceLocalIds, lID)
 		}
 	}
@@ -156,13 +161,13 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			h.noHub = true
 			h.mu.Unlock()
 		}
-		return nil, nil, nil, fmt.Errorf("updating hub '%s' in cloud failed: %s", h.data.HubID, err)
+		return nil, nil, nil, nil, fmt.Errorf("updating hub '%s' in cloud failed: %s", h.data.HubID, err)
 	}
 	h.lastSync = time.Now()
 	if err = writeData(h.wrkSpacePath, h.data); err != nil {
 		util.Logger.Error(err)
 	}
-	return createFailed, updateFailed, nil, nil
+	return recreated, createFailed, updateFailed, nil, nil
 }
 
 func (h *Handler) HasHub() bool {
@@ -250,7 +255,7 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 					continue
 				}
 				lID = device.LocalId
-				util.Logger.Debugf("adding '%s' -> '%s' to device ID cache", lID, rID)
+				util.Logger.Debugf("adding to device ID cache '%s' -> '%s'", lID, rID)
 			}
 			deviceIDMap[lID] = rID
 		}
