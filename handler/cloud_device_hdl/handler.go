@@ -124,11 +124,6 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			util.Logger.Warningf("hub '%s' not found in cloud", h.data.HubID)
 		}
 	}
-	if deviceIDMap, err := h.getDeviceIDMap(ctx, h.data.DeviceIDMap, hb.DeviceIds); err == nil {
-		h.data.DeviceIDMap = deviceIDMap
-	} else {
-		util.Logger.Errorf("refreshing device ID cache failed: %s", err)
-	}
 	hubLocalIDSet := make(map[string]struct{})
 	for _, lID := range hb.DeviceLocalIds {
 		hubLocalIDSet[lID] = struct{}{}
