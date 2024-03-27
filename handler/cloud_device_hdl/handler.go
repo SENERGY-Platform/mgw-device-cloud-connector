@@ -261,7 +261,8 @@ func (h *Handler) updateOrCreateDevice(ctx context.Context, rID string, device m
 	err := h.cloudClient.UpdateDevice(ctxWt, newDevice(device, rID, h.attrOrigin), h.attrOrigin)
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
-		if !errors.As(err, &nfe) {
+		var fe *cloud_client.ForbiddenError
+		if !errors.As(err, &nfe) && !errors.As(err, &fe) {
 			return "", fmt.Errorf("updating device '%s' in cloud failed: %s", device.ID, err)
 		}
 		return h.createOrUpdateDevice(ctx, device)
