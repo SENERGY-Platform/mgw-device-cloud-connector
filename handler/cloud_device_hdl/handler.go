@@ -96,6 +96,9 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 		d.HubID = hID
 		util.Logger.Infof("created hub '%s' in cloud", hID)
 	}
+	if d.DeviceIDMap == nil {
+		d.DeviceIDMap = make(map[string]string)
+	}
 	h.data = d
 	return writeData(h.wrkSpacePath, h.data)
 }
