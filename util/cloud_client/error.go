@@ -1,5 +1,7 @@
 package cloud_client
 
+import "strings"
+
 type cError struct {
 	err error
 }
@@ -29,7 +31,7 @@ type NotAllowedError struct {
 }
 
 func (e *cError) Error() string {
-	return e.err.Error()
+	return strings.TrimSuffix(e.err.Error(), "\n")
 }
 
 func (e *cError) Unwrap() error {
