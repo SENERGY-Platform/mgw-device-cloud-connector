@@ -211,6 +211,7 @@ func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err erro
 		rID, err = h.updateOrCreateDevice(ctx, rID, device)
 	}
 	if err != nil {
+		util.Logger.Error(err)
 		return
 	}
 	h.data.DeviceIDMap[device.ID] = rID
