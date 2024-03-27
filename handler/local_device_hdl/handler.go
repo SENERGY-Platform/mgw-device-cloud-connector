@@ -89,6 +89,13 @@ func (h *Handler) GetDevices() map[string]model.Device {
 }
 
 func (h *Handler) run() {
+	defer func() {
+		h.loopMu.Lock()
+		h.running = false
+		h.loopMu.Unlock()
+	}()
+	ctx, cf := context.WithCancel(context.Background())
+	defer cf()
 	timer := time.NewTimer(h.queryInterval)
 	defer func() {
 		if !timer.Stop() {
@@ -97,12 +104,7 @@ func (h *Handler) run() {
 			default:
 			}
 		}
-		h.loopMu.Lock()
-		h.running = false
-		h.loopMu.Unlock()
 	}()
-	ctx, cf := context.WithCancel(context.Background())
-	defer cf()
 	var err error
 	for {
 		select {
