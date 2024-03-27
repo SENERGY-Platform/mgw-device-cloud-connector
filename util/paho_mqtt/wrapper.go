@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/eclipse/paho.mqtt.golang"
 	"time"
 )
@@ -22,7 +23,7 @@ func NewWrapper(client mqtt.Client, timeout time.Duration) *Wrapper {
 
 func (w *Wrapper) Subscribe(topic string, qos byte, msgHandler func(m handler.Message)) error {
 	if !w.client.IsConnectionOpen() {
-		return errors.New("not connected")
+		return model.NotConnectedErr
 	}
 	t := w.client.Subscribe(topic, qos, func(_ mqtt.Client, message mqtt.Message) {
 		msgHandler(message)
@@ -43,7 +44,7 @@ func (w *Wrapper) Subscribe(topic string, qos byte, msgHandler func(m handler.Me
 
 func (w *Wrapper) Unsubscribe(topic string) error {
 	if !w.client.IsConnectionOpen() {
-		return errors.New("not connected")
+		return model.NotConnectedErr
 	}
 	t := w.client.Unsubscribe(topic)
 	if !t.WaitTimeout(w.timeout) {
@@ -54,7 +55,7 @@ func (w *Wrapper) Unsubscribe(topic string) error {
 
 func (w *Wrapper) Publish(topic string, qos byte, retained bool, payload any) error {
 	if !w.client.IsConnectionOpen() {
-		return errors.New("not connected")
+		return model.NotConnectedErr
 	}
 	t := w.client.Publish(topic, qos, retained, payload)
 	if !t.WaitTimeout(w.timeout) {
