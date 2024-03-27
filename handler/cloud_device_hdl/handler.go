@@ -65,7 +65,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 	if d.HubID != "" {
 		ctxWt, cf := context.WithTimeout(ctx, h.timeout)
 		defer cf()
-		if _, err := h.cloudClient.GetHub(ctxWt, d.HubID); err != nil {
+		if hb, err := h.cloudClient.GetHub(ctxWt, d.HubID); err != nil {
 			var nfe *cloud_client.NotFoundError
 			var fe *cloud_client.ForbiddenError
 			isForbidden := errors.As(err, &fe)
@@ -77,6 +77,12 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) error {
 			} else {
 				util.Logger.Warningf("hub '%s' not found in cloud", d.HubID)
 				d.HubID = ""
+			}
+		} else {
+			if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
+				d.DeviceIDMap = deviceIDMap
+			} else {
+				util.Logger.Errorf("refreshing device ID cache failed: %s", err)
 			}
 		}
 	}
