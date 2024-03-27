@@ -138,6 +138,16 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		}
 		synced[lID] = state
 	}
+	for _, lID := range newIDs {
+		if state, ok := synced[lID]; ok && state == 0 {
+			err = h.syncDevice(ctx, devices[lID])
+			if err != nil {
+				failed = append(failed, lID)
+				continue
+			}
+			synced[lID] = 1
+		}
+	}
 	for _, lID := range changedIDs {
 		if state, ok := synced[lID]; ok && state == 0 {
 			err = h.syncDevice(ctx, devices[lID])
