@@ -22,8 +22,8 @@ func HandleDownstreamDeviceCmd(m handler.Message) (string, []byte, error) {
 	if err := json.Unmarshal(m.Payload(), &cmd); err != nil {
 		return "", nil, err
 	}
-	sec, nsec := math.Modf(cmd.Timestamp)
-	if time.Since(time.Unix(int64(sec), int64(nsec))) <= DeviceCommandMaxAge {
+	sec, mSec := math.Modf(cmd.Timestamp)
+	if time.Since(time.Unix(int64(sec), int64(mSec*10000000))) <= DeviceCommandMaxAge {
 		b, err := json.Marshal(LocalDeviceCmdMsg{
 			LocalDeviceCmdBase: LocalDeviceCmdBase{
 				CommandID: DeviceCommandIDPrefix + cmd.CorrelationID,
