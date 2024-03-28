@@ -34,7 +34,7 @@ func HandleDownstreamDeviceCmd(m handler.Message) (string, []byte, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		return topic.LocalDeviceCmdPub + "/" + dID + "/" + sID, b, nil
+		return topic.LocalDeviceCmdPub + "/" + strings.ReplaceAll(dID, LocalDeviceIDPrefix, "") + "/" + sID, b, nil
 	}
 	return "", nil, model.NoMsgErr
 }
@@ -56,7 +56,7 @@ func HandleUpstreamDeviceCmdResponse(m handler.Message) (string, []byte, error) 
 		if err != nil {
 			return "", nil, err
 		}
-		return topic.CloudDeviceCmdResponsePub + "/" + dID + "/" + sID, b, nil
+		return topic.CloudDeviceCmdResponsePub + "/" + LocalDeviceIDPrefix + dID + "/" + sID, b, nil
 	}
 	return "", nil, model.NoMsgErr
 }

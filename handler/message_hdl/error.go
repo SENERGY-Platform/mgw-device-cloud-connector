@@ -19,7 +19,7 @@ func HandlerUpstreamDeviceErr(m handler.Message) (string, []byte, error) {
 	if !parseTopic(topic.LocalDeviceErrSub, m.Topic(), &dID) {
 		return "", nil, newParseErr(m.Topic())
 	}
-	return topic.CloudDeviceErrPub + "/" + dID, m.Payload(), nil
+	return topic.CloudDeviceErrPub + "/" + LocalDeviceIDPrefix + dID, m.Payload(), nil
 }
 
 func HandlerUpstreamDeviceCmdErr(m handler.Message) (string, []byte, error) {

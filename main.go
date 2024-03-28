@@ -113,6 +113,7 @@ func main() {
 	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
 	message_hdl.DeviceCommandMaxAge = time.Duration(config.MaxDeviceCmdAge)
 	message_hdl.HubID = hubID
+	message_hdl.LocalDeviceIDPrefix = config.LocalDeviceHandler.IDPrefix
 
 	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
 	processesCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamProcessesCmd, localMqttClientPubF)

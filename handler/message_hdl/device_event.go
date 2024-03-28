@@ -6,6 +6,8 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 )
 
+var LocalDeviceIDPrefix string
+
 func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
 	var dID, sID string
 	if !parseTopic(topic.LocalDeviceEventSub, m.Topic(), &dID, &sID) {
@@ -15,5 +17,5 @@ func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	return topic.CloudDeviceEventPub + "/" + dID + "/" + sID, b, nil
+	return topic.CloudDeviceEventPub + "/" + LocalDeviceIDPrefix + dID + "/" + sID, b, nil
 }
