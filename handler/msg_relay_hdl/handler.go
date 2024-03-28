@@ -55,8 +55,10 @@ func (h *Handler) Stop() {
 func (h *Handler) run() {
 	for message := range h.messages {
 		topic, data, err := h.handleFunc(message)
-		if err != nil && err != model.NoMsgErr {
-			util.Logger.Error(err)
+		if err != nil {
+			if err != model.NoMsgErr {
+				util.Logger.Error(err)
+			}
 		} else {
 			if err = h.sendFunc(topic, data); err != nil {
 				util.Logger.Error(err)
