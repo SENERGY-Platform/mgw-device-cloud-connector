@@ -41,8 +41,8 @@ func New(ctx context.Context, dmClient dm_client.ClientItf, timeout, queryInterv
 		timeout:       timeout,
 		queryInterval: queryInterval,
 		idPrefix:      idPrefix,
-		sChan:         make(chan bool, 1),
-		dChan:         make(chan struct{}, 1),
+		sChan:         make(chan bool),
+		dChan:         make(chan struct{}),
 		ctx:           ctx2,
 		cf:            cf,
 	}
