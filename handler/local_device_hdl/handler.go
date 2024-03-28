@@ -24,30 +24,32 @@ type Handler struct {
 	queryInterval       time.Duration
 	idPrefix            string
 	sChan               chan bool
+	dChan               chan struct{}
 	devices             map[string]device
 	running             bool
 	loopMu              sync.RWMutex
+	ctx                 context.Context
+	cf                  context.CancelFunc
 	deviceSyncFunc      func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (recreated, createFailed, updateFailed, deleteFailed []string, err error)
 	deviceStateSyncFunc func(ctx context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string) (failed []string, err error)
 }
 
-func New(dmClient dm_client.ClientItf, timeout, queryInterval time.Duration, idPrefix string) *Handler {
+func New(ctx context.Context, dmClient dm_client.ClientItf, timeout, queryInterval time.Duration, idPrefix string) *Handler {
+	ctx2, cf := context.WithCancel(ctx)
 	return &Handler{
 		dmClient:      dmClient,
 		timeout:       timeout,
 		queryInterval: queryInterval,
 		idPrefix:      idPrefix,
 		sChan:         make(chan bool, 1),
+		dChan:         make(chan struct{}, 1),
+		ctx:           ctx2,
+		cf:            cf,
 	}
 }
 
 func (h *Handler) Start() {
-	h.loopMu.Lock()
-	if !h.running {
-		go h.run()
-		h.running = true
-	}
-	h.loopMu.Unlock()
+	go h.run()
 }
 
 func (h *Handler) Running() bool {
@@ -57,11 +59,8 @@ func (h *Handler) Running() bool {
 }
 
 func (h *Handler) Stop() {
-	h.loopMu.Lock()
-	if h.running {
-		h.sChan <- true
-	}
-	h.loopMu.Unlock()
+	h.cf()
+	<-h.dChan
 }
 
 func (h *Handler) SetDeviceSyncFunc(f func(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (recreated, createFailed, updateFailed, deleteFailed []string, err error)) {
@@ -73,35 +72,35 @@ func (h *Handler) SetDeviceStateSyncFunc(f func(ctx context.Context, devices map
 }
 
 func (h *Handler) run() {
-	defer func() {
-		h.loopMu.Lock()
-		h.running = false
-		h.loopMu.Unlock()
-	}()
-	ctx, cf := context.WithCancel(context.Background())
-	defer cf()
+	h.loopMu.Lock()
+	h.running = true
+	h.loopMu.Unlock()
 	timer := time.NewTimer(h.queryInterval)
-	defer func() {
-		if !timer.Stop() {
-			select {
-			case <-timer.C:
-			default:
-			}
-		}
-	}()
+	loop := true
 	var err error
-	for {
+	for loop {
 		select {
-		case <-h.sChan:
-			return
 		case <-timer.C:
-			err = h.RefreshDevices(ctx)
+			err = h.RefreshDevices(h.ctx)
 			if err != nil {
 				util.Logger.Error(err)
 			}
 			timer.Reset(h.queryInterval)
+		case <-h.ctx.Done():
+			loop = false
+			break
 		}
 	}
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+	h.loopMu.Lock()
+	h.running = false
+	h.loopMu.Unlock()
+	h.dChan <- struct{}{}
 }
 
 func (h *Handler) RefreshDevices(ctx context.Context) error {

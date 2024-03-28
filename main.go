@@ -70,7 +70,9 @@ func main() {
 	}
 
 	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.LocalDmBaseUrl)
-	localDeviceHdl := local_device_hdl.New(dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
+	ldhCtx, cf := context.WithCancel(context.Background())
+	defer cf()
+	localDeviceHdl := local_device_hdl.New(ldhCtx, dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
 
 	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
 	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), time.Duration(config.CloudDeviceHandler.SyncInterval), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
