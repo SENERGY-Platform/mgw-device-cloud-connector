@@ -12,8 +12,7 @@ type Handler struct {
 	messages   chan handler.Message
 	handleFunc handler.MessageHandler
 	sendFunc   func(topic string, data []byte) error
-	started    bool
-	closed     bool
+	dChan      chan struct{}
 	mu         sync.RWMutex
 }
 
@@ -22,6 +21,7 @@ func New(buffer int, handleFunc handler.MessageHandler, sendFunc func(topic stri
 		messages:   make(chan handler.Message, buffer),
 		handleFunc: handleFunc,
 		sendFunc:   sendFunc,
+		dChan:      make(chan struct{}),
 	}
 }
 
@@ -35,21 +35,12 @@ func (h *Handler) Put(m handler.Message) error {
 }
 
 func (h *Handler) Start() {
-	h.mu.Lock()
-	if !h.started {
-		go h.run()
-		h.started = true
-	}
-	h.mu.Unlock()
+	go h.run()
 }
 
 func (h *Handler) Stop() {
-	h.mu.Lock()
-	if !h.closed {
-		close(h.messages)
-		h.closed = true
-	}
-	h.mu.Unlock()
+	close(h.messages)
+	<-h.dChan
 }
 
 func (h *Handler) run() {
@@ -65,4 +56,5 @@ func (h *Handler) run() {
 			}
 		}
 	}
+	h.dChan <- struct{}{}
 }
