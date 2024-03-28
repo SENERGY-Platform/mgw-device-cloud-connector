@@ -5,6 +5,8 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 )
 
+var HubID string
+
 func HandleDownstreamProcessesCmd(m handler.Message) (string, []byte, error) {
 	var hID, subTopic string
 	if !parseTopic(topic.CloudProcessesCmdSub, m.Topic(), &hID, &subTopic) {
@@ -18,5 +20,5 @@ func HandleUpstreamProcessesState(m handler.Message) (string, []byte, error) {
 	if !parseTopic(topic.LocalProcessesStateSub, m.Topic(), &subTopic) {
 		return "", nil, newParseErr(m.Topic())
 	}
-	return topic.CloudProcessesStatePub + "/" + subTopic, m.Payload(), nil
+	return topic.CloudProcessesStatePub + "/" + HubID + "/state/" + subTopic, m.Payload(), nil
 }
