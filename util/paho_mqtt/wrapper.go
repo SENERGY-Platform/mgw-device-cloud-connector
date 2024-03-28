@@ -29,7 +29,7 @@ func (w *Wrapper) Subscribe(topic string, qos byte, msgHandler func(m handler.Me
 		msgHandler(message)
 	})
 	if !t.WaitTimeout(w.timeout) {
-		return errors.New("timeout")
+		return model.OperationTimeoutErr
 	}
 	res := t.(*mqtt.SubscribeToken).Result()
 	c, ok := res[topic]
@@ -48,7 +48,7 @@ func (w *Wrapper) Unsubscribe(topic string) error {
 	}
 	t := w.client.Unsubscribe(topic)
 	if !t.WaitTimeout(w.timeout) {
-		return errors.New("timeout")
+		return model.OperationTimeoutErr
 	}
 	return t.Error()
 }
@@ -59,7 +59,7 @@ func (w *Wrapper) Publish(topic string, qos byte, retained bool, payload any) er
 	}
 	t := w.client.Publish(topic, qos, retained, payload)
 	if !t.WaitTimeout(w.timeout) {
-		return errors.New("timeout")
+		return model.OperationTimeoutErr
 	}
 	return t.Error()
 }
