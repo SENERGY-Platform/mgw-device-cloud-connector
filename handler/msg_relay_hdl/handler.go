@@ -52,7 +52,7 @@ func (h *Handler) run() {
 			}
 		} else {
 			if err = h.sendFunc(topic, data); err != nil {
-				util.Logger.Error(err)
+				util.Logger.Errorf("error publishing on '%s': %s", topic, err)
 			}
 		}
 	}
