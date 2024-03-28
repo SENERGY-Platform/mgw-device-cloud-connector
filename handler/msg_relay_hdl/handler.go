@@ -29,7 +29,7 @@ func (h *Handler) Put(m handler.Message) error {
 	select {
 	case h.messages <- m:
 	default:
-		return errors.New("buffer full")
+		return errors.New("relay buffer full")
 	}
 	return nil
 }
