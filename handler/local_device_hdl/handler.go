@@ -20,7 +20,6 @@ type device struct {
 
 type Handler struct {
 	dmClient            dm_client.ClientItf
-	timeout             time.Duration
 	queryInterval       time.Duration
 	idPrefix            string
 	sChan               chan bool
@@ -34,11 +33,10 @@ type Handler struct {
 	deviceStateSyncFunc func(ctx context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string) (failed []string, err error)
 }
 
-func New(ctx context.Context, dmClient dm_client.ClientItf, timeout, queryInterval time.Duration, idPrefix string) *Handler {
+func New(ctx context.Context, dmClient dm_client.ClientItf, queryInterval time.Duration, idPrefix string) *Handler {
 	ctx2, cf := context.WithCancel(ctx)
 	return &Handler{
 		dmClient:      dmClient,
-		timeout:       timeout,
 		queryInterval: queryInterval,
 		idPrefix:      idPrefix,
 		sChan:         make(chan bool),
@@ -104,9 +102,9 @@ func (h *Handler) run() {
 }
 
 func (h *Handler) RefreshDevices(ctx context.Context) error {
-	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+	ctxWc, cf := context.WithCancel(ctx)
 	defer cf()
-	dmDevices, err := h.dmClient.GetDevices(ctxWt)
+	dmDevices, err := h.dmClient.GetDevices(ctxWc)
 	if err != nil {
 		return fmt.Errorf("retreiving local devices failed: %s", err)
 	}

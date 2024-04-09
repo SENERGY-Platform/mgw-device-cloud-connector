@@ -17,7 +17,6 @@ import (
 
 type Handler struct {
 	cloudClient  cloud_client.ClientItf
-	timeout      time.Duration
 	wrkSpacePath string
 	attrOrigin   string
 	data         data
@@ -27,10 +26,9 @@ type Handler struct {
 	mu           sync.RWMutex
 }
 
-func New(cloudClient cloud_client.ClientItf, timeout, syncInterval time.Duration, wrkSpacePath, attrOrigin string) *Handler {
+func New(cloudClient cloud_client.ClientItf, syncInterval time.Duration, wrkSpacePath, attrOrigin string) *Handler {
 	return &Handler{
 		cloudClient:  cloudClient,
-		timeout:      timeout,
 		syncInterval: syncInterval,
 		wrkSpacePath: wrkSpacePath,
 		attrOrigin:   attrOrigin,
@@ -53,9 +51,9 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) (string, erro
 	}
 	d.DefaultHubName = hubName
 	if d.HubID != "" {
-		ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+		ctxWc, cf := context.WithCancel(ctx)
 		defer cf()
-		if hb, err := h.cloudClient.GetHub(ctxWt, d.HubID); err != nil {
+		if hb, err := h.cloudClient.GetHub(ctxWc, d.HubID); err != nil {
 			var nfe *cloud_client.NotFoundError
 			if !errors.As(err, &nfe) {
 				return "", fmt.Errorf("retreiving hub '%s' from cloud failed: %s", d.HubID, err)
@@ -71,9 +69,9 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) (string, erro
 		}
 	}
 	if d.HubID == "" {
-		ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+		ctxWc, cf := context.WithCancel(ctx)
 		defer cf()
-		hID, err := h.cloudClient.CreateHub(ctxWt, models.Hub{Name: hubName})
+		hID, err := h.cloudClient.CreateHub(ctxWc, models.Hub{Name: hubName})
 		if err != nil {
 			return "", fmt.Errorf("creating hub in cloud failed: %s", err)
 		}
@@ -94,9 +92,9 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	if len(newIDs)+len(changedIDs) == 0 && time.Since(h.lastSync) < h.syncInterval {
 		return nil, nil, nil, nil, nil
 	}
-	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+	ctxWc, cf := context.WithCancel(ctx)
 	defer cf()
-	hb, err := h.cloudClient.GetHub(ctxWt, h.data.HubID)
+	hb, err := h.cloudClient.GetHub(ctxWc, h.data.HubID)
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
 		if errors.As(err, &nfe) {
@@ -152,9 +150,9 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		}
 	}
 	hb.DeviceIds = nil
-	ctxWt2, cf2 := context.WithTimeout(ctx, h.timeout)
+	ctxWc2, cf2 := context.WithCancel(ctx)
 	defer cf2()
-	if err = h.cloudClient.UpdateHub(ctxWt2, hb); err != nil {
+	if err = h.cloudClient.UpdateHub(ctxWc2, hb); err != nil {
 		var nfe *cloud_client.NotFoundError
 		if errors.As(err, &nfe) {
 			h.mu.Lock()
@@ -200,19 +198,19 @@ func (h *Handler) createOrUpdateDevice(ctx context.Context, device model.Device)
 	ch := context_hdl.New()
 	defer ch.CancelAll()
 	nd := newDevice(device, "", h.attrOrigin)
-	rID, err := h.cloudClient.CreateDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), nd)
+	rID, err := h.cloudClient.CreateDevice(ch.Add(context.WithCancel(ctx)), nd)
 	if err != nil {
 		var bre *cloud_client.BadRequestError
 		if !errors.As(err, &bre) {
 			return "", fmt.Errorf("creating device '%s' in cloud failed: %s", device.ID, err)
 		}
-		d, err := h.cloudClient.GetDeviceL(ch.Add(context.WithTimeout(ctx, h.timeout)), device.ID)
+		d, err := h.cloudClient.GetDeviceL(ch.Add(context.WithCancel(ctx)), device.ID)
 		if err != nil {
 			return "", fmt.Errorf("retrieving device '%s' from cloud failed: %s", device.ID, err)
 		}
 		rID = d.Id
 		nd.Id = d.Id
-		if err = h.cloudClient.UpdateDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), nd, h.attrOrigin); err != nil {
+		if err = h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), nd, h.attrOrigin); err != nil {
 			return "", fmt.Errorf("updating device '%s' in cloud failed: %s", device.ID, err)
 		}
 	}
@@ -220,9 +218,9 @@ func (h *Handler) createOrUpdateDevice(ctx context.Context, device model.Device)
 }
 
 func (h *Handler) updateOrCreateDevice(ctx context.Context, rID string, device model.Device) (string, error) {
-	ctxWt, cf := context.WithTimeout(ctx, h.timeout)
+	ctxWc, cf := context.WithCancel(ctx)
 	defer cf()
-	err := h.cloudClient.UpdateDevice(ctxWt, newDevice(device, rID, h.attrOrigin), h.attrOrigin)
+	err := h.cloudClient.UpdateDevice(ctxWc, newDevice(device, rID, h.attrOrigin), h.attrOrigin)
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
 		var fe *cloud_client.ForbiddenError
@@ -246,7 +244,7 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 		for _, rID := range deviceIDs {
 			lID, ok := rDeviceIDMap[rID]
 			if !ok {
-				device, err := h.cloudClient.GetDevice(ch.Add(context.WithTimeout(ctx, h.timeout)), rID)
+				device, err := h.cloudClient.GetDevice(ch.Add(context.WithCancel(ctx)), rID)
 				if err != nil {
 					var nfe *cloud_client.NotFoundError
 					if !errors.As(err, &nfe) {
