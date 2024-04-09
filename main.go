@@ -20,6 +20,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/dm_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/paho_mqtt"
 	"github.com/eclipse/paho.mqtt.golang"
+	"net"
 	"net/http"
 	"os"
 	"syscall"
@@ -69,13 +70,44 @@ func main() {
 		paho_mqtt.SetLogger(config.MQTTDebugLog)
 	}
 
-	dmClient := dm_client.New(http.DefaultClient, config.HttpClient.LocalDmBaseUrl)
+	localHttpClient := &http.Client{
+		Timeout: time.Duration(config.HttpClient.LocalTimeout),
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			ForceAttemptHTTP2:     false,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+
+	dmClient := dm_client.New(localHttpClient, config.HttpClient.LocalDmBaseUrl)
 	ldhCtx, cf := context.WithCancel(context.Background())
 	defer cf()
-	localDeviceHdl := local_device_hdl.New(ldhCtx, dmClient, time.Duration(config.HttpClient.LocalTimeout), time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
+	localDeviceHdl := local_device_hdl.New(ldhCtx, dmClient, time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
 
-	cloudClient := cloud_client.New(http.DefaultClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(http.DefaultClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
-	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.HttpClient.CloudTimeout), time.Duration(config.CloudDeviceHandler.SyncInterval), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
+	cloudHttpClient := &http.Client{
+		Timeout: time.Duration(config.HttpClient.CloudTimeout),
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			ForceAttemptHTTP2:     false,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+
+	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
+	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.CloudDeviceHandler.SyncInterval), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
 	chCtx, cf := context.WithCancel(context.Background())
 	defer cf()
