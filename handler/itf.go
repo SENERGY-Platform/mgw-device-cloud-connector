@@ -1,10 +1,13 @@
 package handler
 
+import "time"
+
 type MessageHandler func(m Message) (topic string, data []byte, err error)
 
 type Message interface {
 	Topic() string
 	Payload() []byte
+	Timestamp() time.Time
 }
 
 type MessageRelayHandler interface {
