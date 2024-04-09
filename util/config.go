@@ -29,7 +29,8 @@ type CloudMqttClientConfig struct {
 	ConnectRetryDelay int64  `json:"connect_retry_delay" env_var:"CLOUD_MQTT_CONNECT_RETRY_DELAY"`
 	MaxReconnectDelay int64  `json:"max_reconnect_delay" env_var:"CLOUD_MQTT_MAX_RECONNECT_DELAY"`
 	WaitTimeout       int64  `json:"wait_timeout" env_var:"CLOUD_MQTT_WAIT_TIMEOUT"`
-	QOSLevel          byte   `json:"qos_level" env_var:"CLOUD_MQTT_QOS_LEVEL"`
+	PublishQOSLevel   byte   `json:"publish_qos_level" env_var:"CLOUD_PUBLISH_QOS_LEVEL"`
+	SubscribeQOSLevel byte   `json:"subscribe_qos_level" env_var:"CLOUD_SUBSCRIBE_QOS_LEVEL"`
 }
 
 type LocalMqttClientConfig struct {
@@ -94,7 +95,8 @@ var defaultCloudMqttClientConfig = CloudMqttClientConfig{
 	ConnectRetryDelay: 30000000000, // 30s
 	MaxReconnectDelay: 60000000000, // 1m
 	WaitTimeout:       5000000000,  // 5s
-	QOSLevel:          1,
+	PublishQOSLevel:   0,
+	SubscribeQOSLevel: 2,
 }
 
 var defaultLocalMqttClientConfig = LocalMqttClientConfig{

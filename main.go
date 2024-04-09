@@ -128,7 +128,7 @@ func main() {
 		return localMqttClient.Publish(topic, config.LocalMqttClient.QOSLevel, false, data)
 	}
 
-	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.QOSLevel, hubID)
+	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.SubscribeQOSLevel, hubID)
 
 	cloudMqttClientOpt := mqtt.NewClientOptions()
 	cloudMqttClientOpt.SetConnectionLostHandler(func(_ mqtt.Client, _ error) {
@@ -137,7 +137,7 @@ func main() {
 	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, hubID, config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
 	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
 	cloudMqttClientPubF := func(topic string, data []byte) error {
-		return cloudMqttClient.Publish(topic, config.CloudMqttClient.QOSLevel, false, data)
+		return cloudMqttClient.Publish(topic, config.CloudMqttClient.PublishQOSLevel, false, data)
 	}
 
 	message_hdl.DeviceEventMaxAge = time.Duration(config.MaxDeviceEventAge)
