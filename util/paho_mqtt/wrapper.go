@@ -26,7 +26,10 @@ func (w *Wrapper) Subscribe(topic string, qos byte, msgHandler func(m handler.Me
 		return model.NotConnectedErr
 	}
 	t := w.client.Subscribe(topic, qos, func(_ mqtt.Client, message mqtt.Message) {
-		msgHandler(message)
+		msgHandler(&msgWrapper{
+			Message:   message,
+			timestamp: time.Now(),
+		})
 	})
 	if !t.WaitTimeout(w.timeout) {
 		return model.OperationTimeoutErr
@@ -70,4 +73,13 @@ func (w *Wrapper) Connect() mqtt.Token {
 
 func (w *Wrapper) Disconnect(quiesce uint) {
 	w.client.Disconnect(quiesce)
+}
+
+type msgWrapper struct {
+	mqtt.Message
+	timestamp time.Time
+}
+
+func (w *msgWrapper) Timestamp() time.Time {
+	return w.timestamp
 }
