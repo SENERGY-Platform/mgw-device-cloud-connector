@@ -140,6 +140,7 @@ func main() {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.QOSLevel, false, data)
 	}
 
+	message_hdl.DeviceEventMaxAge = time.Duration(config.MaxDeviceEventAge)
 	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
 	message_hdl.DeviceCommandMaxAge = time.Duration(config.MaxDeviceCmdAge)
 	message_hdl.HubID = hubID
