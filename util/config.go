@@ -93,7 +93,7 @@ var defaultCloudMqttClientConfig = CloudMqttClientConfig{
 	ConnectRetryDelay: 30000000000, // 30s
 	MaxReconnectDelay: 60000000000, // 1m
 	WaitTimeout:       5000000000,  // 5s
-	QOSLevel:          2,
+	QOSLevel:          1,
 }
 
 var defaultLocalMqttClientConfig = LocalMqttClientConfig{
@@ -103,7 +103,7 @@ var defaultLocalMqttClientConfig = LocalMqttClientConfig{
 	ConnectRetryDelay: 30000000000, // 30s
 	MaxReconnectDelay: 30000000000, // 30s
 	WaitTimeout:       5000000000,  // 5s
-	QOSLevel:          2,
+	QOSLevel:          1,
 }
 
 func NewConfig(path string) (*Config, error) {
