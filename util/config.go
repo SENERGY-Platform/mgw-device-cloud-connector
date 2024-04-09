@@ -87,12 +87,12 @@ type Config struct {
 }
 
 var defaultCloudMqttClientConfig = CloudMqttClientConfig{
-	KeepAlive:         30000000000,  // 30s
-	PingTimeout:       10000000000,  // 10s
-	ConnectTimeout:    30000000000,  // 30s
-	ConnectRetryDelay: 30000000000,  // 30s
-	MaxReconnectDelay: 180000000000, // 3m
-	WaitTimeout:       5000000000,   // 5s
+	KeepAlive:         30000000000, // 30s
+	PingTimeout:       10000000000, // 10s
+	ConnectTimeout:    30000000000, // 30s
+	ConnectRetryDelay: 30000000000, // 30s
+	MaxReconnectDelay: 60000000000, // 1m
+	WaitTimeout:       5000000000,  // 5s
 	QOSLevel:          2,
 }
 
@@ -101,7 +101,7 @@ var defaultLocalMqttClientConfig = LocalMqttClientConfig{
 	PingTimeout:       10000000000, // 10s
 	ConnectTimeout:    30000000000, // 30s
 	ConnectRetryDelay: 30000000000, // 30s
-	MaxReconnectDelay: 60000000000, // 1m
+	MaxReconnectDelay: 30000000000, // 30s
 	WaitTimeout:       5000000000,  // 5s
 	QOSLevel:          2,
 }
