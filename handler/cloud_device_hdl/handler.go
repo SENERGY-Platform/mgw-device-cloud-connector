@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+const logPrefix = "[cloud-device-handler]"
+
 type Handler struct {
 	cloudClient  cloud_client.ClientItf
 	wrkSpacePath string
@@ -53,30 +55,32 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) (string, erro
 	if d.HubID != "" {
 		ctxWc, cf := context.WithCancel(ctx)
 		defer cf()
+		util.Logger.Debugf("%s get hub (%s)", logPrefix, d.HubID)
 		if hb, err := h.cloudClient.GetHub(ctxWc, d.HubID); err != nil {
 			var nfe *cloud_client.NotFoundError
 			if !errors.As(err, &nfe) {
-				return "", fmt.Errorf("retreiving hub '%s' from cloud failed: %s", d.HubID, err)
+				return "", fmt.Errorf("get hub (%s): %s", d.HubID, err)
 			}
-			util.Logger.Warningf("hub '%s' not found in cloud", d.HubID)
+			util.Logger.Warningf("%s get hub (%s): %s", logPrefix, d.HubID, err)
 			d.HubID = ""
 		} else {
 			if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
 				d.DeviceIDMap = deviceIDMap
 			} else {
-				util.Logger.Errorf("refreshing device ID cache failed: %s", err)
+				util.Logger.Errorf("%s refresh device id cache: %s", logPrefix, err)
 			}
 		}
 	}
 	if d.HubID == "" {
 		ctxWc, cf := context.WithCancel(ctx)
 		defer cf()
+		util.Logger.Info(logPrefix, " create hub")
 		hID, err := h.cloudClient.CreateHub(ctxWc, models.Hub{Name: hubName})
 		if err != nil {
-			return "", fmt.Errorf("creating hub in cloud failed: %s", err)
+			return "", fmt.Errorf("create hub: %s", err)
 		}
 		d.HubID = hID
-		util.Logger.Infof("created hub '%s' in cloud", hID)
+		util.Logger.Infof("%s created hub (%s)", logPrefix, hID)
 	}
 	if d.DeviceIDMap == nil {
 		d.DeviceIDMap = make(map[string]string)
@@ -94,6 +98,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	}
 	ctxWc, cf := context.WithCancel(ctx)
 	defer cf()
+	util.Logger.Debugf("%s get hub (%s)", logPrefix, h.data.HubID)
 	hb, err := h.cloudClient.GetHub(ctxWc, h.data.HubID)
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
@@ -102,7 +107,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			h.noHub = true
 			h.mu.Unlock()
 		}
-		return nil, nil, nil, nil, fmt.Errorf("retireving hub '%s' from cloud failed: %s", h.data.HubID, err)
+		return nil, nil, nil, nil, fmt.Errorf("get hub (%s): %s", h.data.HubID, err)
 	}
 	var createFailed []string
 	syncResults := make(map[string]bool)
@@ -144,26 +149,31 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			}
 		}
 	}
+	updateHub := false
 	for lID, synced := range syncResults {
 		if _, ok := hubLocalIDSet[lID]; !ok && synced {
 			hb.DeviceLocalIds = append(hb.DeviceLocalIds, lID)
+			updateHub = true
 		}
 	}
-	hb.DeviceIds = nil
-	ctxWc2, cf2 := context.WithCancel(ctx)
-	defer cf2()
-	if err = h.cloudClient.UpdateHub(ctxWc2, hb); err != nil {
-		var nfe *cloud_client.NotFoundError
-		if errors.As(err, &nfe) {
-			h.mu.Lock()
-			h.noHub = true
-			h.mu.Unlock()
+	if updateHub {
+		hb.DeviceIds = nil
+		ctxWc2, cf2 := context.WithCancel(ctx)
+		defer cf2()
+		util.Logger.Infof("%s update hub (%s)", logPrefix, h.data.HubID)
+		if err = h.cloudClient.UpdateHub(ctxWc2, hb); err != nil {
+			var nfe *cloud_client.NotFoundError
+			if errors.As(err, &nfe) {
+				h.mu.Lock()
+				h.noHub = true
+				h.mu.Unlock()
+			}
+			return nil, nil, nil, nil, fmt.Errorf("update hub (%s): %s", h.data.HubID, err)
 		}
-		return nil, nil, nil, nil, fmt.Errorf("updating hub '%s' in cloud failed: %s", h.data.HubID, err)
 	}
 	h.lastSync = time.Now()
 	if err = writeData(h.wrkSpacePath, h.data); err != nil {
-		util.Logger.Error(err)
+		util.Logger.Errorf("%s write data: %s", logPrefix, err)
 	}
 	return recreated, createFailed, updateFailed, nil, nil
 }
@@ -175,7 +185,6 @@ func (h *Handler) HasHub() bool {
 }
 
 func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err error) {
-	util.Logger.Debugf("synchronising device '%s' in cloud", device.ID)
 	rID, ok := h.data.DeviceIDMap[device.ID]
 	var rIDNew string
 	if !ok {
@@ -184,11 +193,11 @@ func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err erro
 		rIDNew, err = h.updateOrCreateDevice(ctx, rID, device)
 	}
 	if err != nil {
-		util.Logger.Error(err)
+		util.Logger.Error("%s %s", logPrefix, err)
 		return
 	}
 	if rIDNew != rID {
-		util.Logger.Debugf("updating device ID cache '%s' -> '%s'", device.ID, rIDNew)
+		util.Logger.Debugf("%s update device id cache: %s -> %s", logPrefix, device.ID, rIDNew)
 		h.data.DeviceIDMap[device.ID] = rIDNew
 	}
 	return
@@ -198,21 +207,28 @@ func (h *Handler) createOrUpdateDevice(ctx context.Context, device model.Device)
 	ch := context_hdl.New()
 	defer ch.CancelAll()
 	nd := newDevice(device, "", h.attrOrigin)
+	util.Logger.Debugf("%s create device (%s)", logPrefix, device.ID)
 	rID, err := h.cloudClient.CreateDevice(ch.Add(context.WithCancel(ctx)), nd)
 	if err != nil {
 		var bre *cloud_client.BadRequestError
 		if !errors.As(err, &bre) {
-			return "", fmt.Errorf("creating device '%s' in cloud failed: %s", device.ID, err)
+			return "", fmt.Errorf("create device (%s): %s", device.ID, err)
 		}
+		util.Logger.Warningf("%s create device (%s): %s", logPrefix, device.ID, err)
+		util.Logger.Debugf("%s get device (%s)", logPrefix, device.ID)
 		d, err := h.cloudClient.GetDeviceL(ch.Add(context.WithCancel(ctx)), device.ID)
 		if err != nil {
-			return "", fmt.Errorf("retrieving device '%s' from cloud failed: %s", device.ID, err)
+			return "", fmt.Errorf("get device (%s): %s", device.ID, err)
 		}
 		rID = d.Id
 		nd.Id = d.Id
+		util.Logger.Debugf("%s update device (%s)", logPrefix, device.ID)
 		if err = h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), nd, h.attrOrigin); err != nil {
-			return "", fmt.Errorf("updating device '%s' in cloud failed: %s", device.ID, err)
+			return "", fmt.Errorf("update device (%s): %s", device.ID, err)
 		}
+		util.Logger.Infof("%s updated device (%s)", logPrefix, device.ID)
+	} else {
+		util.Logger.Infof("%s created device (%s)", logPrefix, device.ID)
 	}
 	return rID, nil
 }
@@ -220,13 +236,15 @@ func (h *Handler) createOrUpdateDevice(ctx context.Context, device model.Device)
 func (h *Handler) updateOrCreateDevice(ctx context.Context, rID string, device model.Device) (string, error) {
 	ctxWc, cf := context.WithCancel(ctx)
 	defer cf()
+	util.Logger.Debugf("%s update device (%s)", logPrefix, device.ID)
 	err := h.cloudClient.UpdateDevice(ctxWc, newDevice(device, rID, h.attrOrigin), h.attrOrigin)
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
 		var fe *cloud_client.ForbiddenError
 		if !errors.As(err, &nfe) && !errors.As(err, &fe) {
-			return "", fmt.Errorf("updating device '%s' in cloud failed: %s", device.ID, err)
+			return "", fmt.Errorf("update device (%s): %s", device.ID, err)
 		}
+		util.Logger.Warningf("%s update device (%s): %s", logPrefix, device.ID, err)
 		return h.createOrUpdateDevice(ctx, device)
 	}
 	return rID, err
@@ -244,16 +262,18 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 		for _, rID := range deviceIDs {
 			lID, ok := rDeviceIDMap[rID]
 			if !ok {
+				util.Logger.Debugf("%s get device (%s)", logPrefix, rID)
 				device, err := h.cloudClient.GetDevice(ch.Add(context.WithCancel(ctx)), rID)
 				if err != nil {
 					var nfe *cloud_client.NotFoundError
 					if !errors.As(err, &nfe) {
-						return nil, fmt.Errorf("retrieving device '%s' from cloud failed: %s", rID, err)
+						return nil, fmt.Errorf("get device (%s): %s", rID, err)
 					}
+					util.Logger.Warningf("%s get device (%s): %s", logPrefix, rID, err)
 					continue
 				}
 				lID = device.LocalId
-				util.Logger.Debugf("adding to device ID cache '%s' -> '%s'", lID, rID)
+				util.Logger.Debugf("%s update device id cache: %s -> %s", logPrefix, lID, rID)
 			}
 			deviceIDMap[lID] = rID
 		}
