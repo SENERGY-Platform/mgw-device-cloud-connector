@@ -13,6 +13,7 @@ type mqttLogger struct {
 func (l *mqttLogger) Println(v ...any) {
 	l.println(v...)
 }
+
 func (l *mqttLogger) Printf(format string, v ...any) {
 	l.printf(format, v...)
 }
