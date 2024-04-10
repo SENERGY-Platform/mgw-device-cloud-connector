@@ -135,7 +135,6 @@ func NewConfig(path string) (*Config, error) {
 		EventMessageRelayBuffer: 100000,
 		MaxDeviceCmdAge:         30000000000,  // 30s
 		MaxDeviceEventAge:       300000000000, // 5m
-		MQTTLog:                 true,
 	}
 	err := sb_util.LoadConfig(path, &cfg, nil, nil, nil)
 	return &cfg, err
