@@ -126,7 +126,7 @@ func (h *Handler) subscribe(t string, mhf func(m handler.Message)) error {
 	if h.isSubscribed(t) {
 		return nil
 	}
-	util.Logger.Infof(model.SubscribeString, logPrefix, t)
+	util.Logger.Debugf(model.SubscribeString, logPrefix, t)
 	if err := h.client.Subscribe(t, h.qos, mhf); err != nil {
 		util.Logger.Errorf(model.SubscribeErrString, logPrefix, t, err)
 		return err
@@ -134,6 +134,7 @@ func (h *Handler) subscribe(t string, mhf func(m handler.Message)) error {
 	h.mu.Lock()
 	h.subscriptions[t] = struct{}{}
 	h.mu.Unlock()
+	util.Logger.Infof(model.SubscribedString, logPrefix, t)
 	return nil
 }
 
@@ -141,7 +142,7 @@ func (h *Handler) unsubscribe(t string) error {
 	if !h.isSubscribed(t) {
 		return nil
 	}
-	util.Logger.Infof(model.UnsubscribeString, logPrefix, t)
+	util.Logger.Debugf(model.UnsubscribeString, logPrefix, t)
 	if err := h.client.Unsubscribe(t); err != nil {
 		util.Logger.Errorf(model.UnsubscribeErrString, logPrefix, t, err)
 		return err
@@ -149,11 +150,12 @@ func (h *Handler) unsubscribe(t string) error {
 	h.mu.Lock()
 	delete(h.subscriptions, t)
 	h.mu.Unlock()
+	util.Logger.Infof(model.UnsubscribedString, logPrefix, t)
 	return nil
 }
 
 func (h *Handler) resubscribe(t string, mhf func(m handler.Message)) error {
-	util.Logger.Infof(model.ResubscribeString, logPrefix, t)
+	util.Logger.Debugf(model.ResubscribeString, logPrefix, t)
 	if err := h.client.Unsubscribe(t); err != nil {
 		util.Logger.Errorf(model.UnsubscribeErrString, logPrefix, t, err)
 		return err
@@ -165,6 +167,7 @@ func (h *Handler) resubscribe(t string, mhf func(m handler.Message)) error {
 	h.mu.Lock()
 	h.subscriptions[t] = struct{}{}
 	h.mu.Unlock()
+	util.Logger.Infof(model.ResubscribedString, logPrefix, t)
 	return nil
 }
 

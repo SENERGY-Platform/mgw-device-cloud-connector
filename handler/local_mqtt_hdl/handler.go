@@ -40,7 +40,7 @@ func (h *Handler) SetMessageRelayHdl(deviceEventMsgRelayHdl, deviceCmdRespMsgRel
 }
 
 func (h *Handler) HandleSubscriptions() {
-	util.Logger.Infof(model.SubscribeString, logPrefix, topic.LocalDeviceEventSub)
+	util.Logger.Debugf(model.SubscribeString, logPrefix, topic.LocalDeviceEventSub)
 	err := h.client.Subscribe(topic.LocalDeviceEventSub, h.qos, func(m handler.Message) {
 		if err := h.deviceEventMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
@@ -49,7 +49,8 @@ func (h *Handler) HandleSubscriptions() {
 	if err != nil {
 		util.Logger.Errorf(model.SubscribeErrString, logPrefix, topic.LocalDeviceEventSub, err)
 	}
-	util.Logger.Infof(model.SubscribeString, logPrefix, topic.LocalDeviceCmdResponseSub)
+	util.Logger.Infof(model.SubscribedString, logPrefix, topic.LocalDeviceEventSub)
+	util.Logger.Debugf(model.SubscribeString, logPrefix, topic.LocalDeviceCmdResponseSub)
 	err = h.client.Subscribe(topic.LocalDeviceCmdResponseSub, h.qos, func(m handler.Message) {
 		if err := h.deviceCmdRespMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
@@ -58,7 +59,8 @@ func (h *Handler) HandleSubscriptions() {
 	if err != nil {
 		util.Logger.Errorf(model.SubscribeErrString, logPrefix, topic.LocalDeviceCmdResponseSub, err)
 	}
-	util.Logger.Infof(model.SubscribeString, logPrefix, topic.LocalProcessesStateSub)
+	util.Logger.Infof(model.SubscribedString, logPrefix, topic.LocalDeviceCmdResponseSub)
+	util.Logger.Debugf(model.SubscribeString, logPrefix, topic.LocalProcessesStateSub)
 	err = h.client.Subscribe(topic.LocalProcessesStateSub, h.qos, func(m handler.Message) {
 		if err := h.processesStateMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
@@ -67,7 +69,8 @@ func (h *Handler) HandleSubscriptions() {
 	if err != nil {
 		util.Logger.Errorf(model.SubscribeErrString, logPrefix, topic.LocalProcessesStateSub, err)
 	}
-	util.Logger.Infof(model.SubscribeString, logPrefix, topic.LocalDeviceConnectorErrSub)
+	util.Logger.Infof(model.SubscribedString, logPrefix, topic.LocalProcessesStateSub)
+	util.Logger.Debugf(model.SubscribeString, logPrefix, topic.LocalDeviceConnectorErrSub)
 	err = h.client.Subscribe(topic.LocalDeviceConnectorErrSub, h.qos, func(m handler.Message) {
 		if err := h.deviceConnectorErrMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
@@ -76,7 +79,8 @@ func (h *Handler) HandleSubscriptions() {
 	if err != nil {
 		util.Logger.Errorf(model.SubscribeErrString, logPrefix, topic.LocalDeviceConnectorErrSub, err)
 	}
-	util.Logger.Infof(model.SubscribeString, logPrefix, topic.LocalDeviceErrSub)
+	util.Logger.Infof(model.SubscribedString, logPrefix, topic.LocalDeviceConnectorErrSub)
+	util.Logger.Debugf(model.SubscribeString, logPrefix, topic.LocalDeviceErrSub)
 	err = h.client.Subscribe(topic.LocalDeviceErrSub, h.qos, func(m handler.Message) {
 		if err := h.deviceErrMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
@@ -85,7 +89,8 @@ func (h *Handler) HandleSubscriptions() {
 	if err != nil {
 		util.Logger.Errorf(model.SubscribeErrString, logPrefix, topic.LocalDeviceErrSub, err)
 	}
-	util.Logger.Infof(model.SubscribeString, logPrefix, topic.LocalDeviceCmdErrSub)
+	util.Logger.Infof(model.SubscribedString, logPrefix, topic.LocalDeviceErrSub)
+	util.Logger.Debugf(model.SubscribeString, logPrefix, topic.LocalDeviceCmdErrSub)
 	err = h.client.Subscribe(topic.LocalDeviceCmdErrSub, h.qos, func(m handler.Message) {
 		if err := h.deviceCmdErrMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
@@ -94,4 +99,5 @@ func (h *Handler) HandleSubscriptions() {
 	if err != nil {
 		util.Logger.Errorf(model.SubscribeErrString, logPrefix, topic.LocalDeviceCmdErrSub, err)
 	}
+	util.Logger.Infof(model.SubscribedString, logPrefix, topic.LocalDeviceCmdErrSub)
 }
