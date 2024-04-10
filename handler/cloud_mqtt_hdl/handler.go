@@ -8,14 +8,7 @@ import (
 	"sync"
 )
 
-const (
-	RelayMsgErrString    = "relaying message failed: topic=%s err=%s"
-	SubscribeString      = "subscribing to cloud topic '%s'"
-	SubscribeErrString   = "subscribing to cloud topic '%s' failed: %s"
-	UnsubscribeString    = "unsubscribing from cloud topic '%s'"
-	UnsubscribeErrString = "unsubscribing from cloud topic '%s' failed: %s"
-	ResubscribeString    = "resubscribing to cloud topic '%s'"
-)
+const logPrefix = "[cloud-mqtt-handler]"
 
 type Handler struct {
 	client                  handler.MqttClient
@@ -45,16 +38,16 @@ func (h *Handler) SetMessageRelayHdl(deviceCmdMsgRelayHdl, processesCmdMsgRelayH
 }
 
 func (h *Handler) HandleOnDisconnect() {
-	util.Logger.Debug("cloud mqtt client disconnected, clearing subscriptions")
 	h.mu.Lock()
 	clear(h.subscriptions)
 	h.mu.Unlock()
+	util.Logger.Debugf(logPrefix + " subscriptions cleared")
 }
 
 func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string) ([]string, error) {
 	err := h.subscribe("processes/"+h.hubID+"/cmd/#", func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
-			util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
+			util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
 		}
 	})
 	if err == model.NotConnectedErr {
@@ -65,7 +58,7 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 	for _, id := range isOnlineIDs {
 		err = h.subscribe("command/"+id+"/+", func(m handler.Message) {
 			if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-				util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
+				util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
 			}
 		})
 		if err != nil {
@@ -81,7 +74,7 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 	for _, id := range isOnlineAgainIDs {
 		err = h.resubscribe("command/"+id+"/+", func(m handler.Message) {
 			if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-				util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
+				util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
 			}
 		})
 		if err != nil {
@@ -114,7 +107,7 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 			if device.State == model.Online && !h.isSubscribed(t) {
 				err = h.subscribe(t, func(m handler.Message) {
 					if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-						util.Logger.Errorf(RelayMsgErrString, m.Topic(), err)
+						util.Logger.Errorf(model.RelayMsgErrString, logPrefix, m.Topic(), err)
 					}
 				})
 				if err != nil {
@@ -133,9 +126,9 @@ func (h *Handler) subscribe(t string, mhf func(m handler.Message)) error {
 	if h.isSubscribed(t) {
 		return nil
 	}
-	util.Logger.Debugf(SubscribeString, t)
+	util.Logger.Infof(model.SubscribeString, logPrefix, t)
 	if err := h.client.Subscribe(t, h.qos, mhf); err != nil {
-		util.Logger.Errorf(SubscribeErrString, t, err)
+		util.Logger.Errorf(model.SubscribeErrString, logPrefix, t, err)
 		return err
 	}
 	h.mu.Lock()
@@ -148,9 +141,9 @@ func (h *Handler) unsubscribe(t string) error {
 	if !h.isSubscribed(t) {
 		return nil
 	}
-	util.Logger.Debugf(UnsubscribeString, t)
+	util.Logger.Infof(model.UnsubscribeString, logPrefix, t)
 	if err := h.client.Unsubscribe(t); err != nil {
-		util.Logger.Errorf(UnsubscribeErrString, t, err)
+		util.Logger.Errorf(model.UnsubscribeErrString, logPrefix, t, err)
 		return err
 	}
 	h.mu.Lock()
@@ -160,13 +153,13 @@ func (h *Handler) unsubscribe(t string) error {
 }
 
 func (h *Handler) resubscribe(t string, mhf func(m handler.Message)) error {
-	util.Logger.Debugf(ResubscribeString, t)
+	util.Logger.Infof(model.ResubscribeString, logPrefix, t)
 	if err := h.client.Unsubscribe(t); err != nil {
-		util.Logger.Errorf(UnsubscribeErrString, t, err)
+		util.Logger.Errorf(model.UnsubscribeErrString, logPrefix, t, err)
 		return err
 	}
 	if err := h.client.Subscribe(t, h.qos, mhf); err != nil {
-		util.Logger.Errorf(SubscribeErrString, t, err)
+		util.Logger.Errorf(model.SubscribeErrString, logPrefix, t, err)
 		return err
 	}
 	h.mu.Lock()
