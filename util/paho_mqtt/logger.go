@@ -20,20 +20,20 @@ func (l *mqttLogger) Printf(format string, v ...any) {
 
 func SetLogger(debug bool) {
 	mqtt.ERROR = &mqttLogger{
-		println: util.Logger.Errorln,
+		println: util.Logger.Error,
 		printf:  util.Logger.Errorf,
 	}
 	mqtt.CRITICAL = &mqttLogger{
-		println: util.Logger.Errorln,
+		println: util.Logger.Error,
 		printf:  util.Logger.Errorf,
 	}
 	mqtt.WARN = &mqttLogger{
-		println: util.Logger.Warningln,
+		println: util.Logger.Warning,
 		printf:  util.Logger.Warningf,
 	}
 	if debug {
 		mqtt.DEBUG = &mqttLogger{
-			println: util.Logger.Debugln,
+			println: util.Logger.Debug,
 			printf:  util.Logger.Debugf,
 		}
 	}
