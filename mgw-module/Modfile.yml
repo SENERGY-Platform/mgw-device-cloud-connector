@@ -110,7 +110,7 @@ configs:
         services:
           - connector
     userInput:
-      type: text
+      type: number
       name: MQTT log
       group: log-settings
     optional: true
@@ -125,7 +125,7 @@ configs:
         services:
           - connector
     userInput:
-      type: text
+      type: number
       name: MQTT log
       group: log-settings
     optional: true
