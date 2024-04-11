@@ -59,12 +59,12 @@ type CloudAuthConfig struct {
 }
 
 type CloudHandlerConfig struct {
-	HubID            string `json:"hub_id" env_var:"CH_HUB_ID"`
-	DefaultHubName   string `json:"default_hub_name" env_var:"CH_DEFAULT_HUB_NAME"`
-	WrkSpcPath       string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
-	AttributeOrigin  string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
-	SyncInterval     int64  `json:"sync_interval" env_var:"CH_SYNC_INTERVAL"`
-	NetworkInitDelay int64  `json:"network_init_delay" env_var:"CH_NETWORK_INIT_DELAY"`
+	NetworkID          string `json:"network_id" env_var:"CH_NETWORK_ID"`
+	DefaultNetworkName string `json:"default_network_name" env_var:"CH_DEFAULT_NETWORK_NAME"`
+	WrkSpcPath         string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
+	AttributeOrigin    string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
+	SyncInterval       int64  `json:"sync_interval" env_var:"CH_SYNC_INTERVAL"`
+	NetworkInitDelay   int64  `json:"network_init_delay" env_var:"CH_NETWORK_INIT_DELAY"`
 }
 
 type LocalDeviceHandlerConfig struct {

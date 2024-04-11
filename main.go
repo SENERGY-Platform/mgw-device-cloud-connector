@@ -117,7 +117,7 @@ func main() {
 		return nil
 	})
 
-	hubID, err := cloudHdl.Init(chCtx, config.CloudHandler.HubID, config.CloudHandler.DefaultHubName, time.Duration(config.CloudHandler.NetworkInitDelay))
+	hubID, err := cloudHdl.Init(chCtx, config.CloudHandler.NetworkID, config.CloudHandler.DefaultNetworkName, time.Duration(config.CloudHandler.NetworkInitDelay))
 	if err != nil {
 		util.Logger.Error(err)
 		ec = 1
