@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const logPrefix = "[cloud-device-handler]"
+const logPrefix = "[cloud-hdl]"
 
 type Handler struct {
 	cloudClient  cloud_client.ClientItf

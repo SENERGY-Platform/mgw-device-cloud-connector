@@ -7,7 +7,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 )
 
-const logPrefix = "[local-mqtt-handler]"
+const LogPrefix = "[local-mqtt]"
 
 type Handler struct {
 	client                        handler.MqttClient

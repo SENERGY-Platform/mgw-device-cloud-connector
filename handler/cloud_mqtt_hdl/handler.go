@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-const logPrefix = "[cloud-mqtt-handler]"
+const LogPrefix = "[cloud-mqtt]"
 
 type Handler struct {
 	client                  handler.MqttClient
