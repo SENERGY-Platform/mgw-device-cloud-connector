@@ -37,7 +37,7 @@ func New(cloudClient cloud_client.ClientItf, syncInterval time.Duration, wrkSpac
 	}
 }
 
-func (h *Handler) Init(ctx context.Context, hubID, hubName string) (string, error) {
+func (h *Handler) Init(ctx context.Context, hubID, hubName string, delay time.Duration) (string, error) {
 	if !path.IsAbs(h.wrkSpacePath) {
 		return "", fmt.Errorf("workspace path must be absolute")
 	}
@@ -52,35 +52,53 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string) (string, erro
 		d.HubID = hubID
 	}
 	d.DefaultHubName = hubName
-	if d.HubID != "" {
-		ctxWc, cf := context.WithCancel(ctx)
-		defer cf()
-		util.Logger.Debugf("%s get hub (%s)", logPrefix, d.HubID)
-		if hb, err := h.cloudClient.GetHub(ctxWc, d.HubID); err != nil {
-			var nfe *cloud_client.NotFoundError
-			if !errors.As(err, &nfe) {
-				return "", fmt.Errorf("get hub (%s): %s", d.HubID, err)
+	timer := time.NewTimer(time.Millisecond * 10)
+	stop := false
+	util.Logger.Info(logPrefix, " begin hub init")
+	for !stop {
+		select {
+		case <-timer.C:
+			if d.HubID != "" {
+				ctxWc, cf := context.WithCancel(ctx)
+				defer cf()
+				util.Logger.Debugf("%s get hub (%s)", logPrefix, d.HubID)
+				if hb, err := h.cloudClient.GetHub(ctxWc, d.HubID); err != nil {
+					var nfe *cloud_client.NotFoundError
+					if !errors.As(err, &nfe) {
+						util.Logger.Errorf("%s get hub (%s): %s", logPrefix, d.HubID, err)
+						timer.Reset(delay)
+						break
+					}
+					util.Logger.Warningf("%s get hub (%s): %s", logPrefix, d.HubID, err)
+					d.HubID = ""
+				} else {
+					if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
+						d.DeviceIDMap = deviceIDMap
+					} else {
+						util.Logger.Errorf("%s refresh device id cache: %s", logPrefix, err)
+					}
+					stop = true
+					break
+				}
 			}
-			util.Logger.Warningf("%s get hub (%s): %s", logPrefix, d.HubID, err)
-			d.HubID = ""
-		} else {
-			if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
-				d.DeviceIDMap = deviceIDMap
-			} else {
-				util.Logger.Errorf("%s refresh device id cache: %s", logPrefix, err)
+			if d.HubID == "" {
+				ctxWc, cf := context.WithCancel(ctx)
+				defer cf()
+				util.Logger.Info(logPrefix, " create hub")
+				hID, err := h.cloudClient.CreateHub(ctxWc, models.Hub{Name: hubName})
+				if err != nil {
+					util.Logger.Errorf("%s create hub: %s", logPrefix, err)
+					timer.Reset(delay)
+					break
+				}
+				d.HubID = hID
+				util.Logger.Infof("%s created hub (%s)", logPrefix, hID)
+				stop = true
+				break
 			}
+		case <-ctx.Done():
+			return "", fmt.Errorf("init hub: %s", ctx.Err())
 		}
-	}
-	if d.HubID == "" {
-		ctxWc, cf := context.WithCancel(ctx)
-		defer cf()
-		util.Logger.Info(logPrefix, " create hub")
-		hID, err := h.cloudClient.CreateHub(ctxWc, models.Hub{Name: hubName})
-		if err != nil {
-			return "", fmt.Errorf("create hub: %s", err)
-		}
-		d.HubID = hID
-		util.Logger.Infof("%s created hub (%s)", logPrefix, hID)
 	}
 	if d.DeviceIDMap == nil {
 		d.DeviceIDMap = make(map[string]string)

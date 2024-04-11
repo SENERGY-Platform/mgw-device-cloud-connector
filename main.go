@@ -108,9 +108,16 @@ func main() {
 	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
 	cloudHdl := cloud_hdl.New(cloudClient, time.Duration(config.CloudDeviceHandler.SyncInterval), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
+	wtchdg.Start()
+
 	chCtx, cf := context.WithCancel(context.Background())
 	defer cf()
-	hubID, err := cloudHdl.Init(chCtx, config.CloudDeviceHandler.HubID, config.CloudDeviceHandler.DefaultHubName)
+	wtchdg.RegisterStopFunc(func() error {
+		cf()
+		return nil
+	})
+
+	hubID, err := cloudHdl.Init(chCtx, config.CloudDeviceHandler.HubID, config.CloudDeviceHandler.DefaultHubName, time.Duration(config.CloudDeviceHandler.NetworkInitDelay))
 	if err != nil {
 		util.Logger.Error(err)
 		ec = 1
@@ -223,7 +230,7 @@ func main() {
 		return nil
 	})
 
-	wtchdg.Start()
+	// wtchdg.Start()
 
 	ec = wtchdg.Join()
 }
