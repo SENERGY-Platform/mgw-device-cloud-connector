@@ -28,11 +28,6 @@ import (
 	"time"
 )
 
-const (
-	cloudMqttLogPrefix = "[cloud-mqtt-client]"
-	localMqttLogPrefix = "[local-mqtt-client]"
-)
-
 var version string
 
 func main() {
@@ -126,15 +121,15 @@ func main() {
 
 	localMqttClientOpt := mqtt.NewClientOptions()
 	localMqttClientOpt.SetConnectionAttemptHandler(func(_ *url.URL, tlsCfg *tls.Config) *tls.Config {
-		util.Logger.Infof("%s connect to broker (%s)", localMqttLogPrefix, config.LocalMqttClient.Server)
+		util.Logger.Infof("%s connect to broker (%s)", local_mqtt_hdl.LogPrefix, config.LocalMqttClient.Server)
 		return tlsCfg
 	})
 	localMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
-		util.Logger.Infof("%s connected to broker (%s)", localMqttLogPrefix, config.LocalMqttClient.Server)
+		util.Logger.Infof("%s connected to broker (%s)", local_mqtt_hdl.LogPrefix, config.LocalMqttClient.Server)
 		localMqttHdl.HandleSubscriptions()
 	})
 	localMqttClientOpt.SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-		util.Logger.Warningf("%s connection lost: %s", localMqttLogPrefix, err)
+		util.Logger.Warningf("%s connection lost: %s", local_mqtt_hdl.LogPrefix, err)
 	})
 	paho_mqtt.SetLocalClientOptions(localMqttClientOpt, fmt.Sprintf("%s_%s", srvInfoHdl.GetName(), config.MGWDeploymentID), config.LocalMqttClient)
 	localMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(localMqttClientOpt), time.Duration(config.LocalMqttClient.WaitTimeout))
@@ -146,14 +141,14 @@ func main() {
 
 	cloudMqttClientOpt := mqtt.NewClientOptions()
 	cloudMqttClientOpt.SetConnectionAttemptHandler(func(_ *url.URL, tlsCfg *tls.Config) *tls.Config {
-		util.Logger.Infof("%s connect to broker (%s)", cloudMqttLogPrefix, config.CloudMqttClient.Server)
+		util.Logger.Infof("%s connect to broker (%s)", cloud_mqtt_hdl.LogPrefix, config.CloudMqttClient.Server)
 		return tlsCfg
 	})
 	cloudMqttClientOpt.SetOnConnectHandler(func(_ mqtt.Client) {
-		util.Logger.Infof("%s connected to broker (%s)", cloudMqttLogPrefix, config.CloudMqttClient.Server)
+		util.Logger.Infof("%s connected to broker (%s)", cloud_mqtt_hdl.LogPrefix, config.CloudMqttClient.Server)
 	})
 	cloudMqttClientOpt.SetConnectionLostHandler(func(_ mqtt.Client, err error) {
-		util.Logger.Warningf("%s connection lost: %s", cloudMqttLogPrefix, err)
+		util.Logger.Warningf("%s connection lost: %s", cloud_mqtt_hdl.LogPrefix, err)
 		cloudMqttHdl.HandleOnDisconnect()
 	})
 	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, hubID, config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
