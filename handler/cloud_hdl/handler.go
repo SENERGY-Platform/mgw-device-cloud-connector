@@ -49,28 +49,28 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string, delay time.Du
 		return "", err
 	}
 	if hubID != "" {
-		d.HubID = hubID
+		d.NetworkID = hubID
 	}
-	d.DefaultHubName = hubName
+	d.DefaultNetworkName = hubName
 	timer := time.NewTimer(time.Millisecond * 10)
 	stop := false
 	util.Logger.Info(logPrefix, " begin hub init")
 	for !stop {
 		select {
 		case <-timer.C:
-			if d.HubID != "" {
+			if d.NetworkID != "" {
 				ctxWc, cf := context.WithCancel(ctx)
 				defer cf()
-				util.Logger.Debugf("%s get hub (%s)", logPrefix, d.HubID)
-				if hb, err := h.cloudClient.GetHub(ctxWc, d.HubID); err != nil {
+				util.Logger.Debugf("%s get hub (%s)", logPrefix, d.NetworkID)
+				if hb, err := h.cloudClient.GetHub(ctxWc, d.NetworkID); err != nil {
 					var nfe *cloud_client.NotFoundError
 					if !errors.As(err, &nfe) {
-						util.Logger.Errorf("%s get hub (%s): %s", logPrefix, d.HubID, err)
+						util.Logger.Errorf("%s get hub (%s): %s", logPrefix, d.NetworkID, err)
 						timer.Reset(delay)
 						break
 					}
-					util.Logger.Warningf("%s get hub (%s): %s", logPrefix, d.HubID, err)
-					d.HubID = ""
+					util.Logger.Warningf("%s get hub (%s): %s", logPrefix, d.NetworkID, err)
+					d.NetworkID = ""
 				} else {
 					if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
 						d.DeviceIDMap = deviceIDMap
@@ -81,7 +81,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string, delay time.Du
 					break
 				}
 			}
-			if d.HubID == "" {
+			if d.NetworkID == "" {
 				ctxWc, cf := context.WithCancel(ctx)
 				defer cf()
 				util.Logger.Info(logPrefix, " create hub")
@@ -91,7 +91,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string, delay time.Du
 					timer.Reset(delay)
 					break
 				}
-				d.HubID = hID
+				d.NetworkID = hID
 				util.Logger.Infof("%s created hub (%s)", logPrefix, hID)
 				stop = true
 				break
@@ -104,7 +104,7 @@ func (h *Handler) Init(ctx context.Context, hubID, hubName string, delay time.Du
 		d.DeviceIDMap = make(map[string]string)
 	}
 	h.data = d
-	return d.HubID, writeData(h.wrkSpacePath, h.data)
+	return d.NetworkID, writeData(h.wrkSpacePath, h.data)
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, []string, []string, []string, error) {
@@ -121,8 +121,8 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	}
 	ctxWc, cf := context.WithCancel(ctx)
 	defer cf()
-	util.Logger.Debugf("%s get hub (%s)", logPrefix, h.data.HubID)
-	hb, err := h.cloudClient.GetHub(ctxWc, h.data.HubID)
+	util.Logger.Debugf("%s get hub (%s)", logPrefix, h.data.NetworkID)
+	hb, err := h.cloudClient.GetHub(ctxWc, h.data.NetworkID)
 	if err != nil {
 		var nfe *cloud_client.NotFoundError
 		if errors.As(err, &nfe) {
@@ -130,7 +130,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			h.noHub = true
 			h.mu.Unlock()
 		}
-		return nil, nil, nil, nil, fmt.Errorf("get hub (%s): %s", h.data.HubID, err)
+		return nil, nil, nil, nil, fmt.Errorf("get hub (%s): %s", h.data.NetworkID, err)
 	}
 	var createFailed []string
 	syncResults := make(map[string]bool)
@@ -183,9 +183,9 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	ctxWc2, cf2 := context.WithCancel(ctx)
 	defer cf2()
 	if updateHub {
-		util.Logger.Infof("%s update hub (%s)", logPrefix, h.data.HubID)
+		util.Logger.Infof("%s update hub (%s)", logPrefix, h.data.NetworkID)
 	} else {
-		util.Logger.Debugf("%s update hub (%s)", logPrefix, h.data.HubID)
+		util.Logger.Debugf("%s update hub (%s)", logPrefix, h.data.NetworkID)
 	}
 	if err = h.cloudClient.UpdateHub(ctxWc2, hb); err != nil {
 		var nfe *cloud_client.NotFoundError
@@ -194,7 +194,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			h.noHub = true
 			h.mu.Unlock()
 		}
-		return nil, nil, nil, nil, fmt.Errorf("update hub (%s): %s", h.data.HubID, err)
+		return nil, nil, nil, nil, fmt.Errorf("update hub (%s): %s", h.data.NetworkID, err)
 	}
 	h.lastSync = time.Now()
 	if err = writeData(h.wrkSpacePath, h.data); err != nil {

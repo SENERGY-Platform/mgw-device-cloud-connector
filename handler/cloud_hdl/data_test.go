@@ -9,7 +9,7 @@ import (
 
 func TestWriteReadData(t *testing.T) {
 	a := data{
-		HubID: "test",
+		NetworkID: "test",
 		DeviceIDMap: map[string]string{
 			"foo": "bar",
 		},
@@ -41,7 +41,7 @@ func TestWriteReadData(t *testing.T) {
 		}
 	})
 	t.Run("update data file", func(t *testing.T) {
-		a.HubID = "test 2"
+		a.NetworkID = "test 2"
 		err := writeData(tmpDir, a)
 		if err != nil {
 			t.Error(err)
@@ -56,7 +56,7 @@ func TestWriteReadData(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if b.HubID != "test 2" {
+		if b.NetworkID != "test 2" {
 			t.Error("data file not updated")
 		}
 	})

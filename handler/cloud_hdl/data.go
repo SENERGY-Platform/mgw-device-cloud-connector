@@ -9,9 +9,9 @@ import (
 const dataFile = "data.json"
 
 type data struct {
-	HubID          string            `json:"hub_id"`
-	DefaultHubName string            `json:"-"`
-	DeviceIDMap    map[string]string `json:"device_id_map"` // localID:ID
+	NetworkID          string            `json:"network_id"`
+	DefaultNetworkName string            `json:"-"`
+	DeviceIDMap        map[string]string `json:"device_id_map"` // localID:ID
 }
 
 func readData(p string) (data, error) {
