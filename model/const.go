@@ -1,7 +1,7 @@
 package model
 
 const (
-	RelayMsgErrString    = "%s relay message to topic (%s): %s"
+	RelayMsgErrString    = "%s relay message (%s): %s"
 	SubscribeString      = "%s subscribe topic (%s)"
 	SubscribedString     = "%s subscribed topic (%s)"
 	SubscribeErrString   = "%s subscribe topic (%s): %s"
