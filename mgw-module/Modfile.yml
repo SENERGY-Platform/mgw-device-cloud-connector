@@ -100,11 +100,11 @@ configs:
       group: log-settings
     optional: true
   mqtt-log:
-    dataType: bool
-    value: "false"
+    dataType: int
+    value: 0
     options:
-      - "true"
-      - "false"
+      - 0
+      - 1
     targets:
       - refVar: MQTT_LOG
         services:
@@ -115,11 +115,11 @@ configs:
       group: log-settings
     optional: true
   mqtt-debug-log:
-    dataType: bool
-    value: "false"
+    dataType: int
+    value: 0
     options:
-      - "true"
-      - "false"
+      - 0
+      - 1
     targets:
       - refVar: MQTT_DEBUG_LOG
         services:
