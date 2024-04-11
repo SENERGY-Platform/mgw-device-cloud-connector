@@ -208,7 +208,7 @@ func main() {
 	cloudMqttClient.Connect()
 
 	wtchdg.RegisterHealthFunc(localDeviceHdl.Running)
-	wtchdg.RegisterHealthFunc(cloudHdl.HasHub)
+	wtchdg.RegisterHealthFunc(cloudHdl.HasNetwork)
 	wtchdg.RegisterStopFunc(func() error {
 		localDeviceHdl.Stop()
 		return nil
