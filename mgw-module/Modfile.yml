@@ -1,0 +1,307 @@
+modfileVersion: "v1"
+id: github.com/SENERGY-Platform/mgw-device-cloud-connector/mgw-module
+name: Device Cloud-Connector
+description: Connect local devices to the Cloud.
+license: Apache-2.0 license
+author: InfAI (CC SES)
+version: v0.1.0
+type: add-on
+deploymentType: single
+dependencies:
+  github.com/SENERGY-Platform/mgw-mqtt-broker:
+    version: "<v2.0.0"
+    requiredServices:
+      broker:
+        - refVar: CONF_MB_HOST
+          template: "mqtt://{ref}:1881"
+          services:
+            - connector
+  github.com/SENERGY-Platform/device-management-service/mgw-module:
+    version: "<v1.0.0"
+    requiredServices:
+      manager:
+        - refVar: LOCAL_DM_BASE_URL
+          template: "http://{ref}"
+          services:
+            - connector
+services:
+  connector:
+    name: Connector
+    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.1.0
+volumes:
+  ch-data:
+    - mountPoint: /opt/connector/ch-data
+      services:
+        - connector
+inputGroups:
+  log-settings:
+    name: Logging
+  cloud-settings:
+    name: Cloud settings
+  cloud-secrets:
+    name: Authentication
+    group: cloud-settings
+  cloud-mqtt:
+    name: MQTT
+    group: cloud-settings
+  cloud-api:
+    name: APIs
+    group: cloud-settings
+  local-settings:
+    name: Local settings
+  local-mqtt:
+    name: MQTT
+    group: local-settings
+  local-api:
+    name: APIs
+    group: local-settings
+  msg-relay:
+    name: Message relay settings
+secrets:
+  cloud-credentials:
+    type: basic-auth
+    targets:
+      - refVar: CLOUD_USER
+        item: username
+        services:
+          - connector
+      - refVar: CLOUD_PASSWORD
+        item: password
+        services:
+          - connector
+    userInput:
+      name: Cloud credentials
+      group: cloud-secrets
+  client-id:
+    type: client-id
+    targets:
+      - refVar: CLOUD_CLIENT_ID
+        services:
+          - connector
+    userInput:
+      name: Cloud client ID
+      group: cloud-secrets
+configs:
+  log-level:
+    value: "warning"
+    options:
+      - "off"
+      - "error"
+      - "warning"
+      - "info"
+      - "debug"
+    targets:
+      - refVar: LOGGER_LEVEL
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Log level
+      group: log-settings
+    optional: true
+  mqtt-log:
+    dataType: bool
+    value: "false"
+    options:
+      - "true"
+      - "false"
+    targets:
+      - refVar: MQTT_LOG
+        services:
+          - connector
+    userInput:
+      type: text
+      name: MQTT log
+      group: log-settings
+    optional: true
+  mqtt-debug-log:
+    dataType: bool
+    value: "false"
+    options:
+      - "true"
+      - "false"
+    targets:
+      - refVar: MQTT_DEBUG_LOG
+        services:
+          - connector
+    userInput:
+      type: text
+      name: MQTT log
+      group: log-settings
+    optional: true
+  cloud-mqtt-server:
+    targets:
+      - refVar: CLOUD_MQTT_SERVER
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Cloud MQTT server address
+      description: "Address format: <mqtt|mqtts>://<host>:<port>"
+      group: cloud-mqtt
+  cloud-mqtt-pub-qos:
+    dataType: int
+    value: 0
+    options:
+      - 0
+      - 1
+      - 2
+    targets:
+      - refVar: CLOUD_PUBLISH_QOS_LEVEL
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Cloud MQTT publish qos level
+      group: cloud-mqtt
+    optional: true
+  cloud-mqtt-sub-qos:
+    dataType: int
+    value: 2
+    options:
+      - 0
+      - 1
+      - 2
+    targets:
+      - refVar: CLOUD_SUBSCRIBE_QOS_LEVEL
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Cloud MQTT subscription qos level
+      group: cloud-mqtt
+    optional: true
+  cloud-api-base-url:
+    targets:
+      - refVar: CLOUD_API_BASE_URL
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Cloud API URL
+      group: cloud-api
+  cloud-auth-base-url:
+    targets:
+      - refVar: CLOUD_AUTH_BASE_URL
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Cloud authentication URL
+      group: cloud-api
+  local-dm-base-url:
+    targets:
+      - refVar: LOCAL_DM_BASE_URL
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Local device-manager URL
+      group: local-api
+  cloud-network-id:
+    targets:
+      - refVar: CH_NETWORK_ID
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Cloud network ID
+      group: cloud-settings
+    optional: true
+  cloud-default-net-name:
+    value: "my-network"
+    targets:
+      - refVar: CH_DEFAULT_NETWORK_NAME
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Cloud default network name
+      group: cloud-settings
+    optional: true
+  cloud-sync-interval:
+    dataType: int
+    value: 1800000000000
+    targets:
+      - refVar: CH_SYNC_INTERVAL
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Cloud sync interval
+      description: "Set interval for periodic syncs in nanoseconds."
+      group: cloud-settings
+    optional: true
+  local-device-id-prefix:
+    targets:
+      - refVar: LDH_ID_PREFIX
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Local device ID prefix
+      group: local-settings
+    optional: true
+  local-device-refresh-interval:
+    dataType: int
+    value: 5000000000
+    targets:
+      - refVar: LDH_REFRESH_INTERVAL
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Local device discovery interval
+      description: "Set interval for periodic discovery of local devices in nanoseconds."
+      group: cloud-settings
+    optional: true
+  relay-mgs-buffer:
+    dataType: int
+    value: 50000
+    targets:
+      - refVar: RH_MESSAGE_BUFFER
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Message buffer size
+      group: msg-relay
+    optional: true
+  relay-event-msg-buffer:
+    dataType: int
+    value: 100000
+    targets:
+      - refVar: RH_EVENT_MESSAGE_BUFFER
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Event message buffer size
+      group: msg-relay
+    optional: true
+  max-device-cmd-age:
+    dataType: int
+    value: 30000000000
+    targets:
+      - refVar: RH_MAX_DEVICE_CMD_AGE
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Maximum device command age
+      description: "Set the maximum age for device commands in nanoseconds."
+      group: msg-relay
+    optional: true
+  max-device-event-age:
+    dataType: int
+    value: 300000000000
+    targets:
+      - refVar: RH_MAX_DEVICE_EVENT_AGE
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Maximum device event age
+      description: "Set the maximum age for device events in nanoseconds."
+      group: msg-relay
+    optional: true
