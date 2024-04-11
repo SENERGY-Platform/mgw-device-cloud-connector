@@ -8,7 +8,7 @@ import (
 	srv_info_hdl "github.com/SENERGY-Platform/go-service-base/srv-info-hdl"
 	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/go-service-base/watchdog"
-	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_device_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_device_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_mqtt_hdl"
@@ -106,11 +106,11 @@ func main() {
 	}
 
 	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
-	cloudDeviceHdl := cloud_device_hdl.New(cloudClient, time.Duration(config.CloudDeviceHandler.SyncInterval), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
+	cloudHdl := cloud_hdl.New(cloudClient, time.Duration(config.CloudDeviceHandler.SyncInterval), config.CloudDeviceHandler.WrkSpcPath, config.CloudDeviceHandler.AttributeOrigin)
 
 	chCtx, cf := context.WithCancel(context.Background())
 	defer cf()
-	hubID, err := cloudDeviceHdl.Init(chCtx, config.CloudDeviceHandler.HubID, config.CloudDeviceHandler.DefaultHubName)
+	hubID, err := cloudHdl.Init(chCtx, config.CloudDeviceHandler.HubID, config.CloudDeviceHandler.DefaultHubName)
 	if err != nil {
 		util.Logger.Error(err)
 		ec = 1
@@ -183,7 +183,7 @@ func main() {
 	cloudMqttHdl.SetMqttClient(cloudMqttClient)
 	cloudMqttHdl.SetMessageRelayHdl(deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl)
 
-	localDeviceHdl.SetDeviceSyncFunc(cloudDeviceHdl.Sync)
+	localDeviceHdl.SetDeviceSyncFunc(cloudHdl.Sync)
 	localDeviceHdl.SetDeviceStateSyncFunc(cloudMqttHdl.HandleSubscriptions)
 
 	localDeviceHdl.Start()
@@ -201,7 +201,7 @@ func main() {
 	cloudMqttClient.Connect()
 
 	wtchdg.RegisterHealthFunc(localDeviceHdl.Running)
-	wtchdg.RegisterHealthFunc(cloudDeviceHdl.HasHub)
+	wtchdg.RegisterHealthFunc(cloudHdl.HasHub)
 	wtchdg.RegisterStopFunc(func() error {
 		localDeviceHdl.Stop()
 		return nil

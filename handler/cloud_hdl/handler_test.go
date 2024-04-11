@@ -1,4 +1,4 @@
-package cloud_device_hdl
+package cloud_hdl
 
 import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
