@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 	"time"
 )
@@ -23,5 +24,6 @@ func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
 		}
 		return topic.CloudDeviceEventPub + "/" + LocalDeviceIDPrefix + dID + "/" + sID, b, nil
 	}
+	util.Logger.Warningf("%s ignored device event (%s)", logPrefix, m.Topic())
 	return "", nil, model.NoMsgErr
 }

@@ -1,5 +1,7 @@
 package message_hdl
 
+const logPrefix = "[message-hdl]"
+
 type CloudStandardEnvelope struct {
 	Metadata string `json:"metadata,omitempty"`
 	Data     string `json:"data"`

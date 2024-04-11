@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 	"math"
 	"strings"
@@ -36,6 +37,7 @@ func HandleDownstreamDeviceCmd(m handler.Message) (string, []byte, error) {
 		}
 		return topic.LocalDeviceCmdPub + "/" + strings.ReplaceAll(dID, LocalDeviceIDPrefix, "") + "/" + sID, b, nil
 	}
+	util.Logger.Warningf("%s ignored device command (%s)", logPrefix, m.Topic())
 	return "", nil, model.NoMsgErr
 }
 
