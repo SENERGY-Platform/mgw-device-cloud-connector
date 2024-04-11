@@ -96,6 +96,11 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	if len(newIDs)+len(changedIDs) == 0 && time.Since(h.lastSync) < h.syncInterval {
 		return nil, nil, nil, nil, nil
 	}
+	if len(newIDs)+len(changedIDs) > 0 {
+		util.Logger.Info(logPrefix, " begin devices and hub sync")
+	} else {
+		util.Logger.Debug(logPrefix, " begin periodic devices and hub sync")
+	}
 	ctxWc, cf := context.WithCancel(ctx)
 	defer cf()
 	util.Logger.Debugf("%s get hub (%s)", logPrefix, h.data.HubID)
