@@ -117,7 +117,7 @@ func main() {
 		return nil
 	})
 
-	hubID, err := cloudHdl.Init(chCtx, config.CloudHandler.NetworkID, config.CloudHandler.DefaultNetworkName, time.Duration(config.CloudHandler.NetworkInitDelay))
+	networkID, err := cloudHdl.Init(chCtx, config.CloudHandler.NetworkID, config.CloudHandler.DefaultNetworkName, time.Duration(config.CloudHandler.NetworkInitDelay))
 	if err != nil {
 		util.Logger.Error(err)
 		ec = 1
@@ -144,7 +144,7 @@ func main() {
 		return localMqttClient.Publish(topic, config.LocalMqttClient.QOSLevel, false, data)
 	}
 
-	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.SubscribeQOSLevel, hubID)
+	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.SubscribeQOSLevel, networkID)
 
 	cloudMqttClientOpt := mqtt.NewClientOptions()
 	cloudMqttClientOpt.SetConnectionAttemptHandler(func(_ *url.URL, tlsCfg *tls.Config) *tls.Config {
@@ -158,7 +158,7 @@ func main() {
 		util.Logger.Warningf("%s connection lost: %s", cloud_mqtt_hdl.LogPrefix, err)
 		cloudMqttHdl.HandleOnDisconnect()
 	})
-	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, hubID, config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
+	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, networkID, config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
 	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
 	cloudMqttClientPubF := func(topic string, data []byte) error {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.PublishQOSLevel, false, data)
@@ -167,7 +167,7 @@ func main() {
 	message_hdl.DeviceEventMaxAge = time.Duration(config.MaxDeviceEventAge)
 	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
 	message_hdl.DeviceCommandMaxAge = time.Duration(config.MaxDeviceCmdAge)
-	message_hdl.HubID = hubID
+	message_hdl.HubID = networkID
 	message_hdl.LocalDeviceIDPrefix = config.LocalDeviceHandler.IDPrefix
 
 	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
