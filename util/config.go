@@ -58,13 +58,13 @@ type CloudAuthConfig struct {
 	ClientID string               `json:"client_id" env_var:"CLOUD_CLIENT_ID"`
 }
 
-type CloudDeviceHandlerConfig struct {
-	HubID            string `json:"hub_id" env_var:"CDH_HUB_ID"`
-	DefaultHubName   string `json:"default_hub_name" env_var:"CDH_DEFAULT_HUB_NAME"`
-	WrkSpcPath       string `json:"wrk_spc_path" env_var:"CDH_WRK_SPC_PATH"`
-	AttributeOrigin  string `json:"attribute_origin" env_var:"CDH_ATTRIBUTE_ORIGIN"`
-	SyncInterval     int64  `json:"sync_interval" env_var:"CDH_SYNC_INTERVAL"`
-	NetworkInitDelay int64  `json:"network_init_delay" env_var:"CDH_NETWORK_INIT_DELAY"`
+type CloudHandlerConfig struct {
+	HubID            string `json:"hub_id" env_var:"CH_HUB_ID"`
+	DefaultHubName   string `json:"default_hub_name" env_var:"CH_DEFAULT_HUB_NAME"`
+	WrkSpcPath       string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
+	AttributeOrigin  string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
+	SyncInterval     int64  `json:"sync_interval" env_var:"CH_SYNC_INTERVAL"`
+	NetworkInitDelay int64  `json:"network_init_delay" env_var:"CH_NETWORK_INIT_DELAY"`
 }
 
 type LocalDeviceHandlerConfig struct {
@@ -78,7 +78,7 @@ type Config struct {
 	LocalMqttClient         LocalMqttClientConfig    `json:"local_mqtt_client" env_var:"LOCAL_MQTT_CLIENT_CONFIG"`
 	HttpClient              HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
 	CloudAuth               CloudAuthConfig          `json:"cloud_auth" env_var:"CLOUD_AUTH_CONFIG"`
-	CloudDeviceHandler      CloudDeviceHandlerConfig `json:"cloud_device_handler" env_var:"CLOUD_DEVICE_HANDLER_CONFIG"`
+	CloudHandler            CloudHandlerConfig       `json:"cloud_handler" env_var:"CLOUD_HANDLER_CONFIG"`
 	LocalDeviceHandler      LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
 	MessageRelayBuffer      int                      `json:"message_relay_buffer" env_var:"MESSAGE_RELAY_BUFFER"`
 	EventMessageRelayBuffer int                      `json:"event_message_relay_buffer" env_var:"EVENT_MESSAGE_RELAY_BUFFER"`
@@ -124,8 +124,8 @@ func NewConfig(path string) (*Config, error) {
 			LocalTimeout: 10000000000, // 10s
 			CloudTimeout: 30000000000, // 30s
 		},
-		CloudDeviceHandler: CloudDeviceHandlerConfig{
-			WrkSpcPath:       "/opt/connector/cdh-data",
+		CloudHandler: CloudHandlerConfig{
+			WrkSpcPath:       "/opt/connector/ch-data",
 			AttributeOrigin:  "dcc",
 			SyncInterval:     1800000000000, // 30m
 			NetworkInitDelay: 10000000000,   // 10s
