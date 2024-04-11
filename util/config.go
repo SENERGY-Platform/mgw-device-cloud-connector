@@ -68,8 +68,8 @@ type CloudHandlerConfig struct {
 }
 
 type LocalDeviceHandlerConfig struct {
-	IDPrefix      string `json:"id_prefix" env_var:"LDH_ID_PREFIX"`
-	QueryInterval int64  `json:"query_interval" env_var:"LDH_QUERY_INTERVAL"`
+	IDPrefix        string `json:"id_prefix" env_var:"LDH_ID_PREFIX"`
+	RefreshInterval int64  `json:"refresh_interval" env_var:"LDH_REFRESH_INTERVAL"`
 }
 
 type RelayHandlerConfig struct {
@@ -135,7 +135,7 @@ func NewConfig(path string) (*Config, error) {
 			NetworkInitDelay: 10000000000,   // 10s
 		},
 		LocalDeviceHandler: LocalDeviceHandlerConfig{
-			QueryInterval: 5000000000, // 5s
+			RefreshInterval: 5000000000, // 5s
 		},
 		RelayHandler: RelayHandlerConfig{
 			MessageBuffer:      50000,

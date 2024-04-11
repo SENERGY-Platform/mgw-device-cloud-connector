@@ -88,7 +88,7 @@ func main() {
 	dmClient := dm_client.New(localHttpClient, config.HttpClient.LocalDmBaseUrl)
 	ldhCtx, cf := context.WithCancel(context.Background())
 	defer cf()
-	localDeviceHdl := local_device_hdl.New(ldhCtx, dmClient, time.Duration(config.LocalDeviceHandler.QueryInterval), config.LocalDeviceHandler.IDPrefix)
+	localDeviceHdl := local_device_hdl.New(ldhCtx, dmClient, time.Duration(config.LocalDeviceHandler.RefreshInterval), config.LocalDeviceHandler.IDPrefix)
 
 	cloudHttpClient := &http.Client{
 		Timeout: time.Duration(config.HttpClient.CloudTimeout),
