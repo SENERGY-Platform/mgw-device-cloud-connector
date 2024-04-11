@@ -59,11 +59,12 @@ type CloudAuthConfig struct {
 }
 
 type CloudDeviceHandlerConfig struct {
-	HubID           string `json:"hub_id" env_var:"CDH_HUB_ID"`
-	DefaultHubName  string `json:"default_hub_name" env_var:"CDH_DEFAULT_HUB_NAME"`
-	WrkSpcPath      string `json:"wrk_spc_path" env_var:"CDH_WRK_SPC_PATH"`
-	AttributeOrigin string `json:"attribute_origin" env_var:"CDH_ATTRIBUTE_ORIGIN"`
-	SyncInterval    int64  `json:"sync_interval" env_var:"CDH_SYNC_INTERVAL"`
+	HubID            string `json:"hub_id" env_var:"CDH_HUB_ID"`
+	DefaultHubName   string `json:"default_hub_name" env_var:"CDH_DEFAULT_HUB_NAME"`
+	WrkSpcPath       string `json:"wrk_spc_path" env_var:"CDH_WRK_SPC_PATH"`
+	AttributeOrigin  string `json:"attribute_origin" env_var:"CDH_ATTRIBUTE_ORIGIN"`
+	SyncInterval     int64  `json:"sync_interval" env_var:"CDH_SYNC_INTERVAL"`
+	NetworkInitDelay int64  `json:"network_init_delay" env_var:"CDH_NETWORK_INIT_DELAY"`
 }
 
 type LocalDeviceHandlerConfig struct {
@@ -124,9 +125,10 @@ func NewConfig(path string) (*Config, error) {
 			CloudTimeout: 30000000000, // 30s
 		},
 		CloudDeviceHandler: CloudDeviceHandlerConfig{
-			WrkSpcPath:      "/opt/connector/cdh-data",
-			AttributeOrigin: "dcc",
-			SyncInterval:    1800000000000, // 30m
+			WrkSpcPath:       "/opt/connector/cdh-data",
+			AttributeOrigin:  "dcc",
+			SyncInterval:     1800000000000, // 30m
+			NetworkInitDelay: 10000000000,   // 10s
 		},
 		LocalDeviceHandler: LocalDeviceHandlerConfig{
 			QueryInterval: 5000000000, // 5s
