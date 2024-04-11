@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+const logPrefix = "[relay-hdl]"
+
 type Handler struct {
 	messages   chan handler.Message
 	handleFunc handler.MessageHandler
@@ -29,7 +31,7 @@ func (h *Handler) Put(m handler.Message) error {
 	select {
 	case h.messages <- m:
 	default:
-		return errors.New("relay buffer full")
+		return errors.New("buffer full")
 	}
 	return nil
 }
@@ -48,11 +50,11 @@ func (h *Handler) run() {
 		topic, data, err := h.handleFunc(message)
 		if err != nil {
 			if err != model.NoMsgErr {
-				util.Logger.Error(err)
+				util.Logger.Errorf("%s handle message: %s", logPrefix, err)
 			}
 		} else {
 			if err = h.sendFunc(topic, data); err != nil {
-				util.Logger.Errorf("error publishing on '%s': %s", topic, err)
+				util.Logger.Errorf("%s publish on topic (%s): %s", logPrefix, topic, err)
 			}
 		}
 	}
