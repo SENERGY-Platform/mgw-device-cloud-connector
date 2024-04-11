@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	context_hdl "github.com/SENERGY-Platform/go-service-base/context-hdl"
+	"github.com/SENERGY-Platform/go-service-base/context-hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
