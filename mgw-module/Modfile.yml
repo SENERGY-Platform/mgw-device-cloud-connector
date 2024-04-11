@@ -189,15 +189,6 @@ configs:
       type: text
       name: Cloud authentication URL
       group: cloud-api
-  local-dm-base-url:
-    targets:
-      - refVar: LOCAL_DM_BASE_URL
-        services:
-          - connector
-    userInput:
-      type: text
-      name: Local device-manager URL
-      group: local-api
   cloud-network-id:
     targets:
       - refVar: CH_NETWORK_ID
