@@ -12,7 +12,7 @@ dependencies:
     version: "<v2.0.0"
     requiredServices:
       broker:
-        - refVar: CONF_MB_HOST
+        - refVar: LOCAL_MQTT_SERVER
           template: "mqtt://{ref}:1881"
           services:
             - connector
