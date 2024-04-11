@@ -9,9 +9,12 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/dm_client"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 )
+
+const logPrefix = "[local-device-hdl]"
 
 type device struct {
 	model.Device
@@ -79,9 +82,10 @@ func (h *Handler) run() {
 	for loop {
 		select {
 		case <-timer.C:
+			util.Logger.Debug(logPrefix, " begin devices refresh")
 			err = h.RefreshDevices(h.ctx)
 			if err != nil {
-				util.Logger.Error(err)
+				util.Logger.Errorf("%s %s", logPrefix, err)
 			}
 			timer.Reset(h.queryInterval)
 		case <-h.ctx.Done():
@@ -106,18 +110,28 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	defer cf()
 	dmDevices, err := h.dmClient.GetDevices(ctxWc)
 	if err != nil {
-		return fmt.Errorf("retreiving local devices failed: %s", err)
+		return fmt.Errorf("get devices: %s", err)
 	}
 	devices := make(map[string]device)
 	for id, dmDevice := range dmDevices {
 		devices[h.idPrefix+id] = newDevice(h.idPrefix+id, dmDevice)
+		util.Logger.Debugf("%s found device (%s, %s)", logPrefix, id, dmDevice.State)
 	}
 	var recreatedIDs []string
 	if h.deviceSyncFunc != nil {
 		newIDs, changedIDs, missingIDs, deviceMap := h.diffDevices(devices)
+		if len(newIDs) > 0 {
+			util.Logger.Infof("%s new devices (%s)", logPrefix, strings.Join(newIDs, ", "))
+		}
+		if len(changedIDs) > 0 {
+			util.Logger.Infof("%s changed devices (%s)", logPrefix, strings.Join(changedIDs, ", "))
+		}
+		if len(missingIDs) > 0 {
+			util.Logger.Infof("%s missing devices (%s)", logPrefix, strings.Join(missingIDs, ", "))
+		}
 		recreated, createFailed, updateFailed, deleteFailed, err := h.deviceSyncFunc(ctx, deviceMap, newIDs, changedIDs, missingIDs)
 		if err != nil {
-			return fmt.Errorf("synchronising devices failed: %s", err)
+			return fmt.Errorf("sync devices: %s", err)
 		}
 		recreatedIDs = recreated
 		for _, id := range createFailed {
@@ -136,9 +150,15 @@ func (h *Handler) RefreshDevices(ctx context.Context) error {
 	}
 	if h.deviceStateSyncFunc != nil {
 		isOnlineIDs, isOfflineIDs, isOnlineAgainIDs, deviceMap := h.diffDeviceStates(devices, recreatedIDs)
+		if len(isOnlineIDs) > 0 {
+			util.Logger.Infof("%s online devices (%s)", logPrefix, strings.Join(isOnlineIDs, ", "))
+		}
+		if len(isOfflineIDs) > 0 {
+			util.Logger.Infof("%s offline devices (%s)", logPrefix, strings.Join(isOfflineIDs, ", "))
+		}
 		failed, err := h.deviceStateSyncFunc(ctx, deviceMap, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs)
 		if err != nil {
-			return fmt.Errorf("synchronising device states failed: %s", err)
+			return fmt.Errorf("sync device states: %s", err)
 		}
 		for _, id := range failed {
 			d := devices[id]
