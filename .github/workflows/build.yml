@@ -31,5 +31,5 @@ jobs:
           build-args: |
             VERSION=${{ github.ref_name }}
           tags: |
-            ghcr.io/senergy-platform/mgw-module-manager:latest
-            ghcr.io/senergy-platform/mgw-module-manager:${{ github.ref_name }}
+            ghcr.io/senergy-platform/mgw-device-cloud-connector:latest
+            ghcr.io/senergy-platform/mgw-device-cloud-connector:${{ github.ref_name }}
