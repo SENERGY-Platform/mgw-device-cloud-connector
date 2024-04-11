@@ -16,14 +16,14 @@ type Handler struct {
 	processesCmdMsgRelayHdl handler.MessageRelayHandler
 	subscriptions           map[string]struct{}
 	qos                     byte
-	hubID                   string
+	networkID               string
 	mu                      sync.RWMutex
 }
 
-func New(qos byte, hubID string) *Handler {
+func New(qos byte, networkID string) *Handler {
 	return &Handler{
 		qos:           qos,
-		hubID:         hubID,
+		networkID:     networkID,
 		subscriptions: make(map[string]struct{}),
 	}
 }
@@ -45,7 +45,7 @@ func (h *Handler) HandleOnDisconnect() {
 }
 
 func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string) ([]string, error) {
-	err := h.subscribe("processes/"+h.hubID+"/cmd/#", func(m handler.Message) {
+	err := h.subscribe("processes/"+h.networkID+"/cmd/#", func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
 		}
