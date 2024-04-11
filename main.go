@@ -164,20 +164,20 @@ func main() {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.PublishQOSLevel, false, data)
 	}
 
-	message_hdl.DeviceEventMaxAge = time.Duration(config.MaxDeviceEventAge)
+	message_hdl.DeviceEventMaxAge = time.Duration(config.RelayHandler.MaxDeviceEventAge)
 	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
-	message_hdl.DeviceCommandMaxAge = time.Duration(config.MaxDeviceCmdAge)
+	message_hdl.DeviceCommandMaxAge = time.Duration(config.RelayHandler.MaxDeviceCmdAge)
 	message_hdl.NetworkID = networkID
 	message_hdl.LocalDeviceIDPrefix = config.LocalDeviceHandler.IDPrefix
 
-	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
-	processesCmdMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleDownstreamProcessesCmd, localMqttClientPubF)
-	deviceEventMsgRelayHdl := msg_relay_hdl.New(config.EventMessageRelayBuffer, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF)
-	deviceCmdRespMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamDeviceCmdResponse, cloudMqttClientPubF)
-	processesStateMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandleUpstreamProcessesState, cloudMqttClientPubF)
-	deviceConnectorErrMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandlerUpstreamDeviceConnectorErr, cloudMqttClientPubF)
-	deviceErrMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandlerUpstreamDeviceErr, cloudMqttClientPubF)
-	deviceCmdErrMsgRelayHdl := msg_relay_hdl.New(config.MessageRelayBuffer, message_hdl.HandlerUpstreamDeviceCmdErr, cloudMqttClientPubF)
+	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
+	processesCmdMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleDownstreamProcessesCmd, localMqttClientPubF)
+	deviceEventMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.EventMessageBuffer, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF)
+	deviceCmdRespMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleUpstreamDeviceCmdResponse, cloudMqttClientPubF)
+	processesStateMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleUpstreamProcessesState, cloudMqttClientPubF)
+	deviceConnectorErrMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandlerUpstreamDeviceConnectorErr, cloudMqttClientPubF)
+	deviceErrMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandlerUpstreamDeviceErr, cloudMqttClientPubF)
+	deviceCmdErrMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandlerUpstreamDeviceCmdErr, cloudMqttClientPubF)
 
 	localMqttHdl.SetMqttClient(localMqttClient)
 	localMqttHdl.SetMessageRelayHdl(

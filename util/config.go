@@ -72,21 +72,25 @@ type LocalDeviceHandlerConfig struct {
 	QueryInterval int64  `json:"query_interval" env_var:"LDH_QUERY_INTERVAL"`
 }
 
+type RelayHandlerConfig struct {
+	MessageBuffer      int   `json:"message_buffer" env_var:"RH_MESSAGE_BUFFER"`
+	EventMessageBuffer int   `json:"event_message_buffer" env_var:"RH_EVENT_MESSAGE_BUFFER"`
+	MaxDeviceCmdAge    int64 `json:"max_device_cmd_age" env_var:"RH_MAX_DEVICE_CMD_AGE"`
+	MaxDeviceEventAge  int64 `json:"max_device_event_age" env_var:"RH_MAX_DEVICE_EVENT_AGE"`
+}
+
 type Config struct {
-	Logger                  sb_util.LoggerConfig     `json:"logger" env_var:"LOGGER_CONFIG"`
-	CloudMqttClient         CloudMqttClientConfig    `json:"cloud_mqtt_client" env_var:"CLOUD_MQTT_CLIENT_CONFIG"`
-	LocalMqttClient         LocalMqttClientConfig    `json:"local_mqtt_client" env_var:"LOCAL_MQTT_CLIENT_CONFIG"`
-	HttpClient              HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
-	CloudAuth               CloudAuthConfig          `json:"cloud_auth" env_var:"CLOUD_AUTH_CONFIG"`
-	CloudHandler            CloudHandlerConfig       `json:"cloud_handler" env_var:"CLOUD_HANDLER_CONFIG"`
-	LocalDeviceHandler      LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
-	MessageRelayBuffer      int                      `json:"message_relay_buffer" env_var:"MESSAGE_RELAY_BUFFER"`
-	EventMessageRelayBuffer int                      `json:"event_message_relay_buffer" env_var:"EVENT_MESSAGE_RELAY_BUFFER"`
-	MGWDeploymentID         string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
-	MaxDeviceCmdAge         int64                    `json:"max_device_cmd_age" env_var:"MAX_DEVICE_CMD_AGE"`
-	MaxDeviceEventAge       int64                    `json:"max_device_event_age" env_var:"MAX_DEVICE_EVENT_AGE"`
-	MQTTLog                 bool                     `json:"mqtt_log" env_var:"MQTT_LOG"`
-	MQTTDebugLog            bool                     `json:"mqtt_debug_log" env_var:"MQTT_DEBUG_LOG"`
+	Logger             sb_util.LoggerConfig     `json:"logger" env_var:"LOGGER_CONFIG"`
+	CloudMqttClient    CloudMqttClientConfig    `json:"cloud_mqtt_client" env_var:"CLOUD_MQTT_CLIENT_CONFIG"`
+	LocalMqttClient    LocalMqttClientConfig    `json:"local_mqtt_client" env_var:"LOCAL_MQTT_CLIENT_CONFIG"`
+	HttpClient         HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
+	CloudAuth          CloudAuthConfig          `json:"cloud_auth" env_var:"CLOUD_AUTH_CONFIG"`
+	CloudHandler       CloudHandlerConfig       `json:"cloud_handler" env_var:"CLOUD_HANDLER_CONFIG"`
+	LocalDeviceHandler LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
+	RelayHandler       RelayHandlerConfig       `json:"relay_handler" env_var:"RELAY_HANDLER_CONFIG"`
+	MGWDeploymentID    string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
+	MQTTLog            bool                     `json:"mqtt_log" env_var:"MQTT_LOG"`
+	MQTTDebugLog       bool                     `json:"mqtt_debug_log" env_var:"MQTT_DEBUG_LOG"`
 }
 
 var defaultCloudMqttClientConfig = CloudMqttClientConfig{
@@ -133,10 +137,12 @@ func NewConfig(path string) (*Config, error) {
 		LocalDeviceHandler: LocalDeviceHandlerConfig{
 			QueryInterval: 5000000000, // 5s
 		},
-		MessageRelayBuffer:      50000,
-		EventMessageRelayBuffer: 100000,
-		MaxDeviceCmdAge:         30000000000,  // 30s
-		MaxDeviceEventAge:       300000000000, // 5m
+		RelayHandler: RelayHandlerConfig{
+			MessageBuffer:      50000,
+			EventMessageBuffer: 100000,
+			MaxDeviceCmdAge:    30000000000,  // 30s
+			MaxDeviceEventAge:  300000000000, // 5m
+		},
 	}
 	err := sb_util.LoadConfig(path, &cfg, nil, nil, nil)
 	return &cfg, err
