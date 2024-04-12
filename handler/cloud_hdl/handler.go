@@ -41,6 +41,7 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 	if !path.IsAbs(h.wrkSpacePath) {
 		return "", fmt.Errorf("workspace path must be absolute")
 	}
+	util.Logger.Info(logPrefix, " begin init")
 	if err := os.MkdirAll(h.wrkSpacePath, 0770); err != nil {
 		return "", err
 	}
@@ -48,29 +49,32 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
-	if networkID != "" {
-		d.NetworkID = networkID
+	if networkID == "" {
+		networkID = d.NetworkID
 	}
 	d.DefaultNetworkName = networkName
 	timer := time.NewTimer(time.Millisecond * 10)
 	stop := false
-	util.Logger.Info(logPrefix, " begin network init")
 	for !stop {
 		select {
 		case <-timer.C:
-			if d.NetworkID != "" {
+			if networkID != "" {
 				ctxWc, cf := context.WithCancel(ctx)
 				defer cf()
-				util.Logger.Debugf("%s get network (%s)", logPrefix, d.NetworkID)
-				if hb, err := h.cloudClient.GetHub(ctxWc, d.NetworkID); err != nil {
+				util.Logger.Debugf("%s get network (%s)", logPrefix, networkID)
+				if hb, err := h.cloudClient.GetHub(ctxWc, networkID); err != nil {
 					var nfe *cloud_client.NotFoundError
 					if !errors.As(err, &nfe) {
-						util.Logger.Errorf("%s get network (%s): %s", logPrefix, d.NetworkID, err)
+						util.Logger.Errorf("%s get network (%s): %s", logPrefix, networkID, err)
 						timer.Reset(delay)
 						break
 					}
-					util.Logger.Warningf("%s get network (%s): %s", logPrefix, d.NetworkID, err)
-					d.NetworkID = ""
+					util.Logger.Warningf("%s get network (%s): %s", logPrefix, networkID, err)
+					if networkID != d.NetworkID && d.NetworkID != "" {
+						networkID = d.NetworkID
+					} else {
+						networkID = ""
+					}
 				} else {
 					if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
 						d.DeviceIDMap = deviceIDMap
@@ -81,7 +85,7 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 					break
 				}
 			}
-			if d.NetworkID == "" {
+			if networkID == "" {
 				ctxWc, cf := context.WithCancel(ctx)
 				defer cf()
 				util.Logger.Info(logPrefix, " create network")
@@ -91,8 +95,8 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 					timer.Reset(delay)
 					break
 				}
-				d.NetworkID = hID
-				util.Logger.Infof("%s created network (%s)", logPrefix, hID)
+				networkID = hID
+				util.Logger.Infof("%s created network (%s)", logPrefix, networkID)
 				stop = true
 				break
 			}
@@ -100,6 +104,7 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 			return "", fmt.Errorf("init network: %s", ctx.Err())
 		}
 	}
+	d.NetworkID = networkID
 	if d.DeviceIDMap == nil {
 		d.DeviceIDMap = make(map[string]string)
 	}
@@ -218,7 +223,7 @@ func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err erro
 		rIDNew, err = h.updateOrCreateDevice(ctx, rID, device)
 	}
 	if err != nil {
-		util.Logger.Error("%s %s", logPrefix, err)
+		util.Logger.Errorf("%s %s", logPrefix, err)
 		return
 	}
 	if rIDNew != rID {
