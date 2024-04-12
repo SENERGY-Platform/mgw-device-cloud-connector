@@ -53,16 +53,16 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 		networkID = d.NetworkID
 	}
 	d.DefaultNetworkName = networkName
+	ch := context_hdl.New()
+	defer ch.CancelAll()
 	timer := time.NewTimer(time.Millisecond * 10)
 	stop := false
 	for !stop {
 		select {
 		case <-timer.C:
 			if networkID != "" {
-				ctxWc, cf := context.WithCancel(ctx)
-				defer cf()
 				util.Logger.Debugf("%s get network (%s)", logPrefix, networkID)
-				if hb, err := h.cloudClient.GetHub(ctxWc, networkID); err != nil {
+				if hb, err := h.cloudClient.GetHub(ch.Add(context.WithCancel(ctx)), networkID); err != nil {
 					var nfe *cloud_client.NotFoundError
 					if !errors.As(err, &nfe) {
 						util.Logger.Errorf("%s get network (%s): %s", logPrefix, networkID, err)
@@ -86,10 +86,8 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 				}
 			}
 			if networkID == "" {
-				ctxWc, cf := context.WithCancel(ctx)
-				defer cf()
 				util.Logger.Info(logPrefix, " create network")
-				hID, err := h.cloudClient.CreateHub(ctxWc, models.Hub{Name: networkName})
+				hID, err := h.cloudClient.CreateHub(ch.Add(context.WithCancel(ctx)), models.Hub{Name: networkName})
 				if err != nil {
 					util.Logger.Errorf("%s create network: %s", logPrefix, err)
 					timer.Reset(delay)
