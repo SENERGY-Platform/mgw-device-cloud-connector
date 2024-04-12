@@ -72,6 +72,8 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 					util.Logger.Warningf("%s get network (%s): %s", logPrefix, networkID, err)
 					if networkID != d.NetworkID && d.NetworkID != "" {
 						networkID = d.NetworkID
+						timer.Reset(time.Millisecond * 10)
+						break
 					} else {
 						networkID = ""
 					}
