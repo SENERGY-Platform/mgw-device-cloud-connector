@@ -49,12 +49,6 @@ inputGroups:
     group: cloud-settings
   local-settings:
     name: Local settings
-  local-mqtt:
-    name: MQTT
-    group: local-settings
-  local-api:
-    name: APIs
-    group: local-settings
   msg-relay:
     name: Message relay settings
 secrets:
