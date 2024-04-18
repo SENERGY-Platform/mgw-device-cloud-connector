@@ -4,7 +4,7 @@ name: Device Cloud-Connector
 description: Connect local devices to the Cloud.
 license: Apache-2.0 license
 author: InfAI (CC SES)
-version: v0.1.5
+version: v0.1.6
 type: add-on
 deploymentType: single
 dependencies:
