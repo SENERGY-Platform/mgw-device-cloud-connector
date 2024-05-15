@@ -230,7 +230,5 @@ func main() {
 		return nil
 	})
 
-	// wtchdg.Start()
-
 	ec = wtchdg.Join()
 }
