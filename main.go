@@ -19,6 +19,8 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/dm_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/paho_mqtt"
+	dep_adv_client "github.com/SENERGY-Platform/mgw-module-manager/clients/dep-adv-client"
+	mm_model "github.com/SENERGY-Platform/mgw-module-manager/lib/model"
 	"github.com/eclipse/paho.mqtt.golang"
 	"net"
 	"net/http"
@@ -122,6 +124,19 @@ func main() {
 		util.Logger.Error(err)
 		ec = 1
 		return
+	}
+
+	depAdvClient := dep_adv_client.New(localHttpClient, config.HttpClient.LocalMmBaseUrl)
+	daCtx, cf2 := context.WithCancel(context.Background())
+	defer cf2()
+	err = depAdvClient.PutDepAdvertisement(daCtx, config.MGWDeploymentID, mm_model.DepAdvertisementBase{
+		Ref: "network",
+		Items: map[string]string{
+			"id": networkID,
+		},
+	})
+	if err != nil {
+		util.Logger.Error(err)
 	}
 
 	localMqttHdl := local_mqtt_hdl.New(config.LocalMqttClient.QOSLevel)

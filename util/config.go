@@ -45,6 +45,7 @@ type LocalMqttClientConfig struct {
 }
 
 type HttpClientConfig struct {
+	LocalMmBaseUrl   string `json:"local_mm_base_url" env_var:"LOCAL_MM_BASE_URL"`
 	LocalDmBaseUrl   string `json:"local_dm_base_url" env_var:"LOCAL_DM_BASE_URL"`
 	CloudApiBaseUrl  string `json:"cloud_api_base_url" env_var:"CLOUD_API_BASE_URL"`
 	CloudAuthBaseUrl string `json:"cloud_auth_base_url" env_var:"CLOUD_AUTH_BASE_URL"`
@@ -125,8 +126,9 @@ func NewConfig(path string) (*Config, error) {
 		CloudMqttClient: defaultCloudMqttClientConfig,
 		LocalMqttClient: defaultLocalMqttClientConfig,
 		HttpClient: HttpClientConfig{
-			LocalTimeout: 10000000000, // 10s
-			CloudTimeout: 30000000000, // 30s
+			LocalMmBaseUrl: "http://module-manager",
+			LocalTimeout:   10000000000, // 10s
+			CloudTimeout:   30000000000, // 30s
 		},
 		CloudHandler: CloudHandlerConfig{
 			WrkSpcPath:       "/opt/connector/ch-data",

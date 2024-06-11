@@ -4,7 +4,7 @@ name: Device Cloud-Connector
 description: Connect local devices to the Cloud.
 license: Apache-2.0 license
 author: InfAI (CC SES)
-version: v0.1.6
+version: v0.2.0
 type: add-on
 deploymentType: single
 dependencies:
@@ -27,7 +27,7 @@ dependencies:
 services:
   connector:
     name: Connector
-    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.1.1
+    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.2.0
 volumes:
   ch-data:
     - mountPoint: /opt/connector/ch-data
@@ -240,6 +240,12 @@ configs:
       description: "Set interval for periodic discovery of local devices in nanoseconds."
       group: cloud-settings
     optional: true
+  local-mm-base-url:
+    value: http://core-api/module-manager
+    targets:
+      - refVar: LOCAL_MM_BASE_URL
+        services:
+          - connector
   relay-mgs-buffer:
     dataType: int
     value: 50000
