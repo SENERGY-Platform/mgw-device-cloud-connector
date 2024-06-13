@@ -11,9 +11,6 @@ import (
 	"time"
 )
 
-var DeviceCommandIDPrefix string
-var DeviceCommandMaxAge time.Duration
-
 func HandleDownstreamDeviceCmd(m handler.Message) (string, []byte, error) {
 	var dID, sID string
 	if !parseTopic(topic.CloudDeviceCmdSub, m.Topic(), &dID, &sID) {

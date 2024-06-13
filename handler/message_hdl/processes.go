@@ -5,8 +5,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
 )
 
-var NetworkID string
-
 func HandleDownstreamProcessesCmd(m handler.Message) (string, []byte, error) {
 	var hID, subTopic string
 	if !parseTopic(topic.CloudProcessesCmdSub, m.Topic(), &hID, &subTopic) {

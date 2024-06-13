@@ -9,9 +9,6 @@ import (
 	"time"
 )
 
-var LocalDeviceIDPrefix string
-var DeviceEventMaxAge time.Duration
-
 func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
 	if time.Since(m.Timestamp()) <= DeviceEventMaxAge {
 		var dID, sID string
