@@ -11,7 +11,7 @@ func HandlerUpstreamDeviceConnectorErr(m handler.Message) (string, []byte, error
 	if m.Topic() != topic.LocalDeviceConnectorErrSub {
 		return "", nil, newParseErr(m.Topic())
 	}
-	return topic.CloudDeviceConnectorErrPub, m.Payload(), nil
+	return "error", m.Payload(), nil
 }
 
 func HandlerUpstreamDeviceErr(m handler.Message) (string, []byte, error) {
@@ -19,7 +19,7 @@ func HandlerUpstreamDeviceErr(m handler.Message) (string, []byte, error) {
 	if !parseTopic(topic.LocalDeviceErrSub, m.Topic(), &dID) {
 		return "", nil, newParseErr(m.Topic())
 	}
-	return topic.CloudDeviceErrPub + "/" + LocalDeviceIDPrefix + dID, m.Payload(), nil
+	return "error/device/" + UserID + "/" + LocalDeviceIDPrefix + dID, m.Payload(), nil //  error/device/{user_id}/{local_device_id}
 }
 
 func HandlerUpstreamDeviceCmdErr(m handler.Message) (string, []byte, error) {
@@ -28,7 +28,7 @@ func HandlerUpstreamDeviceCmdErr(m handler.Message) (string, []byte, error) {
 		return "", nil, newParseErr(m.Topic())
 	}
 	if strings.Contains(cID, DeviceCommandIDPrefix) {
-		return topic.CloudDeviceCmdErrPub + "/" + strings.ReplaceAll(cID, DeviceCommandIDPrefix, ""), m.Payload(), nil
+		return "error/command/" + UserID + "/" + strings.ReplaceAll(cID, DeviceCommandIDPrefix, ""), m.Payload(), nil // error/command/{user_id}/{correlation_id}
 	}
 	return "", nil, model.NoMsgErr
 }

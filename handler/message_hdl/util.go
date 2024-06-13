@@ -7,3 +7,4 @@ var DeviceCommandMaxAge time.Duration
 var LocalDeviceIDPrefix string
 var DeviceEventMaxAge time.Duration
 var NetworkID string
+var UserID string
