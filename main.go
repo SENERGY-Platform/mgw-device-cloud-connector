@@ -184,6 +184,7 @@ func main() {
 	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
 	message_hdl.DeviceCommandMaxAge = time.Duration(config.RelayHandler.MaxDeviceCmdAge)
 	message_hdl.NetworkID = networkID
+	message_hdl.UserID = userID
 	message_hdl.LocalDeviceIDPrefix = config.LocalDeviceHandler.IDPrefix
 
 	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
