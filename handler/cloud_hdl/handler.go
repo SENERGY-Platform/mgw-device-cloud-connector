@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/go-service-base/context-hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
@@ -18,41 +19,44 @@ import (
 const logPrefix = "[cloud-hdl]"
 
 type Handler struct {
-	cloudClient  cloud_client.ClientItf
-	wrkSpacePath string
-	attrOrigin   string
-	data         data
-	lastSync     time.Time
-	syncInterval time.Duration
-	noNetwork    bool
-	mu           sync.RWMutex
+	cloudClient     cloud_client.ClientItf
+	subjectProvider handler.SubjectProvider
+	wrkSpacePath    string
+	attrOrigin      string
+	data            data
+	lastSync        time.Time
+	syncInterval    time.Duration
+	noNetwork       bool
+	mu              sync.RWMutex
 }
 
-func New(cloudClient cloud_client.ClientItf, syncInterval time.Duration, wrkSpacePath, attrOrigin string) *Handler {
+func New(cloudClient cloud_client.ClientItf, subjectProvider handler.SubjectProvider, syncInterval time.Duration, wrkSpacePath, attrOrigin string) *Handler {
 	return &Handler{
-		cloudClient:  cloudClient,
-		syncInterval: syncInterval,
-		wrkSpacePath: wrkSpacePath,
-		attrOrigin:   attrOrigin,
+		cloudClient:     cloudClient,
+		subjectProvider: subjectProvider,
+		syncInterval:    syncInterval,
+		wrkSpacePath:    wrkSpacePath,
+		attrOrigin:      attrOrigin,
 	}
 }
 
-func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay time.Duration) (string, error) {
+func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay time.Duration) (string, string, error) {
 	if !path.IsAbs(h.wrkSpacePath) {
-		return "", fmt.Errorf("workspace path must be absolute")
+		return "", "", fmt.Errorf("workspace path must be absolute")
 	}
 	util.Logger.Info(logPrefix, " begin init")
 	if err := os.MkdirAll(h.wrkSpacePath, 0770); err != nil {
-		return "", err
+		return "", "", err
 	}
 	d, err := readData(h.wrkSpacePath)
 	if err != nil && !os.IsNotExist(err) {
-		return "", err
+		return "", "", err
 	}
 	if networkID == "" {
 		networkID = d.NetworkID
 	}
 	d.DefaultNetworkName = networkName
+	var userID string
 	ch := context_hdl.New()
 	defer ch.CancelAll()
 	timer := time.NewTimer(time.Millisecond * 10)
@@ -65,6 +69,24 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 		}
 	}()
 	stop := false
+	for !stop {
+		select {
+		case <-timer.C:
+			util.Logger.Debugf("%s get user ID", logPrefix)
+			userID, err = h.subjectProvider.GetUserID(ch.Add(context.WithCancel(ctx)))
+			if err != nil {
+				util.Logger.Errorf("%s get user ID: %s", logPrefix, err)
+				timer.Reset(delay)
+				break
+			}
+			stop = true
+			break
+		case <-ctx.Done():
+			return "", "", fmt.Errorf("get user ID: %s", ctx.Err())
+		}
+	}
+	timer.Reset(time.Millisecond * 10)
+	stop = false
 	for !stop {
 		select {
 		case <-timer.C:
@@ -109,7 +131,7 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 				break
 			}
 		case <-ctx.Done():
-			return "", fmt.Errorf("init network: %s", ctx.Err())
+			return "", "", fmt.Errorf("init network: %s", ctx.Err())
 		}
 	}
 	d.NetworkID = networkID
@@ -117,7 +139,7 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 		d.DeviceIDMap = make(map[string]string)
 	}
 	h.data = d
-	return d.NetworkID, writeData(h.wrkSpacePath, h.data)
+	return d.NetworkID, userID, writeData(h.wrkSpacePath, h.data)
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, []string, []string, []string, error) {

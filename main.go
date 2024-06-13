@@ -107,8 +107,9 @@ func main() {
 		},
 	}
 
-	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl, auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID))
-	cloudHdl := cloud_hdl.New(cloudClient, time.Duration(config.CloudHandler.SyncInterval), config.CloudHandler.WrkSpcPath, config.CloudHandler.AttributeOrigin)
+	cloutAuthClient := auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID)
+	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl, cloutAuthClient)
+	cloudHdl := cloud_hdl.New(cloudClient, cloutAuthClient, time.Duration(config.CloudHandler.SyncInterval), config.CloudHandler.WrkSpcPath, config.CloudHandler.AttributeOrigin)
 
 	wtchdg.Start()
 
@@ -119,7 +120,7 @@ func main() {
 		return nil
 	})
 
-	networkID, err := cloudHdl.Init(chCtx, config.CloudHandler.NetworkID, config.CloudHandler.DefaultNetworkName, time.Duration(config.CloudHandler.NetworkInitDelay))
+	networkID, userID, err := cloudHdl.Init(chCtx, config.CloudHandler.NetworkID, config.CloudHandler.DefaultNetworkName, time.Duration(config.CloudHandler.NetworkInitDelay))
 	if err != nil {
 		util.Logger.Error(err)
 		ec = 1
