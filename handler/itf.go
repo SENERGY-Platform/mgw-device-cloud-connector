@@ -1,6 +1,9 @@
 package handler
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type MessageHandler func(m Message) (topic string, data []byte, err error)
 
@@ -18,4 +21,8 @@ type MqttClient interface {
 	Subscribe(topic string, qos byte, messageHandler func(m Message)) error
 	Unsubscribe(topic string) error
 	Publish(topic string, qos byte, retained bool, payload any) error
+}
+
+type SubjectProvider interface {
+	GetUserID(ctx context.Context) (string, error)
 }
