@@ -25,7 +25,6 @@ type Handler struct {
 	dmClient            dm_client.ClientItf
 	queryInterval       time.Duration
 	idPrefix            string
-	sChan               chan bool
 	dChan               chan struct{}
 	devices             map[string]device
 	running             bool
@@ -42,7 +41,6 @@ func New(ctx context.Context, dmClient dm_client.ClientItf, queryInterval time.D
 		dmClient:      dmClient,
 		queryInterval: queryInterval,
 		idPrefix:      idPrefix,
-		sChan:         make(chan bool),
 		dChan:         make(chan struct{}),
 		ctx:           ctx2,
 		cf:            cf,
