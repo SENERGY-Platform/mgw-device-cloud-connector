@@ -17,16 +17,12 @@ type Handler struct {
 	processesCmdMsgRelayHdl handler.MessageRelayHandler
 	subscriptions           map[string]struct{}
 	qos                     byte
-	networkID               string
-	userID                  string
 	mu                      sync.RWMutex
 }
 
-func New(qos byte, networkID, userID string) *Handler {
+func New(qos byte) *Handler {
 	return &Handler{
 		qos:           qos,
-		networkID:     networkID,
-		userID:        userID,
 		subscriptions: make(map[string]struct{}),
 	}
 }
