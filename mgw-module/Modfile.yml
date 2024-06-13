@@ -27,7 +27,7 @@ dependencies:
 services:
   connector:
     name: Connector
-    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.2.0
+    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.2.1
 volumes:
   ch-data:
     - mountPoint: /opt/connector/ch-data
