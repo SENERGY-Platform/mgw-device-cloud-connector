@@ -17,13 +17,15 @@ type Handler struct {
 	subscriptions           map[string]struct{}
 	qos                     byte
 	networkID               string
+	userID                  string
 	mu                      sync.RWMutex
 }
 
-func New(qos byte, networkID string) *Handler {
+func New(qos byte, networkID, userID string) *Handler {
 	return &Handler{
 		qos:           qos,
 		networkID:     networkID,
+		userID:        userID,
 		subscriptions: make(map[string]struct{}),
 	}
 }
@@ -56,7 +58,7 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 	var failed []string
 	syncResults := make(map[string]bool)
 	for _, id := range isOnlineIDs {
-		err = h.subscribe("command/"+id+"/+", func(m handler.Message) {
+		err = h.subscribe("command/"+h.userID+"/"+id+"/+", func(m handler.Message) {
 			if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 				util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
 			}
@@ -72,7 +74,7 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 		syncResults[id] = true
 	}
 	for _, id := range isOnlineAgainIDs {
-		err = h.resubscribe("command/"+id+"/+", func(m handler.Message) {
+		err = h.resubscribe("command/"+h.userID+"/"+id+"/+", func(m handler.Message) {
 			if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 				util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
 			}
@@ -88,7 +90,7 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 		syncResults[id] = true
 	}
 	for _, id := range isOfflineIDs {
-		if err = h.unsubscribe("command/" + id + "/+"); err != nil {
+		if err = h.unsubscribe("command/" + h.userID + "/" + id + "/+"); err != nil {
 			failed = append(failed, id)
 		}
 		if err != nil {
@@ -103,7 +105,7 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 	}
 	for id, device := range devices {
 		if _, ok := syncResults[id]; !ok {
-			t := "command/" + id + "/+"
+			t := "command/" + h.userID + "/" + id + "/+"
 			if device.State == model.Online && !h.isSubscribed(t) {
 				err = h.subscribe(t, func(m handler.Message) {
 					if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {

@@ -160,7 +160,7 @@ func main() {
 		return localMqttClient.Publish(topic, config.LocalMqttClient.QOSLevel, false, data)
 	}
 
-	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.SubscribeQOSLevel, networkID)
+	cloudMqttHdl := cloud_mqtt_hdl.New(config.CloudMqttClient.SubscribeQOSLevel, networkID, userID)
 
 	cloudMqttClientOpt := mqtt.NewClientOptions()
 	cloudMqttClientOpt.SetConnectionAttemptHandler(func(_ *url.URL, tlsCfg *tls.Config) *tls.Config {
