@@ -19,7 +19,7 @@ func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		return "event/" + UserID + "/" + LocalDeviceIDPrefix + dID + "/" + sID, b, nil // event/{user_id}/{local_device_id}/{service_id}
+		return topic.Handler.CloudDeviceEventPub(LocalDeviceIDPrefix+dID, sID), b, nil
 	}
 	util.Logger.Warningf("%s ignored device event (%s)", logPrefix, m.Topic())
 	return "", nil, model.NoMsgErr

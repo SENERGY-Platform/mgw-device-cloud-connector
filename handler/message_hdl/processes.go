@@ -7,10 +7,10 @@ import (
 
 func HandleDownstreamProcessesCmd(m handler.Message) (string, []byte, error) {
 	var hID, subTopic string
-	if !parseTopic("processes/"+UserID+"/+/cmd/#", m.Topic(), &hID, &subTopic) { // processes/{user_id}/{hub_id}/cmd/#
+	if !parseTopic(topic.Handler.CloudProcessesCmdSub(), m.Topic(), &hID, &subTopic) { // processes/{user_id}/{hub_id}/cmd/#
 		return "", nil, newParseErr(m.Topic())
 	}
-	return "processes/cmd/" + subTopic, m.Payload(), nil
+	return topic.Handler.LocalProcessesCmdPub(subTopic), m.Payload(), nil
 }
 
 func HandleUpstreamProcessesState(m handler.Message) (string, []byte, error) {
@@ -18,5 +18,5 @@ func HandleUpstreamProcessesState(m handler.Message) (string, []byte, error) {
 	if !parseTopic(topic.LocalProcessesStateSub, m.Topic(), &subTopic) {
 		return "", nil, newParseErr(m.Topic())
 	}
-	return "processes/" + NetworkID + "/state/" + subTopic, m.Payload(), nil // processes/{hub_id}/state/{sub_topic}
+	return topic.Handler.CloudProcessesStatePub(subTopic), m.Payload(), nil // processes/{hub_id}/state/{sub_topic}
 }

@@ -13,7 +13,7 @@ import (
 
 func HandleDownstreamDeviceCmd(m handler.Message) (string, []byte, error) {
 	var dID, sID string
-	if !parseTopic("command/"+UserID+"/+/+", m.Topic(), &dID, &sID) { // command/{user_id}/{local_device_id}/{service_id}
+	if !parseTopic(topic.Handler.CloudDeviceCmdSub(), m.Topic(), &dID, &sID) {
 		return "", nil, newParseErr(m.Topic())
 	}
 	var cmd CloudDeviceCmdMsg
@@ -32,7 +32,7 @@ func HandleDownstreamDeviceCmd(m handler.Message) (string, []byte, error) {
 		if err != nil {
 			return "", nil, err
 		}
-		return "command/" + strings.ReplaceAll(dID, LocalDeviceIDPrefix, "") + "/" + sID, b, nil // command/{local_device_id}/{service_id}
+		return topic.Handler.LocalDeviceCmdPub(strings.ReplaceAll(dID, LocalDeviceIDPrefix, ""), sID), b, nil
 	}
 	util.Logger.Warningf("%s ignored device command (%s)", logPrefix, m.Topic())
 	return "", nil, model.NoMsgErr
@@ -55,7 +55,7 @@ func HandleUpstreamDeviceCmdResponse(m handler.Message) (string, []byte, error) 
 		if err != nil {
 			return "", nil, err
 		}
-		return "response/" + UserID + "/" + LocalDeviceIDPrefix + dID + "/" + sID, b, nil // response/{user_id}/{local_device_id}/{service_id}
+		return topic.Handler.CloudDeviceCmdResponsePub(LocalDeviceIDPrefix+dID, sID), b, nil
 	}
 	return "", nil, model.NoMsgErr
 }
