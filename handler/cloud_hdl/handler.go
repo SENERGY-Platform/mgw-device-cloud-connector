@@ -56,6 +56,14 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 	ch := context_hdl.New()
 	defer ch.CancelAll()
 	timer := time.NewTimer(time.Millisecond * 10)
+	defer func() {
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+	}()
 	stop := false
 	for !stop {
 		select {
