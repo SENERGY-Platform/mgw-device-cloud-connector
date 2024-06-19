@@ -16,8 +16,8 @@ github.com/SENERGY-Platform/mgw-module-manager/clients/dep-adv-client v0.2.0 h1:
 github.com/SENERGY-Platform/mgw-module-manager/clients/dep-adv-client v0.2.0/go.mod h1:GEwBfwPolw+mT50BrBNlF+cEyZcCVIGqGoypnVSTyOU=
 github.com/SENERGY-Platform/mgw-module-manager/lib v0.7.0 h1:ftU2JftzVwU65XqCtGbxjdVi/uNSxO52SUcnzRsuss4=
 github.com/SENERGY-Platform/mgw-module-manager/lib v0.7.0/go.mod h1:6+9jaFKLTMD5uRvcNV1J2So/6S7wzXeBNo3My/EuLXg=
-github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38 h1:PDvFwIJBnFyKt1KeepkABNIS57+WhVj4vBw7X5JGZJw=
-github.com/SENERGY-Platform/models/go v0.0.0-20230824080159-16585960df38/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
+github.com/SENERGY-Platform/models/go v0.0.0-20240614103449-f208279dad36 h1:K/CixW5j2aCJmjY/5YJlIhqwAimlTpur8wQNsEqcR0I=
+github.com/SENERGY-Platform/models/go v0.0.0-20240614103449-f208279dad36/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
 github.com/eclipse/paho.mqtt.golang v1.4.3 h1:2kwcUGn8seMUfWndX0hGbvH8r7crgcJguQNCyp70xik=
 github.com/eclipse/paho.mqtt.golang v1.4.3/go.mod h1:CSYvoAlsMkhYOXh/oKyxa8EcBci6dVkLCbo5tTC1RIE=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
