@@ -23,6 +23,7 @@ type Handler struct {
 	subjectProvider handler.SubjectProvider
 	wrkSpacePath    string
 	attrOrigin      string
+	userID          string
 	data            data
 	lastSync        time.Time
 	syncInterval    time.Duration
@@ -55,8 +56,6 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 	if networkID == "" {
 		networkID = d.NetworkID
 	}
-	d.DefaultNetworkName = networkName
-	var userID string
 	ch := context_hdl.New()
 	defer ch.CancelAll()
 	timer := time.NewTimer(time.Millisecond * 10)
@@ -73,9 +72,14 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 		select {
 		case <-timer.C:
 			util.Logger.Debugf("%s get user ID", logPrefix)
-			userID, err = h.subjectProvider.GetUserID(ch.Add(context.WithCancel(ctx)))
+			h.userID, err = h.subjectProvider.GetUserID(ch.Add(context.WithCancel(ctx)))
 			if err != nil {
 				util.Logger.Errorf("%s get user ID: %s", logPrefix, err)
+				timer.Reset(delay)
+				break
+			}
+			if h.userID == "" {
+				util.Logger.Errorf("%s get user ID: invalid", logPrefix)
 				timer.Reset(delay)
 				break
 			}
@@ -108,13 +112,19 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 						networkID = ""
 					}
 				} else {
-					if deviceIDMap, err := h.getDeviceIDMap(ctx, d.DeviceIDMap, hb.DeviceIds); err == nil {
-						d.DeviceIDMap = deviceIDMap
+					if hb.OwnerId != h.userID {
+						util.Logger.Warningf("%s get network (%s): invalid user ID", logPrefix, networkID)
+						if networkID != d.NetworkID && d.NetworkID != "" {
+							networkID = d.NetworkID
+							timer.Reset(time.Millisecond * 10)
+							break
+						} else {
+							networkID = ""
+						}
 					} else {
-						util.Logger.Errorf("%s refresh device id cache: %s", logPrefix, err)
+						stop = true
+						break
 					}
-					stop = true
-					break
 				}
 			}
 			if networkID == "" {
@@ -135,11 +145,8 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 		}
 	}
 	d.NetworkID = networkID
-	if d.DeviceIDMap == nil {
-		d.DeviceIDMap = make(map[string]string)
-	}
 	h.data = d
-	return d.NetworkID, userID, writeData(h.wrkSpacePath, h.data)
+	return d.NetworkID, h.userID, writeData(h.wrkSpacePath, h.data)
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, []string, []string, []string, error) {
