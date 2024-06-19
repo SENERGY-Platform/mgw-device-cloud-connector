@@ -15,6 +15,7 @@ type ClientItf interface {
 	CreateDevice(ctx context.Context, device models.Device) (string, error)
 	GetDevice(ctx context.Context, id string) (models.Device, error)
 	GetDeviceL(ctx context.Context, id string) (models.Device, error)
+	GetDevices(ctx context.Context, ids []string) ([]models.Device, error)
 	UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error
 }
 

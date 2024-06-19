@@ -19,6 +19,7 @@ type Mock struct {
 	CreateDeviceC   int
 	GetDeviceC      int
 	GetDeviceLC     int
+	GetDevicesC     int
 	UpdateDeviceC   int
 }
 
@@ -99,6 +100,18 @@ func (m *Mock) GetDeviceL(_ context.Context, id string) (models.Device, error) {
 		return models.Device{}, newNotFoundError(errors.New("not found"))
 	}
 	return device, nil
+}
+
+func (m *Mock) GetDevices(ctx context.Context, ids []string) ([]models.Device, error) {
+	m.GetDevicesC++
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	var devices []models.Device
+	for _, device := range m.Devices {
+		devices = append(devices, device)
+	}
+	return devices, nil
 }
 
 func (m *Mock) UpdateDevice(_ context.Context, device models.Device, attributeOrigin string) error {
