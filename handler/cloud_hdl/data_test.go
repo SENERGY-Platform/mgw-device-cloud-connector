@@ -10,9 +10,6 @@ import (
 func TestWriteReadData(t *testing.T) {
 	a := data{
 		NetworkID: "test",
-		DeviceIDMap: map[string]string{
-			"foo": "bar",
-		},
 	}
 	tmpDir := t.TempDir()
 	t.Run("read non existent data file", func(t *testing.T) {
