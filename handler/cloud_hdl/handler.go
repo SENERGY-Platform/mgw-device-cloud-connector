@@ -349,7 +349,7 @@ func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, 
 	return deviceIDMap, nil
 }
 
-func newDevice(device model.Device, rID, attrOrigin string) models.Device {
+func newCloudDevice(device model.Device, rID, attrOrigin string) models.Device {
 	var attributes []models.Attribute
 	for _, attribute := range device.Attributes {
 		attributes = append(attributes, models.Attribute{
