@@ -366,3 +366,27 @@ func newCloudDevice(device model.Device, rID, attrOrigin string) models.Device {
 		DeviceTypeId: device.Type,
 	}
 }
+
+func notEqual(cDevice models.Device, lDevice model.Device, attrOrigin string) bool {
+	var cAttrPairs []string
+	for _, attr := range cDevice.Attributes {
+		if attr.Origin == attrOrigin {
+			cAttrPairs = append(cAttrPairs, attr.Key+attr.Value)
+		}
+	}
+	slices.Sort(cAttrPairs)
+	var lAttrPairs []string
+	for _, attr := range lDevice.Attributes {
+		lAttrPairs = append(lAttrPairs, attr.Key+attr.Value)
+	}
+	slices.Sort(lAttrPairs)
+	return genHash(cDevice.DeviceTypeId, cDevice.Name, strings.Join(cAttrPairs, "")) != genHash(lDevice.Type, lDevice.Name, strings.Join(lAttrPairs, ""))
+}
+
+func genHash(str ...string) string {
+	hash := sha1.New()
+	for _, s := range str {
+		hash.Write([]byte(s))
+	}
+	return hex.EncodeToString(hash.Sum(nil))
+}
