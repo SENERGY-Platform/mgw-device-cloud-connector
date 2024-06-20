@@ -2,6 +2,7 @@ package cloud_hdl
 
 import (
 	"context"
+	"errors"
 	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
@@ -350,6 +351,14 @@ func TestHandler_syncDevice(t *testing.T) {
 				t.Error("name not equal")
 			}
 		})
+	})
+	t.Run("request error", func(t *testing.T) {
+		initHandler()
+		mockCC.Err = errors.New("test error")
+		_, err := handler.syncDevice(context.Background(), map[string]models.Device{}, lDevice)
+		if err == nil {
+			t.Error("error expected")
+		}
 	})
 }
 
