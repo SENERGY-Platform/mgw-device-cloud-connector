@@ -2,6 +2,8 @@ package cloud_hdl
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/SENERGY-Platform/go-service-base/context-hdl"
@@ -12,6 +14,8 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 	"os"
 	"path"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 )
