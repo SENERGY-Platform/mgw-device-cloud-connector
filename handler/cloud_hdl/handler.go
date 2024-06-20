@@ -154,9 +154,6 @@ func (h *Handler) Init(ctx context.Context, networkID, networkName string, delay
 }
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, []string, []string, []string, error) {
-	for _, lID := range missingIDs {
-		delete(h.data.DeviceIDMap, lID)
-	}
 	if len(newIDs)+len(changedIDs) == 0 && time.Since(h.lastSync) < h.syncInterval {
 		return nil, nil, nil, nil, nil
 	}
@@ -178,74 +175,92 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		}
 		return nil, nil, nil, nil, fmt.Errorf("get network (%s): %s", h.data.NetworkID, err)
 	}
+	if network.OwnerId != h.userID {
+		h.mu.Lock()
+		h.noNetwork = true
+		h.mu.Unlock()
+		return nil, nil, nil, nil, fmt.Errorf("get network (%s): invalid user ID", h.data.NetworkID)
+	}
+	cloudDevices := make(map[string]models.Device)
+	if len(network.DeviceIds) > 0 {
+		ctxWc2, cf2 := context.WithCancel(ctx)
+		defer cf2()
+		devicesList, err := h.cloudClient.GetDevices(ctxWc2, network.DeviceIds)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("get devices: %s", err)
+		}
+		for _, device := range devicesList {
+			if device.OwnerId != h.userID {
+				util.Logger.Warningf("%s get devices: device (%s) invalid user ID", logPrefix, device.Id)
+				continue
+			}
+			cloudDevices[device.LocalId] = device
+		}
+	}
+	syncedIDs := make(map[string]string)
 	var createFailed []string
-	syncResults := make(map[string]bool)
 	for _, lID := range newIDs {
-		err = h.syncDevice(ctx, devices[lID])
+		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
 		if err != nil {
 			createFailed = append(createFailed, lID)
-			syncResults[lID] = false
 			continue
 		}
-		syncResults[lID] = true
+		syncedIDs[lID] = cID
 	}
 	var updateFailed []string
 	for _, lID := range changedIDs {
-		err = h.syncDevice(ctx, devices[lID])
+		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
 		if err != nil {
 			updateFailed = append(updateFailed, lID)
-			syncResults[lID] = false
 			continue
 		}
-		syncResults[lID] = true
+		syncedIDs[lID] = cID
 	}
 	var recreated []string
-	networkLocalIDSet := make(map[string]struct{})
-	for _, lID := range network.DeviceLocalIds {
-		networkLocalIDSet[lID] = struct{}{}
-	}
-	for lID, device := range devices {
-		if _, ok := syncResults[lID]; !ok {
-			if _, ok := networkLocalIDSet[lID]; !ok {
-				err = h.syncDevice(ctx, device)
-				if err != nil {
+	for lID, lDevice := range devices {
+		if _, ok := syncedIDs[lID]; !ok {
+			_, inCloud := cloudDevices[lID]
+			cID, err := h.syncDevice(ctx, cloudDevices, lDevice)
+			if err != nil {
+				if !inCloud {
 					createFailed = append(createFailed, lID)
-					syncResults[lID] = false
-					continue
 				}
-				recreated = append(recreated, lID)
-				syncResults[lID] = true
+				continue
 			}
+			if !inCloud {
+				recreated = append(recreated, lID)
+			}
+			syncedIDs[lID] = cID
 		}
 	}
-	updateNetwork := false
-	for lID, synced := range syncResults {
-		if _, ok := networkLocalIDSet[lID]; !ok && synced {
-			network.DeviceLocalIds = append(network.DeviceLocalIds, lID)
-			updateNetwork = true
-		}
+	networkDeviceIDSet := make(map[string]struct{})
+	for _, id := range network.DeviceIds {
+		networkDeviceIDSet[id] = struct{}{}
 	}
-	network.DeviceIds = nil
-	ctxWc2, cf2 := context.WithCancel(ctx)
-	defer cf2()
-	if updateNetwork {
+	lenOld := len(networkDeviceIDSet)
+	for _, cID := range syncedIDs {
+		networkDeviceIDSet[cID] = struct{}{}
+	}
+	if lenOld != len(networkDeviceIDSet) {
 		util.Logger.Infof("%s update network (%s)", logPrefix, h.data.NetworkID)
-	} else {
-		util.Logger.Debugf("%s update network (%s)", logPrefix, h.data.NetworkID)
-	}
-	if err = h.cloudClient.UpdateHub(ctxWc2, network); err != nil {
-		var nfe *cloud_client.NotFoundError
-		if errors.As(err, &nfe) {
-			h.mu.Lock()
-			h.noNetwork = true
-			h.mu.Unlock()
+		var deviceIDs []string
+		for id := range networkDeviceIDSet {
+			deviceIDs = append(deviceIDs, id)
 		}
-		return nil, nil, nil, nil, fmt.Errorf("update network (%s): %s", h.data.NetworkID, err)
+		network.DeviceIds = deviceIDs
+		ctxWc3, cf3 := context.WithCancel(ctx)
+		defer cf3()
+		if err = h.cloudClient.UpdateHub(ctxWc3, network); err != nil {
+			var nfe *cloud_client.NotFoundError
+			if errors.As(err, &nfe) {
+				h.mu.Lock()
+				h.noNetwork = true
+				h.mu.Unlock()
+			}
+			return nil, nil, nil, nil, fmt.Errorf("update network (%s): %s", h.data.NetworkID, err)
+		}
 	}
 	h.lastSync = time.Now()
-	if err = writeData(h.wrkSpacePath, h.data); err != nil {
-		util.Logger.Errorf("%s write data: %s", logPrefix, err)
-	}
 	return recreated, createFailed, updateFailed, nil, nil
 }
 
