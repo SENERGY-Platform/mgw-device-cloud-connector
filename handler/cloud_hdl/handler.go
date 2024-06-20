@@ -255,102 +255,40 @@ func (h *Handler) HasNetwork() bool {
 	return !h.noNetwork
 }
 
-func (h *Handler) syncDevice(ctx context.Context, device model.Device) (err error) {
-	rID, ok := h.data.DeviceIDMap[device.ID]
-	var rIDNew string
-	if !ok {
-		rIDNew, err = h.createOrUpdateDevice(ctx, device)
-	} else {
-		rIDNew, err = h.updateOrCreateDevice(ctx, rID, device)
-	}
-	if err != nil {
-		util.Logger.Errorf("%s %s", logPrefix, err)
-		return
-	}
-	if rIDNew != rID {
-		util.Logger.Debugf("%s update device id cache: %s -> %s", logPrefix, device.ID, rIDNew)
-		h.data.DeviceIDMap[device.ID] = rIDNew
-	}
-	return
-}
-
-func (h *Handler) createOrUpdateDevice(ctx context.Context, device model.Device) (string, error) {
+func (h *Handler) syncDevice(ctx context.Context, cDevices map[string]models.Device, lDevice model.Device) (string, error) {
 	ch := context_hdl.New()
 	defer ch.CancelAll()
-	nd := newDevice(device, "", h.attrOrigin)
-	util.Logger.Debugf("%s create device (%s)", logPrefix, device.ID)
-	rID, err := h.cloudClient.CreateDevice(ch.Add(context.WithCancel(ctx)), nd)
-	if err != nil {
-		var bre *cloud_client.BadRequestError
-		if !errors.As(err, &bre) {
-			return "", fmt.Errorf("create device (%s): %s", device.ID, err)
-		}
-		util.Logger.Warningf("%s create device (%s): %s", logPrefix, device.ID, err)
-		util.Logger.Debugf("%s get device (%s)", logPrefix, device.ID)
-		d, err := h.cloudClient.GetDeviceL(ch.Add(context.WithCancel(ctx)), device.ID)
-		if err != nil {
-			return "", fmt.Errorf("get device (%s): %s", device.ID, err)
-		}
-		rID = d.Id
-		nd.Id = d.Id
-		util.Logger.Debugf("%s update device (%s)", logPrefix, device.ID)
-		if err = h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), nd, h.attrOrigin); err != nil {
-			return "", fmt.Errorf("update device (%s): %s", device.ID, err)
-		}
-		util.Logger.Infof("%s updated device (%s)", logPrefix, device.ID)
-	} else {
-		util.Logger.Infof("%s created device (%s)", logPrefix, device.ID)
-	}
-	return rID, nil
-}
-
-func (h *Handler) updateOrCreateDevice(ctx context.Context, rID string, device model.Device) (string, error) {
-	ctxWc, cf := context.WithCancel(ctx)
-	defer cf()
-	util.Logger.Debugf("%s update device (%s)", logPrefix, device.ID)
-	err := h.cloudClient.UpdateDevice(ctxWc, newDevice(device, rID, h.attrOrigin), h.attrOrigin)
-	if err != nil {
-		var nfe *cloud_client.NotFoundError
-		var fe *cloud_client.ForbiddenError
-		if !errors.As(err, &nfe) && !errors.As(err, &fe) {
-			return "", fmt.Errorf("update device (%s): %s", device.ID, err)
-		}
-		util.Logger.Warningf("%s update device (%s): %s", logPrefix, device.ID, err)
-		return h.createOrUpdateDevice(ctx, device)
-	}
-	util.Logger.Infof("%s updated device (%s)", logPrefix, device.ID)
-	return rID, err
-}
-
-func (h *Handler) getDeviceIDMap(ctx context.Context, oldMap map[string]string, deviceIDs []string) (map[string]string, error) {
-	deviceIDMap := make(map[string]string)
-	if len(deviceIDs) > 0 {
-		ch := context_hdl.New()
-		defer ch.CancelAll()
-		rDeviceIDMap := make(map[string]string)
-		for lID, rID := range oldMap {
-			rDeviceIDMap[rID] = lID
-		}
-		for _, rID := range deviceIDs {
-			lID, ok := rDeviceIDMap[rID]
-			if !ok {
-				util.Logger.Debugf("%s get device (%s)", logPrefix, rID)
-				device, err := h.cloudClient.GetDevice(ch.Add(context.WithCancel(ctx)), rID)
-				if err != nil {
-					var nfe *cloud_client.NotFoundError
-					if !errors.As(err, &nfe) {
-						return nil, fmt.Errorf("get device (%s): %s", rID, err)
-					}
-					util.Logger.Warningf("%s get device (%s): %s", logPrefix, rID, err)
-					continue
-				}
-				lID = device.LocalId
-				util.Logger.Debugf("%s update device id cache: %s -> %s", logPrefix, lID, rID)
+	cDevice, ok := cDevices[lDevice.ID]
+	if !ok {
+		util.Logger.Debugf("%s create device (%s)", logPrefix, lDevice.ID)
+		ncd := newCloudDevice(lDevice, "", h.attrOrigin)
+		cID, err := h.cloudClient.CreateDevice(ch.Add(context.WithCancel(ctx)), ncd)
+		if err == nil {
+			util.Logger.Infof("%s created device (%s)", logPrefix, lDevice.ID)
+			return cID, nil
+		} else {
+			var bre *cloud_client.BadRequestError
+			if !errors.As(err, &bre) {
+				return "", fmt.Errorf("create device (%s): %s", lDevice.ID, err)
 			}
-			deviceIDMap[lID] = rID
+			util.Logger.Warningf("%s create device (%s): %s", logPrefix, lDevice.ID, err)
+			util.Logger.Debugf("%s get device (%s)", logPrefix, lDevice.ID)
+			cDevice, err = h.cloudClient.GetDeviceL(ch.Add(context.WithCancel(ctx)), lDevice.ID)
+			if err != nil {
+				return "", fmt.Errorf("get device (%s): %s", lDevice.ID, err)
+			}
 		}
 	}
-	return deviceIDMap, nil
+	if notEqual(cDevice, lDevice, h.attrOrigin) {
+		util.Logger.Debugf("%s update device (%s)", logPrefix, lDevice.ID)
+		ncd := newCloudDevice(lDevice, cDevice.Id, h.attrOrigin)
+		if err := h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), ncd, h.attrOrigin); err != nil {
+			return "", fmt.Errorf("update device (%s): %s", lDevice.ID, err)
+		}
+		util.Logger.Infof("%s updated device (%s)", logPrefix, lDevice.ID)
+		return cDevice.Id, nil
+	}
+	return cDevice.Id, nil
 }
 
 func newCloudDevice(device model.Device, rID, attrOrigin string) models.Device {
