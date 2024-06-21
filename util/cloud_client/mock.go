@@ -13,6 +13,8 @@ type Mock struct {
 	DeviceIDMap     map[string]string
 	AttributeOrigin string
 	Err             error
+	HubErr          error
+	DeviceErr       error
 	CreateHubC      int
 	GetHubC         int
 	UpdateHubC      int
@@ -25,6 +27,9 @@ type Mock struct {
 
 func (m *Mock) CreateHub(_ context.Context, hub models.Hub) (string, error) {
 	m.CreateHubC += 1
+	if m.HubErr != nil {
+		return "", m.HubErr
+	}
 	if m.Err != nil {
 		return "", m.Err
 	}
@@ -42,6 +47,9 @@ func (m *Mock) CreateHub(_ context.Context, hub models.Hub) (string, error) {
 
 func (m *Mock) GetHub(_ context.Context, id string) (models.Hub, error) {
 	m.GetHubC += 1
+	if m.HubErr != nil {
+		return models.Hub{}, m.HubErr
+	}
 	if m.Err != nil {
 		return models.Hub{}, m.Err
 	}
@@ -54,6 +62,9 @@ func (m *Mock) GetHub(_ context.Context, id string) (models.Hub, error) {
 
 func (m *Mock) UpdateHub(_ context.Context, hub models.Hub) error {
 	m.UpdateHubC += 1
+	if m.HubErr != nil {
+		return m.HubErr
+	}
 	if m.Err != nil {
 		return m.Err
 	}
@@ -66,6 +77,9 @@ func (m *Mock) UpdateHub(_ context.Context, hub models.Hub) error {
 
 func (m *Mock) CreateDevice(_ context.Context, device models.Device) (string, error) {
 	m.CreateDeviceC += 1
+	if m.DeviceErr != nil {
+		return "", m.DeviceErr
+	}
 	if m.Err != nil {
 		return "", m.Err
 	}
@@ -80,6 +94,9 @@ func (m *Mock) CreateDevice(_ context.Context, device models.Device) (string, er
 
 func (m *Mock) GetDevice(_ context.Context, id string) (models.Device, error) {
 	m.GetDeviceC += 1
+	if m.DeviceErr != nil {
+		return models.Device{}, m.DeviceErr
+	}
 	if m.Err != nil {
 		return models.Device{}, m.Err
 	}
@@ -92,6 +109,9 @@ func (m *Mock) GetDevice(_ context.Context, id string) (models.Device, error) {
 
 func (m *Mock) GetDeviceL(_ context.Context, id string) (models.Device, error) {
 	m.GetDeviceLC += 1
+	if m.DeviceErr != nil {
+		return models.Device{}, m.DeviceErr
+	}
 	if m.Err != nil {
 		return models.Device{}, m.Err
 	}
@@ -104,6 +124,9 @@ func (m *Mock) GetDeviceL(_ context.Context, id string) (models.Device, error) {
 
 func (m *Mock) GetDevices(ctx context.Context, ids []string) ([]models.Device, error) {
 	m.GetDevicesC++
+	if m.DeviceErr != nil {
+		return nil, m.DeviceErr
+	}
 	if m.Err != nil {
 		return nil, m.Err
 	}
@@ -117,6 +140,9 @@ func (m *Mock) GetDevices(ctx context.Context, ids []string) ([]models.Device, e
 func (m *Mock) UpdateDevice(_ context.Context, device models.Device, attributeOrigin string) error {
 	m.AttributeOrigin = attributeOrigin
 	m.UpdateDeviceC += 1
+	if m.DeviceErr != nil {
+		return m.DeviceErr
+	}
 	if m.Err != nil {
 		return m.Err
 	}
