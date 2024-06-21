@@ -7,6 +7,7 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 const (
@@ -44,6 +45,29 @@ func (c *Client) GetDevice(ctx context.Context, id string) (models.Device, error
 		return models.Device{}, err
 	}
 	return c.getDevice(ctx, u)
+}
+
+func (c *Client) GetDevices(ctx context.Context, ids []string) ([]models.Device, error) {
+	u, err := url.JoinPath(c.baseUrl, devicesPath)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) > 0 {
+		u += "?ids=" + strings.Join(ids, ",")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err = c.setAuthHeader(ctx, req); err != nil {
+		return nil, err
+	}
+	var devices []models.Device
+	err = c.baseClient.ExecRequestJSON(req, &devices)
+	if err != nil {
+		return nil, err
+	}
+	return devices, nil
 }
 
 func (c *Client) GetDeviceL(ctx context.Context, id string) (models.Device, error) {
