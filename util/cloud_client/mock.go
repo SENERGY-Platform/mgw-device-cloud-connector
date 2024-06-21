@@ -15,6 +15,7 @@ type Mock struct {
 	Err             error
 	HubErr          error
 	DeviceErr       error
+	DevicesErr      error
 	CreateHubC      int
 	GetHubC         int
 	UpdateHubC      int
@@ -124,8 +125,8 @@ func (m *Mock) GetDeviceL(_ context.Context, id string) (models.Device, error) {
 
 func (m *Mock) GetDevices(ctx context.Context, ids []string) ([]models.Device, error) {
 	m.GetDevicesC++
-	if m.DeviceErr != nil {
-		return nil, m.DeviceErr
+	if m.DevicesErr != nil {
+		return nil, m.DevicesErr
 	}
 	if m.Err != nil {
 		return nil, m.Err
