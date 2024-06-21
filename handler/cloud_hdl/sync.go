@@ -62,7 +62,6 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
 		if err != nil {
 			createFailed = append(createFailed, lID)
-			continue
 		}
 		syncedIDs[lID] = cID
 	}
@@ -71,7 +70,6 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
 		if err != nil {
 			updateFailed = append(updateFailed, lID)
-			continue
 		}
 		syncedIDs[lID] = cID
 	}
@@ -98,7 +96,9 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	}
 	lenOld := len(networkDeviceIDSet)
 	for _, cID := range syncedIDs {
-		networkDeviceIDSet[cID] = struct{}{}
+		if cID != "" {
+			networkDeviceIDSet[cID] = struct{}{}
+		}
 	}
 	if lenOld != len(networkDeviceIDSet) {
 		util.Logger.Infof("%s update network (%s)", logPrefix, h.data.NetworkID)
