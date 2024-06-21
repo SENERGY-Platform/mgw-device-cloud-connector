@@ -21,40 +21,13 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	} else {
 		util.Logger.Debug(logPrefix, " begin periodic devices and network sync")
 	}
-	ctxWc, cf := context.WithCancel(ctx)
-	defer cf()
-	util.Logger.Debugf("%s get network (%s)", logPrefix, h.data.NetworkID)
-	network, err := h.cloudClient.GetHub(ctxWc, h.data.NetworkID)
+	network, err := h.getNetwork(ctx)
 	if err != nil {
-		var nfe *cloud_client.NotFoundError
-		if errors.As(err, &nfe) {
-			h.mu.Lock()
-			h.noNetwork = true
-			h.mu.Unlock()
-		}
-		return nil, nil, nil, nil, fmt.Errorf("get network (%s): %s", h.data.NetworkID, err)
+		return nil, nil, nil, nil, err
 	}
-	if network.OwnerId != h.userID {
-		h.mu.Lock()
-		h.noNetwork = true
-		h.mu.Unlock()
-		return nil, nil, nil, nil, fmt.Errorf("get network (%s): invalid user ID", h.data.NetworkID)
-	}
-	cloudDevices := make(map[string]models.Device)
-	if len(network.DeviceIds) > 0 {
-		ctxWc2, cf2 := context.WithCancel(ctx)
-		defer cf2()
-		devicesList, err := h.cloudClient.GetDevices(ctxWc2, network.DeviceIds)
-		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("get devices: %s", err)
-		}
-		for _, device := range devicesList {
-			if device.OwnerId != h.userID {
-				util.Logger.Warningf("%s get devices: device (%s) invalid user ID", logPrefix, device.Id)
-				continue
-			}
-			cloudDevices[device.LocalId] = device
-		}
+	cloudDevices, err := h.getCloudDevices(ctx, network.DeviceIds)
+	if err != nil {
+		return nil, nil, nil, nil, err
 	}
 	syncedIDs := make(map[string]string)
 	var createFailed []string
@@ -101,22 +74,13 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		}
 	}
 	if lenOld != len(networkDeviceIDSet) {
-		util.Logger.Infof("%s update network (%s)", logPrefix, h.data.NetworkID)
 		var deviceIDs []string
 		for id := range networkDeviceIDSet {
 			deviceIDs = append(deviceIDs, id)
 		}
 		network.DeviceIds = deviceIDs
-		ctxWc3, cf3 := context.WithCancel(ctx)
-		defer cf3()
-		if err = h.cloudClient.UpdateHub(ctxWc3, network); err != nil {
-			var nfe *cloud_client.NotFoundError
-			if errors.As(err, &nfe) {
-				h.mu.Lock()
-				h.noNetwork = true
-				h.mu.Unlock()
-			}
-			return nil, nil, nil, nil, fmt.Errorf("update network (%s): %s", h.data.NetworkID, err)
+		if err = h.updateNetwork(ctx, network); err != nil {
+			return nil, nil, nil, nil, err
 		}
 	}
 	h.lastSync = time.Now()
@@ -159,4 +123,63 @@ func (h *Handler) syncDevice(ctx context.Context, cDevices map[string]models.Dev
 		return cDevice.Id, nil
 	}
 	return cDevice.Id, nil
+}
+
+func (h *Handler) getNetwork(ctx context.Context) (models.Hub, error) {
+	ctxWc, cf := context.WithCancel(ctx)
+	defer cf()
+	util.Logger.Debugf("%s get network (%s)", logPrefix, h.data.NetworkID)
+	network, err := h.cloudClient.GetHub(ctxWc, h.data.NetworkID)
+	if err != nil {
+		var nfe *cloud_client.NotFoundError
+		if errors.As(err, &nfe) {
+			h.mu.Lock()
+			h.noNetwork = true
+			h.mu.Unlock()
+		}
+		return models.Hub{}, fmt.Errorf("get network (%s): %s", h.data.NetworkID, err)
+	}
+	if network.OwnerId != h.userID {
+		h.mu.Lock()
+		h.noNetwork = true
+		h.mu.Unlock()
+		return models.Hub{}, fmt.Errorf("get network (%s): invalid user ID", h.data.NetworkID)
+	}
+	return network, nil
+}
+
+func (h *Handler) updateNetwork(ctx context.Context, network models.Hub) error {
+	util.Logger.Infof("%s update network (%s)", logPrefix, h.data.NetworkID)
+	ctxWc, cf := context.WithCancel(ctx)
+	defer cf()
+	if err := h.cloudClient.UpdateHub(ctxWc, network); err != nil {
+		var nfe *cloud_client.NotFoundError
+		if errors.As(err, &nfe) {
+			h.mu.Lock()
+			h.noNetwork = true
+			h.mu.Unlock()
+		}
+		return fmt.Errorf("update network (%s): %s", h.data.NetworkID, err)
+	}
+	return nil
+}
+
+func (h *Handler) getCloudDevices(ctx context.Context, cDeviceIDs []string) (map[string]models.Device, error) {
+	cloudDevices := make(map[string]models.Device)
+	if len(cDeviceIDs) > 0 {
+		ctxWc, cf := context.WithCancel(ctx)
+		defer cf()
+		devicesList, err := h.cloudClient.GetDevices(ctxWc, cDeviceIDs)
+		if err != nil {
+			return nil, fmt.Errorf("get devices: %s", err)
+		}
+		for _, device := range devicesList {
+			if device.OwnerId != h.userID {
+				util.Logger.Warningf("%s get devices: device (%s) invalid user ID", logPrefix, device.Id)
+				continue
+			}
+			cloudDevices[device.LocalId] = device
+		}
+	}
+	return cloudDevices, nil
 }
