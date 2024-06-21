@@ -12,6 +12,304 @@ import (
 	"testing"
 )
 
+func TestHandler_Sync(t *testing.T) {
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("create update recreate", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{
+			Devices: map[string]models.Device{
+				"1": {
+					Id:      "1",
+					LocalId: "l1",
+					Name:    "foo",
+				},
+			},
+			DeviceIDMap: map[string]string{"l1": "1"},
+			Hubs: map[string]models.Hub{
+				"1": {
+					Id:        "1",
+					DeviceIds: []string{"1"},
+				},
+			},
+		}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+		lDevices := map[string]model.Device{
+			"l1": {
+				ID:   "l1",
+				Name: "bar",
+			},
+			"l2": {
+				ID: "l2",
+			},
+			"l3": {
+				ID: "l3",
+			},
+		}
+		recreated, createFailed, updateFailed, _, err := handler.Sync(context.Background(), lDevices, []string{"l3"}, []string{"l1"}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(recreated) == 1 {
+			if recreated[0] != "l2" {
+				t.Error("not recreated")
+			}
+		} else {
+			t.Error("invalid length")
+		}
+		if len(createFailed) > 0 {
+			t.Error("invalid length")
+		}
+		if len(updateFailed) > 0 {
+			t.Error("invalid length")
+		}
+		if mockCC.Devices["1"].Name != "bar" {
+			t.Error("device not updated")
+		}
+		if _, ok := mockCC.Devices[mockCC.DeviceIDMap["l2"]]; !ok {
+			t.Error("device not recreated")
+		}
+		if _, ok := mockCC.Devices[mockCC.DeviceIDMap["l3"]]; !ok {
+			t.Error("device not created")
+		}
+		if len(mockCC.Hubs["1"].DeviceIds) != 3 {
+			t.Error("hub invalid number of ids")
+		}
+		ids := make(map[string]struct{})
+		for _, id := range mockCC.Hubs["1"].DeviceIds {
+			ids[id] = struct{}{}
+		}
+		if _, ok := ids["1"]; !ok {
+			t.Error("hub missing id 1")
+		}
+		if _, ok := ids["2"]; !ok {
+			t.Error("hub missing id 2")
+		}
+		if _, ok := ids["3"]; !ok {
+			t.Error("hub missing id 3")
+		}
+	})
+	t.Run("network no change", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{
+			Devices: map[string]models.Device{
+				"1": {
+					Id:      "1",
+					LocalId: "l1",
+					Name:    "foo",
+				},
+			},
+			DeviceIDMap: map[string]string{"l1": "1"},
+			Hubs: map[string]models.Hub{
+				"1": {
+					Id:        "1",
+					DeviceIds: []string{"1"},
+				},
+			},
+		}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+		lDevices := map[string]model.Device{
+			"l1": {
+				ID:   "l1",
+				Name: "bar",
+			},
+		}
+		recreated, createFailed, updateFailed, _, err := handler.Sync(context.Background(), lDevices, nil, []string{"l1"}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(recreated) > 0 {
+			t.Error("invalid length")
+		}
+		if len(createFailed) > 0 {
+			t.Error("invalid length")
+		}
+		if len(updateFailed) > 0 {
+			t.Error("invalid length")
+		}
+		if mockCC.Devices["1"].Name != "bar" {
+			t.Error("device not updated")
+		}
+		if mockCC.UpdateHubC > 0 {
+			t.Error("illegal call")
+		}
+	})
+	t.Run("recreate periodic", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{
+			Devices:     make(map[string]models.Device),
+			DeviceIDMap: make(map[string]string),
+			Hubs: map[string]models.Hub{
+				"1": {
+					Id: "1",
+				},
+			},
+		}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+		lDevices := map[string]model.Device{
+			"l1": {
+				ID: "l1",
+			},
+		}
+		recreated, createFailed, updateFailed, _, err := handler.Sync(context.Background(), lDevices, nil, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(recreated) == 1 {
+			if recreated[0] != "l1" {
+				t.Error("not recreated")
+			}
+		} else {
+			t.Error("invalid length")
+		}
+		if len(createFailed) > 0 {
+			t.Error("invalid length")
+		}
+		if len(updateFailed) > 0 {
+			t.Error("invalid length")
+		}
+		if _, ok := mockCC.Devices[mockCC.DeviceIDMap["l1"]]; !ok {
+			t.Error("device not recreated")
+		}
+		if len(mockCC.Hubs["1"].DeviceIds) != 1 {
+			t.Error("hub invalid number of ids")
+		}
+		ids := make(map[string]struct{})
+		for _, id := range mockCC.Hubs["1"].DeviceIds {
+			ids[id] = struct{}{}
+		}
+		if _, ok := ids["1"]; !ok {
+			t.Error("hub missing id 1")
+		}
+	})
+	t.Run("create fail", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{
+			Devices:     make(map[string]models.Device),
+			DeviceIDMap: make(map[string]string),
+			Hubs: map[string]models.Hub{
+				"1": {
+					Id: "1",
+				},
+			},
+			DeviceErr: errors.New("test error"),
+		}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+		lDevices := map[string]model.Device{
+			"l1": {
+				ID: "l1",
+			},
+		}
+		recreated, createFailed, updateFailed, _, err := handler.Sync(context.Background(), lDevices, []string{"l1"}, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(recreated) > 0 {
+			t.Error("invalid length")
+		}
+		if len(createFailed) == 1 {
+			if createFailed[0] != "l1" {
+				t.Error("invalid id")
+			}
+		} else {
+			t.Error("invalid length")
+		}
+		if len(updateFailed) > 0 {
+			t.Error("invalid length")
+		}
+	})
+	t.Run("update fail", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{
+			Devices: map[string]models.Device{
+				"1": {
+					Id:      "1",
+					LocalId: "l1",
+				},
+			},
+			DeviceIDMap: map[string]string{"l1": "1"},
+			Hubs: map[string]models.Hub{
+				"1": {
+					Id:        "1",
+					DeviceIds: []string{"1"},
+				},
+			},
+			DeviceErr: errors.New("test error"),
+		}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+		lDevices := map[string]model.Device{
+			"l1": {
+				ID:   "l1",
+				Name: "test",
+			},
+		}
+		recreated, createFailed, updateFailed, _, err := handler.Sync(context.Background(), lDevices, nil, []string{"l1"}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(recreated) > 0 {
+			t.Error("invalid length")
+		}
+		if len(createFailed) > 0 {
+			t.Error("invalid length")
+		}
+		if len(updateFailed) == 1 {
+			if updateFailed[0] != "l1" {
+				t.Error("invalid id")
+			}
+		} else {
+			t.Error("invalid length")
+		}
+	})
+	t.Run("recreate fail", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{
+			Devices:     make(map[string]models.Device),
+			DeviceIDMap: make(map[string]string),
+			Hubs: map[string]models.Hub{
+				"1": {
+					Id: "1",
+				},
+			},
+			DeviceErr: errors.New("test error"),
+		}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+		lDevices := map[string]model.Device{
+			"l1": {
+				ID: "l1",
+			},
+		}
+		recreated, createFailed, updateFailed, _, err := handler.Sync(context.Background(), lDevices, nil, nil, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(recreated) > 0 {
+			t.Error("invalid length")
+		}
+		if len(createFailed) == 1 {
+			if createFailed[0] != "l1" {
+				t.Error("invalid id")
+			}
+		} else {
+			t.Error("invalid length")
+		}
+		if len(updateFailed) > 0 {
+			t.Error("invalid length")
+		}
+	})
+}
+
 func TestHandler_syncDevice(t *testing.T) {
 	var mockCC *cloud_client.Mock
 	var handler *Handler
