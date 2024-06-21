@@ -461,3 +461,164 @@ func TestHandler_syncDevice(t *testing.T) {
 		}
 	})
 }
+
+func TestHandler_getNetwork(t *testing.T) {
+	var mockCC *cloud_client.Mock
+	var handler *Handler
+	initTest := func() {
+		mockCC = &cloud_client.Mock{}
+		handler = &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+	}
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("network not found", func(t *testing.T) {
+		initTest()
+		_, err := handler.getNetwork(context.Background())
+		if err == nil {
+			t.Error("error expected")
+		}
+		if !handler.noNetwork {
+			t.Error("true expected")
+		}
+	})
+	t.Run("network user id not equal", func(t *testing.T) {
+		initTest()
+		mockCC.Hubs = map[string]models.Hub{
+			"1": {
+				Id:        "1",
+				DeviceIds: []string{"1"},
+				OwnerId:   "456",
+			},
+		}
+		handler.userID = "123"
+		_, err := handler.getNetwork(context.Background())
+		if err == nil {
+			t.Error("error expected")
+		}
+		if !handler.noNetwork {
+			t.Error("true expected")
+		}
+	})
+	t.Run("request error", func(t *testing.T) {
+		initTest()
+		mockCC.Err = errors.New("test error")
+		_, err := handler.getNetwork(context.Background())
+		if err == nil {
+			t.Error("error expected")
+		}
+		if handler.noNetwork {
+			t.Error("false expected")
+		}
+	})
+}
+
+func TestHandler_updateNetwork(t *testing.T) {
+	var mockCC *cloud_client.Mock
+	var handler *Handler
+	initTest := func() {
+		mockCC = &cloud_client.Mock{}
+		handler = &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
+	}
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("network not found", func(t *testing.T) {
+		initTest()
+		err := handler.updateNetwork(context.Background(), models.Hub{})
+		if err == nil {
+			t.Error("error expected")
+		}
+		if !handler.noNetwork {
+			t.Error("true expected")
+		}
+	})
+	t.Run("request error", func(t *testing.T) {
+		initTest()
+		mockCC.Err = errors.New("test error")
+		err := handler.updateNetwork(context.Background(), models.Hub{})
+		if err == nil {
+			t.Error("error expected")
+		}
+		if handler.noNetwork {
+			t.Error("false expected")
+		}
+	})
+}
+
+func TestHandler_getCloudDevices(t *testing.T) {
+	var mockCC *cloud_client.Mock
+	var handler *Handler
+	initTest := func() {
+		mockCC = &cloud_client.Mock{}
+		handler = &Handler{
+			cloudClient: mockCC,
+		}
+	}
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("no error", func(t *testing.T) {
+		initTest()
+		cD1 := models.Device{
+			Id:      "1",
+			LocalId: "l1",
+		}
+		cD2 := models.Device{
+			Id:      "2",
+			LocalId: "l2",
+		}
+		mockCC.Devices = map[string]models.Device{
+			"1": cD1,
+			"2": cD2,
+		}
+		cloudDevices, err := handler.getCloudDevices(context.Background(), []string{"1", "2"})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(cloudDevices) != 2 {
+			t.Error("invalid length")
+		}
+		if cd := cloudDevices["l1"]; !reflect.DeepEqual(cd, cD1) {
+			t.Error("not equal")
+		}
+		if cd := cloudDevices["l2"]; !reflect.DeepEqual(cd, cD2) {
+			t.Error("not equal")
+		}
+	})
+	t.Run("error", func(t *testing.T) {
+		initTest()
+		mockCC.Err = errors.New("test error")
+		_, err := handler.getCloudDevices(context.Background(), []string{"1", "2"})
+		if err == nil {
+			t.Error("error expected")
+		}
+	})
+	t.Run("device user id not equal", func(t *testing.T) {
+		initTest()
+		cD1 := models.Device{
+			Id:      "1",
+			LocalId: "l1",
+			OwnerId: "123",
+		}
+		mockCC.Devices = map[string]models.Device{
+			"1": cD1,
+			"2": {
+				Id:      "2",
+				LocalId: "l2",
+				OwnerId: "456",
+			},
+		}
+		handler.userID = "123"
+		cloudDevices, err := handler.getCloudDevices(context.Background(), []string{"1", "2"})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(cloudDevices) != 1 {
+			t.Error("invalid length")
+		}
+		if cd := cloudDevices["l1"]; !reflect.DeepEqual(cd, cD1) {
+			t.Error("not equal")
+		}
+	})
+}
