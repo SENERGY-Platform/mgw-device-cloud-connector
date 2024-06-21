@@ -156,19 +156,3 @@ func (m *Mock) UpdateDevice(_ context.Context, device models.Device, attributeOr
 func (m *Mock) Reset() {
 	*m = Mock{}
 }
-
-func (m *Mock) SetInternalErr() {
-	m.Err = newInternalError(errors.New("internal error"))
-}
-
-func (m *Mock) SetNotFoundErr() {
-	m.Err = newNotFoundError(errors.New("not found"))
-}
-
-func (m *Mock) SetUnauthorizedErr() {
-	m.Err = newUnauthorizedError(errors.New("unauthorized"))
-}
-
-func (m *Mock) SetBadRequestErr() {
-	m.Err = newBadRequestError(errors.New("bad request"))
-}
