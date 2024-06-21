@@ -137,6 +137,7 @@ func (h *Handler) syncDevice(ctx context.Context, cDevices map[string]models.Dev
 		} else {
 			var bre *cloud_client.BadRequestError
 			if !errors.As(err, &bre) {
+				util.Logger.Errorf("%s create device (%s): %s", logPrefix, lDevice.ID, err)
 				return "", fmt.Errorf("create device (%s): %s", lDevice.ID, err)
 			}
 			util.Logger.Warningf("%s create device (%s): %s", logPrefix, lDevice.ID, err)
@@ -151,6 +152,7 @@ func (h *Handler) syncDevice(ctx context.Context, cDevices map[string]models.Dev
 		util.Logger.Debugf("%s update device (%s)", logPrefix, lDevice.ID)
 		ncd := newCloudDevice(lDevice, cDevice.Id, h.attrOrigin)
 		if err := h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), ncd, h.attrOrigin); err != nil {
+			util.Logger.Errorf("%s update device (%s): %s", logPrefix, lDevice.ID, err)
 			return "", fmt.Errorf("update device (%s): %s", lDevice.ID, err)
 		}
 		util.Logger.Infof("%s updated device (%s)", logPrefix, lDevice.ID)
