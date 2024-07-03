@@ -134,15 +134,15 @@ func (h *Handler) getNetwork(ctx context.Context) (models.Hub, error) {
 		var nfe *cloud_client.NotFoundError
 		if errors.As(err, &nfe) {
 			h.mu.Lock()
+			defer h.mu.Unlock()
 			h.noNetwork = true
-			h.mu.Unlock()
 		}
 		return models.Hub{}, fmt.Errorf("get network (%s): %s", h.data.NetworkID, err)
 	}
 	if network.OwnerId != h.userID {
 		h.mu.Lock()
+		defer h.mu.Unlock()
 		h.noNetwork = true
-		h.mu.Unlock()
 		return models.Hub{}, fmt.Errorf("get network (%s): invalid user ID", h.data.NetworkID)
 	}
 	return network, nil
@@ -156,8 +156,8 @@ func (h *Handler) updateNetwork(ctx context.Context, network models.Hub) error {
 		var nfe *cloud_client.NotFoundError
 		if errors.As(err, &nfe) {
 			h.mu.Lock()
+			defer h.mu.Unlock()
 			h.noNetwork = true
-			h.mu.Unlock()
 		}
 		return fmt.Errorf("update network (%s): %s", h.data.NetworkID, err)
 	}
