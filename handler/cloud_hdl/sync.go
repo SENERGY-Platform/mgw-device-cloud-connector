@@ -34,6 +34,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	for _, lID := range newIDs {
 		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
 		if err != nil {
+			util.Logger.Errorf("%s %s", logPrefix, err)
 			createFailed = append(createFailed, lID)
 		}
 		syncedIDs[lID] = cID
@@ -42,6 +43,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	for _, lID := range changedIDs {
 		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
 		if err != nil {
+			util.Logger.Errorf("%s %s", logPrefix, err)
 			updateFailed = append(updateFailed, lID)
 		}
 		syncedIDs[lID] = cID
@@ -52,6 +54,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			_, inCloud := cloudDevices[lID]
 			cID, err := h.syncDevice(ctx, cloudDevices, lDevice)
 			if err != nil {
+				util.Logger.Errorf("%s %s", logPrefix, err)
 				if !inCloud {
 					createFailed = append(createFailed, lID)
 				}
@@ -101,7 +104,6 @@ func (h *Handler) syncDevice(ctx context.Context, cDevices map[string]models.Dev
 		} else {
 			var bre *cloud_client.BadRequestError
 			if !errors.As(err, &bre) {
-				util.Logger.Errorf("%s create device (%s): %s", logPrefix, lDevice.ID, err)
 				return "", fmt.Errorf("create device (%s): %s", lDevice.ID, err)
 			}
 			util.Logger.Warningf("%s create device (%s): %s", logPrefix, lDevice.ID, err)
@@ -116,7 +118,6 @@ func (h *Handler) syncDevice(ctx context.Context, cDevices map[string]models.Dev
 		util.Logger.Debugf("%s update device (%s)", logPrefix, lDevice.ID)
 		ncd := newCloudDevice(lDevice, cDevice.Id, h.attrOrigin)
 		if err := h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), ncd, h.attrOrigin); err != nil {
-			util.Logger.Errorf("%s update device (%s): %s", logPrefix, lDevice.ID, err)
 			return "", fmt.Errorf("update device (%s): %s", lDevice.ID, err)
 		}
 		util.Logger.Infof("%s updated device (%s)", logPrefix, lDevice.ID)
