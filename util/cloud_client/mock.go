@@ -8,22 +8,29 @@ import (
 )
 
 type Mock struct {
-	Devices         map[string]models.Device
-	Hubs            map[string]models.Hub
-	DeviceIDMap     map[string]string
-	AttributeOrigin string
-	Err             error
-	HubErr          error
-	DeviceErr       error
-	DevicesErr      error
-	CreateHubC      int
-	GetHubC         int
-	UpdateHubC      int
-	CreateDeviceC   int
-	GetDeviceC      int
-	GetDeviceLC     int
-	GetDevicesC     int
-	UpdateDeviceC   int
+	Devices            map[string]models.Device
+	Hubs               map[string]models.Hub
+	DeviceIDMap        map[string]string
+	AttributeOrigin    string
+	DevicesAccPol      HttpMethodAccPol
+	DevicesLAccPol     HttpMethodAccPol
+	HubAccPol          HttpMethodAccPol
+	Err                error
+	HubErr             error
+	DeviceErr          error
+	DevicesErr         error
+	AccPolErr          error
+	CreateHubC         int
+	GetHubC            int
+	UpdateHubC         int
+	CreateDeviceC      int
+	GetDeviceC         int
+	GetDeviceLC        int
+	GetDevicesC        int
+	UpdateDeviceC      int
+	GetDevicesAccPolC  int
+	GetDevicesLAccPolC int
+	GetHubAccPolC      int
 }
 
 func (m *Mock) CreateHub(_ context.Context, hub models.Hub) (string, error) {
@@ -152,6 +159,39 @@ func (m *Mock) UpdateDevice(_ context.Context, device models.Device, attributeOr
 	}
 	m.Devices[device.Id] = device
 	return nil
+}
+
+func (m *Mock) GetDevicesAccPol(ctx context.Context) (HttpMethodAccPol, error) {
+	m.GetDevicesAccPolC += 1
+	if m.AccPolErr != nil {
+		return HttpMethodAccPol{}, m.AccPolErr
+	}
+	if m.Err != nil {
+		return HttpMethodAccPol{}, m.Err
+	}
+	return m.DevicesAccPol, nil
+}
+
+func (m *Mock) GetDevicesLAccPol(ctx context.Context) (HttpMethodAccPol, error) {
+	m.GetDevicesLAccPolC += 1
+	if m.AccPolErr != nil {
+		return HttpMethodAccPol{}, m.AccPolErr
+	}
+	if m.Err != nil {
+		return HttpMethodAccPol{}, m.Err
+	}
+	return m.DevicesLAccPol, nil
+}
+
+func (m *Mock) GetHubAccPol(ctx context.Context) (HttpMethodAccPol, error) {
+	m.GetHubAccPolC += 1
+	if m.AccPolErr != nil {
+		return HttpMethodAccPol{}, m.AccPolErr
+	}
+	if m.Err != nil {
+		return HttpMethodAccPol{}, m.Err
+	}
+	return m.HubAccPol, nil
 }
 
 func (m *Mock) Reset() {
