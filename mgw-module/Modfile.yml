@@ -4,7 +4,7 @@ name: Device Cloud-Connector
 description: Connect local devices to the Cloud.
 license: Apache-2.0 license
 author: InfAI (CC SES)
-version: v0.3.0
+version: v0.4.0
 type: add-on
 deploymentType: single
 dependencies:
@@ -47,8 +47,6 @@ inputGroups:
   cloud-api:
     name: APIs
     group: cloud-settings
-  local-settings:
-    name: Local settings
   msg-relay:
     name: Message relay settings
 secrets:
@@ -216,16 +214,6 @@ configs:
       name: Cloud sync interval
       description: "Set interval for periodic syncs in nanoseconds."
       group: cloud-settings
-    optional: true
-  local-device-id-prefix:
-    targets:
-      - refVar: LDH_ID_PREFIX
-        services:
-          - connector
-    userInput:
-      type: text
-      name: Local device ID prefix
-      group: local-settings
     optional: true
   local-device-refresh-interval:
     dataType: int
