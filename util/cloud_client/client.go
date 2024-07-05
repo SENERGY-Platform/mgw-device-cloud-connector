@@ -19,6 +19,14 @@ type ClientItf interface {
 	UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error
 }
 
+type HttpMethodAccPol interface {
+	Get() bool
+	Post() bool
+	Put() bool
+	Patch() bool
+	Delete() bool
+}
+
 type Client struct {
 	baseClient *base_client.Client
 	baseUrl    string
