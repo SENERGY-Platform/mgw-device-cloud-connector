@@ -12,7 +12,7 @@ import (
 
 const accPolPath = "ladon/allowed"
 
-var httpMethods = []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
+var httpMethods = []string{"GET", "POST", "PUT", "DELETE"}
 var httpMethodsLen = len(httpMethods)
 
 type reqItem struct {
@@ -26,27 +26,21 @@ type resp struct {
 
 type HttpMethodAccPol struct {
 	get    bool
-	head   bool
 	post   bool
 	put    bool
-	patch  bool
 	delete bool
 }
 
-func (a HttpMethodAccPol) Get() bool {
+func (a HttpMethodAccPol) Read() bool {
 	return a.get
 }
 
-func (a HttpMethodAccPol) Post() bool {
+func (a HttpMethodAccPol) Create() bool {
 	return a.post
 }
 
-func (a HttpMethodAccPol) Put() bool {
+func (a HttpMethodAccPol) Update() bool {
 	return a.put
-}
-
-func (a HttpMethodAccPol) Patch() bool {
-	return a.patch
 }
 
 func (a HttpMethodAccPol) Delete() bool {
@@ -87,11 +81,9 @@ func (c *Client) getAccPol(ctx context.Context, endpoint string) (HttpMethodAccP
 	}
 	return HttpMethodAccPol{
 		get:    res.Allowed[0],
-		head:   res.Allowed[1],
-		post:   res.Allowed[2],
-		put:    res.Allowed[3],
-		patch:  res.Allowed[4],
-		delete: res.Allowed[5],
+		post:   res.Allowed[1],
+		put:    res.Allowed[2],
+		delete: res.Allowed[3],
 	}, nil
 }
 
