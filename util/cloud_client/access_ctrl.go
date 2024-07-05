@@ -24,7 +24,7 @@ type resp struct {
 	Allowed []bool `json:"allowed"`
 }
 
-type accPol struct {
+type HttpMethodAccPol struct {
 	get    bool
 	head   bool
 	post   bool
@@ -33,30 +33,30 @@ type accPol struct {
 	delete bool
 }
 
-func (a *accPol) Get() bool {
+func (a HttpMethodAccPol) Get() bool {
 	return a.get
 }
 
-func (a *accPol) Post() bool {
+func (a HttpMethodAccPol) Post() bool {
 	return a.post
 }
 
-func (a *accPol) Put() bool {
+func (a HttpMethodAccPol) Put() bool {
 	return a.put
 }
 
-func (a *accPol) Patch() bool {
+func (a HttpMethodAccPol) Patch() bool {
 	return a.patch
 }
 
-func (a *accPol) Delete() bool {
+func (a HttpMethodAccPol) Delete() bool {
 	return a.delete
 }
 
 func (c *Client) getAccPol(ctx context.Context, endpoint string) (HttpMethodAccPol, error) {
 	u, err := url.JoinPath(c.baseUrl, accPolPath)
 	if err != nil {
-		return nil, err
+		return HttpMethodAccPol{}, err
 	}
 	if !strings.HasPrefix(endpoint, "/") {
 		endpoint = "/" + endpoint
@@ -67,25 +67,25 @@ func (c *Client) getAccPol(ctx context.Context, endpoint string) (HttpMethodAccP
 	}
 	body, err := json.Marshal(reqData)
 	if err != nil {
-		return nil, err
+		return HttpMethodAccPol{}, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewBuffer(body))
 	if err != nil {
-		return nil, err
+		return HttpMethodAccPol{}, err
 	}
 	if err = c.setAuthHeader(ctx, req); err != nil {
-		return nil, err
+		return HttpMethodAccPol{}, err
 	}
 	var res resp
 	err = c.baseClient.ExecRequestJSON(req, &res)
 	if err != nil {
-		return nil, err
+		return HttpMethodAccPol{}, err
 	}
 	fmt.Println(res)
 	if httpMethodsLen != len(res.Allowed) {
-		return nil, fmt.Errorf("expected %d results, got %d", httpMethodsLen, len(res.Allowed))
+		return HttpMethodAccPol{}, fmt.Errorf("expected %d results, got %d", httpMethodsLen, len(res.Allowed))
 	}
-	return &accPol{
+	return HttpMethodAccPol{
 		get:    res.Allowed[0],
 		head:   res.Allowed[1],
 		post:   res.Allowed[2],

@@ -22,14 +22,6 @@ type ClientItf interface {
 	GetHubAccPol(ctx context.Context) (HttpMethodAccPol, error)
 }
 
-type HttpMethodAccPol interface {
-	Get() bool
-	Post() bool
-	Put() bool
-	Patch() bool
-	Delete() bool
-}
-
 type Client struct {
 	baseClient *base_client.Client
 	baseUrl    string
