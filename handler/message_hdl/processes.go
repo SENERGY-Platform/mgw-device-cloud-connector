@@ -6,8 +6,8 @@ import (
 )
 
 func HandleDownstreamProcessesCmd(m handler.Message) (string, []byte, error) {
-	var hID, subTopic string
-	if !parseTopic(topic.Handler.CloudProcessesCmdSub(), m.Topic(), &hID, &subTopic) { // processes/{user_id}/{hub_id}/cmd/#
+	var subTopic string
+	if !parseTopic(topic.Handler.CloudProcessesCmdSub(), m.Topic(), &subTopic) { // processes/{hub_id}/cmd/#
 		return "", nil, newParseErr(m.Topic())
 	}
 	return topic.Handler.LocalProcessesCmdPub(subTopic), m.Payload(), nil
