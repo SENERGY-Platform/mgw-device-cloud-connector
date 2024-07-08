@@ -184,3 +184,35 @@ func (h *Handler) getCloudDevices(ctx context.Context, cDeviceIDs []string) (map
 	}
 	return cloudDevices, nil
 }
+
+func (h *Handler) checkAccPols(ctx context.Context) (bool, error) {
+	msgStr := "check access policies"
+	ctxWc, cf := context.WithCancel(ctx)
+	defer cf()
+	util.Logger.Debugf("%s %s", logPrefix, msgStr)
+	accPol, err := h.cloudClient.GetAccessPolicies(ctxWc)
+	if err != nil {
+		return false, fmt.Errorf("%s: %s", msgStr, err)
+	}
+	if !accPol.Hubs().Read() {
+		return false, errors.New(msgStr + " (network): read not allowed")
+	}
+	if !accPol.Hubs().Update() {
+		return false, errors.New(msgStr + " (network): update not allowed")
+	}
+	if !accPol.Devices().Read() {
+		return false, errors.New(msgStr + " (devices cloud id): read not allowed")
+	}
+	if !accPol.DevicesL().Read() {
+		return false, errors.New(msgStr + " (devices local id): read not allowed")
+	}
+	if !accPol.Devices().Create() {
+		util.Logger.Debugf("%s %s (devices cloud id): create not allowed", logPrefix, msgStr)
+		return false, nil
+	}
+	if !accPol.Devices().Update() {
+		util.Logger.Debugf("%s %s (devices cloud id): update not allowed", logPrefix, msgStr)
+		return false, nil
+	}
+	return true, nil
+}
