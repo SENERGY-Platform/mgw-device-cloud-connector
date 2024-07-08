@@ -622,3 +622,182 @@ func TestHandler_getCloudDevices(t *testing.T) {
 		}
 	})
 }
+
+func TestHandler_checkAccPols(t *testing.T) {
+	var mockCC *cloud_client.Mock
+	var handler *Handler
+	initTest := func() {
+		mockCC = &cloud_client.Mock{}
+		handler = &Handler{
+			cloudClient: mockCC,
+		}
+	}
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("network read not allowed", func(t *testing.T) {
+		initTest()
+		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{HubsAccPol: cloud_client.HttpMethodAccPolMock{
+			ReadAP:   false,
+			CreateAP: true,
+			UpdateAP: true,
+			DeleteAP: true,
+		}}
+		if _, err := handler.checkAccPols(context.Background()); err == nil {
+			t.Error("error expected")
+		}
+	})
+	t.Run("network update not allowed", func(t *testing.T) {
+		initTest()
+		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{HubsAccPol: cloud_client.HttpMethodAccPolMock{
+			ReadAP:   true,
+			CreateAP: true,
+			UpdateAP: false,
+			DeleteAP: true,
+		}}
+		if _, err := handler.checkAccPols(context.Background()); err == nil {
+			t.Error("error expected")
+		}
+	})
+	t.Run("devices (cloud id) read not allowed", func(t *testing.T) {
+		initTest()
+		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
+			HubsAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+			DevicesAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   false,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+		}
+		if _, err := handler.checkAccPols(context.Background()); err == nil {
+			t.Error("error expected")
+		}
+	})
+	t.Run("devices (local id) read not allowed", func(t *testing.T) {
+		initTest()
+		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
+			HubsAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+			DevicesAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+			DevicesLAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   false,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+		}
+		if _, err := handler.checkAccPols(context.Background()); err == nil {
+			t.Error("error expected")
+		}
+	})
+	t.Run("devices (cloud id) create not allowed", func(t *testing.T) {
+		initTest()
+		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
+			HubsAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+			DevicesAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: false,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+			DevicesLAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+		}
+		ok, err := handler.checkAccPols(context.Background())
+		if err != nil {
+			t.Error(err)
+		}
+		if ok {
+			t.Error("false expected")
+		}
+	})
+	t.Run("devices (cloud id) update not allowed", func(t *testing.T) {
+		initTest()
+		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
+			HubsAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+			DevicesAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: false,
+				DeleteAP: true,
+			},
+			DevicesLAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+		}
+		ok, err := handler.checkAccPols(context.Background())
+		if err != nil {
+			t.Error(err)
+		}
+		if ok {
+			t.Error("false expected")
+		}
+	})
+	t.Run("devices (local & cloud id) read only", func(t *testing.T) {
+		initTest()
+		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
+			HubsAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: true,
+				UpdateAP: true,
+				DeleteAP: true,
+			},
+			DevicesAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: false,
+				UpdateAP: false,
+				DeleteAP: false,
+			},
+			DevicesLAccPol: cloud_client.HttpMethodAccPolMock{
+				ReadAP:   true,
+				CreateAP: false,
+				UpdateAP: false,
+				DeleteAP: false,
+			},
+		}
+		ok, err := handler.checkAccPols(context.Background())
+		if err != nil {
+			t.Error(err)
+		}
+		if ok {
+			t.Error("false expected")
+		}
+	})
+	t.Run("error", func(t *testing.T) {
+		initTest()
+		mockCC.Err = errors.New("test")
+		if _, err := handler.checkAccPols(context.Background()); err == nil {
+			t.Error("error expected")
+		}
+	})
+}
