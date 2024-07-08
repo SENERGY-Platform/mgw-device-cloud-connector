@@ -17,9 +17,20 @@ type ClientItf interface {
 	GetDeviceL(ctx context.Context, id string) (models.Device, error)
 	GetDevices(ctx context.Context, ids []string) ([]models.Device, error)
 	UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error
-	GetDevicesAccPol(ctx context.Context) (HttpMethodAccPol, error)
-	GetDevicesLAccPol(ctx context.Context) (HttpMethodAccPol, error)
-	GetHubAccPol(ctx context.Context) (HttpMethodAccPol, error)
+	GetAccessPolicies(ctx context.Context) (EndpointAccPolItf, error)
+}
+
+type HttpMethodAccPolItf interface {
+	Read() bool
+	Create() bool
+	Update() bool
+	Delete() bool
+}
+
+type EndpointAccPolItf interface {
+	Hubs() HttpMethodAccPolItf
+	Devices() HttpMethodAccPolItf
+	DevicesL() HttpMethodAccPolItf
 }
 
 type Client struct {

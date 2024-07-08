@@ -7,94 +7,104 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 const accPolPath = "ladon/allowed"
 
-var httpMethods = []string{"GET", "POST", "PUT", "DELETE"}
-var httpMethodsLen = len(httpMethods)
+var endpoints = []string{
+	hubsPath,
+	devicesPath,
+	localDevicesPath,
+}
+var httpMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
+var accPolReqData = func() []accPolReqItem {
+	var reqData []accPolReqItem
+	for _, endpoint := range endpoints {
+		for _, method := range httpMethods {
+			reqData = append(reqData, accPolReqItem{Endpoint: "/" + endpoint, Method: method})
+		}
+	}
+	return reqData
+}()
 
-type reqItem struct {
+type accPolReqItem struct {
 	Endpoint string `json:"endpoint"`
 	Method   string `json:"method"`
 }
 
-type resp struct {
+type accPolRespData struct {
 	Allowed []bool `json:"allowed"`
 }
 
-type HttpMethodAccPol struct {
-	get    bool
-	post   bool
-	put    bool
-	delete bool
+type httpMethodAccPol struct {
+	accPol map[string]bool
 }
 
-func (a HttpMethodAccPol) Read() bool {
-	return a.get
+func (a httpMethodAccPol) Read() bool {
+	return a.accPol[http.MethodGet]
 }
 
-func (a HttpMethodAccPol) Create() bool {
-	return a.post
+func (a httpMethodAccPol) Create() bool {
+	return a.accPol[http.MethodPost]
 }
 
-func (a HttpMethodAccPol) Update() bool {
-	return a.put
+func (a httpMethodAccPol) Update() bool {
+	return a.accPol[http.MethodPut]
 }
 
-func (a HttpMethodAccPol) Delete() bool {
-	return a.delete
+func (a httpMethodAccPol) Delete() bool {
+	return a.accPol[http.MethodDelete]
 }
 
-func (c *Client) getAccPol(ctx context.Context, endpoint string) (HttpMethodAccPol, error) {
+type endpointAccPol struct {
+	accPol map[string]httpMethodAccPol
+}
+
+func (a endpointAccPol) Hubs() HttpMethodAccPolItf {
+	return a.accPol[hubsPath]
+}
+
+func (a endpointAccPol) Devices() HttpMethodAccPolItf {
+	return a.accPol[devicesPath]
+}
+
+func (a endpointAccPol) DevicesL() HttpMethodAccPolItf {
+	return a.accPol[localDevicesPath]
+}
+
+func (c *Client) GetAccessPolicies(ctx context.Context) (EndpointAccPolItf, error) {
 	u, err := url.JoinPath(c.baseUrl, accPolPath)
 	if err != nil {
-		return HttpMethodAccPol{}, err
+		return endpointAccPol{}, err
 	}
-	if !strings.HasPrefix(endpoint, "/") {
-		endpoint = "/" + endpoint
-	}
-	var reqData []reqItem
-	for _, method := range httpMethods {
-		reqData = append(reqData, reqItem{Endpoint: endpoint, Method: method})
-	}
-	body, err := json.Marshal(reqData)
+	body, err := json.Marshal(accPolReqData)
 	if err != nil {
-		return HttpMethodAccPol{}, err
+		return endpointAccPol{}, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewBuffer(body))
 	if err != nil {
-		return HttpMethodAccPol{}, err
+		return endpointAccPol{}, err
 	}
 	if err = c.setAuthHeader(ctx, req); err != nil {
-		return HttpMethodAccPol{}, err
+		return endpointAccPol{}, err
 	}
-	var res resp
+	var res accPolRespData
 	err = c.baseClient.ExecRequestJSON(req, &res)
 	if err != nil {
-		return HttpMethodAccPol{}, err
+		return endpointAccPol{}, err
 	}
-	fmt.Println(res)
-	if httpMethodsLen != len(res.Allowed) {
-		return HttpMethodAccPol{}, fmt.Errorf("expected %d results, got %d", httpMethodsLen, len(res.Allowed))
+	if len(endpoints)*len(httpMethods) != len(res.Allowed) {
+		return endpointAccPol{}, fmt.Errorf("expected %d results, got %d", len(endpoints)*len(httpMethods), len(res.Allowed))
 	}
-	return HttpMethodAccPol{
-		get:    res.Allowed[0],
-		post:   res.Allowed[1],
-		put:    res.Allowed[2],
-		delete: res.Allowed[3],
-	}, nil
-}
-
-func (c *Client) GetDevicesAccPol(ctx context.Context) (HttpMethodAccPol, error) {
-	return c.getAccPol(ctx, devicesPath)
-}
-
-func (c *Client) GetDevicesLAccPol(ctx context.Context) (HttpMethodAccPol, error) {
-	return c.getAccPol(ctx, localDevicesPath)
-}
-
-func (c *Client) GetHubAccPol(ctx context.Context) (HttpMethodAccPol, error) {
-	return c.getAccPol(ctx, hubsPath)
+	eAccPol := endpointAccPol{accPol: make(map[string]httpMethodAccPol)}
+	i := 0
+	for _, endpoint := range endpoints {
+		mAccPol := httpMethodAccPol{accPol: make(map[string]bool)}
+		for _, method := range httpMethods {
+			mAccPol.accPol[method] = res.Allowed[i]
+			i++
+		}
+		eAccPol.accPol[endpoint] = mAccPol
+	}
+	return eAccPol, nil
 }
