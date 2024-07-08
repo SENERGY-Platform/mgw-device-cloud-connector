@@ -21,6 +21,10 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	} else {
 		util.Logger.Debug(logPrefix, " begin periodic devices and network sync")
 	}
+	devSyncAllowed, err := h.checkAccPols(ctx)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
 	network, err := h.getNetwork(ctx)
 	if err != nil {
 		return nil, nil, nil, nil, err
