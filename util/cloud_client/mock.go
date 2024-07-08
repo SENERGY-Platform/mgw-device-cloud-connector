@@ -12,9 +12,7 @@ type Mock struct {
 	Hubs               map[string]models.Hub
 	DeviceIDMap        map[string]string
 	AttributeOrigin    string
-	DevicesAccPol      HttpMethodAccPol
-	DevicesLAccPol     HttpMethodAccPol
-	HubAccPol          HttpMethodAccPol
+	EptAccPol          EndpointAccPolMock
 	Err                error
 	HubErr             error
 	DeviceErr          error
@@ -28,9 +26,7 @@ type Mock struct {
 	GetDeviceLC        int
 	GetDevicesC        int
 	UpdateDeviceC      int
-	GetDevicesAccPolC  int
-	GetDevicesLAccPolC int
-	GetHubAccPolC      int
+	GetAccessPoliciesC int
 }
 
 func (m *Mock) CreateHub(_ context.Context, hub models.Hub) (string, error) {
@@ -161,39 +157,58 @@ func (m *Mock) UpdateDevice(_ context.Context, device models.Device, attributeOr
 	return nil
 }
 
-func (m *Mock) GetDevicesAccPol(ctx context.Context) (HttpMethodAccPol, error) {
-	m.GetDevicesAccPolC += 1
+func (m *Mock) GetAccessPolicies(_ context.Context) (EndpointAccPolItf, error) {
+	m.GetAccessPoliciesC++
 	if m.AccPolErr != nil {
-		return HttpMethodAccPol{}, m.AccPolErr
+		return endpointAccPol{}, m.AccPolErr
 	}
 	if m.Err != nil {
-		return HttpMethodAccPol{}, m.Err
+		return endpointAccPol{}, m.Err
 	}
-	return m.DevicesAccPol, nil
-}
-
-func (m *Mock) GetDevicesLAccPol(ctx context.Context) (HttpMethodAccPol, error) {
-	m.GetDevicesLAccPolC += 1
-	if m.AccPolErr != nil {
-		return HttpMethodAccPol{}, m.AccPolErr
-	}
-	if m.Err != nil {
-		return HttpMethodAccPol{}, m.Err
-	}
-	return m.DevicesLAccPol, nil
-}
-
-func (m *Mock) GetHubAccPol(ctx context.Context) (HttpMethodAccPol, error) {
-	m.GetHubAccPolC += 1
-	if m.AccPolErr != nil {
-		return HttpMethodAccPol{}, m.AccPolErr
-	}
-	if m.Err != nil {
-		return HttpMethodAccPol{}, m.Err
-	}
-	return m.HubAccPol, nil
+	return m.EptAccPol, nil
 }
 
 func (m *Mock) Reset() {
 	*m = Mock{}
+}
+
+type EndpointAccPolMock struct {
+	HubsAccPol     HttpMethodAccPolMock
+	DevicesAccPol  HttpMethodAccPolMock
+	DevicesLAccPol HttpMethodAccPolMock
+}
+
+func (m EndpointAccPolMock) Hubs() HttpMethodAccPolItf {
+	return m.HubsAccPol
+}
+
+func (m EndpointAccPolMock) Devices() HttpMethodAccPolItf {
+	return m.DevicesAccPol
+}
+
+func (m EndpointAccPolMock) DevicesL() HttpMethodAccPolItf {
+	return m.DevicesLAccPol
+}
+
+type HttpMethodAccPolMock struct {
+	ReadAP   bool
+	CreateAP bool
+	UpdateAP bool
+	DeleteAP bool
+}
+
+func (m HttpMethodAccPolMock) Read() bool {
+	return m.ReadAP
+}
+
+func (m HttpMethodAccPolMock) Create() bool {
+	return m.CreateAP
+}
+
+func (m HttpMethodAccPolMock) Update() bool {
+	return m.UpdateAP
+}
+
+func (m HttpMethodAccPolMock) Delete() bool {
+	return m.DeleteAP
 }
