@@ -112,4 +112,30 @@ func TestHandler(t *testing.T) {
 		}
 		h.Stop()
 	})
+	t.Run("buffer full", func(t *testing.T) {
+		testMsgHdl = func(m handler.Message) (topic string, data []byte, err error) {
+			return "", nil, nil
+		}
+		testSendFunc = func(topic string, data []byte) error {
+			return nil
+		}
+		h = New(1, testMsgHdl, testSendFunc)
+		err = h.Put(msg)
+		if err != nil {
+			t.Error(err)
+		}
+		err = h.Put(msg)
+		if err == nil {
+			t.Error(err)
+		}
+		if len(h.messages) != 1 {
+			t.Error("message not in channel")
+		}
+		h.Start()
+		time.Sleep(1 * time.Second)
+		if len(h.messages) > 0 {
+			t.Error("message not consumed")
+		}
+		h.Stop()
+	})
 }
