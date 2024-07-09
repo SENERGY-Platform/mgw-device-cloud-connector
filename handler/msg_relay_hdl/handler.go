@@ -5,7 +5,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
-	"sync"
 )
 
 const logPrefix = "[relay-hdl]"
@@ -15,7 +14,6 @@ type Handler struct {
 	handleFunc handler.MessageHandler
 	sendFunc   func(topic string, data []byte) error
 	dChan      chan struct{}
-	mu         sync.RWMutex
 }
 
 func New(buffer int, handleFunc handler.MessageHandler, sendFunc func(topic string, data []byte) error) *Handler {
