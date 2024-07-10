@@ -92,5 +92,8 @@ func TestHandlerUpstreamDeviceCmdErr(t *testing.T) {
 		if err == nil {
 			t.Error("expected error")
 		}
+		if err == model.NoMsgErr {
+			t.Error("wrong error type")
+		}
 	})
 }
