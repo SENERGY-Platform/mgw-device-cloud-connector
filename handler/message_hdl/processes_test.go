@@ -7,6 +7,7 @@ import (
 )
 
 func TestHandleDownstreamProcessesCmd(t *testing.T) {
+	t.Cleanup(clearVars)
 	topic.InitTopicHandler("usrID", "netID")
 	rt, rb, err := HandleDownstreamProcessesCmd(&mockMessage{
 		topic:   "processes/netID/cmd/a/b",
@@ -32,6 +33,7 @@ func TestHandleDownstreamProcessesCmd(t *testing.T) {
 }
 
 func TestHandleUpstreamProcessesState(t *testing.T) {
+	t.Cleanup(clearVars)
 	topic.InitTopicHandler("usrID", "netID")
 	rt, rb, err := HandleUpstreamProcessesState(&mockMessage{
 		topic:   "processes/state/a/b",

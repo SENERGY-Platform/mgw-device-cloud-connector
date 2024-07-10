@@ -8,6 +8,7 @@ import (
 )
 
 func TestHandlerUpstreamDeviceConnectorErr(t *testing.T) {
+	t.Cleanup(clearVars)
 	topic.InitTopicHandler("usrID", "netID")
 	rt, rb, err := HandlerUpstreamDeviceConnectorErr(&mockMessage{
 		topic:   "error/client",
@@ -33,6 +34,7 @@ func TestHandlerUpstreamDeviceConnectorErr(t *testing.T) {
 }
 
 func TestHandlerUpstreamDeviceErr(t *testing.T) {
+	t.Cleanup(clearVars)
 	topic.InitTopicHandler("usrID", "netID")
 	rt, rb, err := HandlerUpstreamDeviceErr(&mockMessage{
 		topic:   "error/device/test",
@@ -58,6 +60,7 @@ func TestHandlerUpstreamDeviceErr(t *testing.T) {
 }
 
 func TestHandlerUpstreamDeviceCmdErr(t *testing.T) {
+	t.Cleanup(clearVars)
 	topic.InitTopicHandler("usrID", "netID")
 	DeviceCommandIDPrefix = "123"
 	rt, rb, err := HandlerUpstreamDeviceCmdErr(&mockMessage{
