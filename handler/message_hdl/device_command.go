@@ -47,7 +47,7 @@ func HandleUpstreamDeviceCmdResponse(m handler.Message) (string, []byte, error) 
 	if err := json.Unmarshal(m.Payload(), &cmdRes); err != nil {
 		return "", nil, err
 	}
-	if strings.Contains(cmdRes.CommandID, DeviceCommandIDPrefix) {
+	if strings.HasPrefix(cmdRes.CommandID, DeviceCommandIDPrefix) {
 		b, err := json.Marshal(CloudDeviceCmdResponseMsg{
 			CorrelationID: strings.ReplaceAll(cmdRes.CommandID, DeviceCommandIDPrefix, ""),
 			Payload:       CloudStandardEnvelope{Data: cmdRes.Data},
