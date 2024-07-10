@@ -19,3 +19,10 @@ func (m *mockMessage) Payload() []byte {
 func (m *mockMessage) Timestamp() time.Time {
 	return m.timestamp
 }
+
+func clearVars() {
+	DeviceCommandIDPrefix = ""
+	DeviceCommandMaxAge = 0
+	LocalDeviceIDPrefix = ""
+	DeviceEventMaxAge = 0
+}
