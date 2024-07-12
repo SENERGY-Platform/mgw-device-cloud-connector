@@ -38,141 +38,107 @@ func (h *Handler) SetMessageRelayHdl(deviceCmdMsgRelayHdl, processesCmdMsgRelayH
 
 func (h *Handler) HandleOnDisconnect() {
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	clear(h.subscriptions)
-	h.mu.Unlock()
 	util.Logger.Debugf(LogPrefix + " subscriptions cleared")
 }
 
-func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]model.Device, isOnlineIDs, isOfflineIDs, isOnlineAgainIDs []string) ([]string, error) {
+func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]model.Device, missingIDs, onlineIDs, offlineIDs []string) {
 	err := h.subscribe(topic.Handler.CloudProcessesCmdSub(), func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
 		}
 	})
 	if err == model.NotConnectedErr {
-		return nil, err
+		return
 	}
-	var failed []string
-	syncResults := make(map[string]bool)
-	for _, id := range isOnlineIDs {
-		err = h.subscribe(topic.Handler.CloudDeviceServiceCmdSub(id), func(m handler.Message) {
+	topics := map[string]struct{}{
+		topic.Handler.CloudProcessesCmdSub(): {},
+	}
+	for id := range devices {
+		topics[topic.Handler.CloudDeviceServiceCmdSub(id)] = struct{}{}
+	}
+	missingTopics, newTopics := h.diffSubs(topics)
+	for _, t := range missingTopics {
+		if err = h.unsubscribe(t); err != nil {
+			if err == model.NotConnectedErr {
+				return
+			}
+			continue
+		}
+	}
+	for _, t := range newTopics {
+		err = h.subscribe(t, func(m handler.Message) {
 			if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
 				util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
 			}
 		})
 		if err != nil {
 			if err == model.NotConnectedErr {
-				return nil, err
+				return
 			}
-			failed = append(failed, id)
-			syncResults[id] = false
 			continue
 		}
-		syncResults[id] = true
 	}
-	for _, id := range isOnlineAgainIDs {
-		err = h.resubscribe(topic.Handler.CloudDeviceServiceCmdSub(id), func(m handler.Message) {
-			if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-				util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
-			}
-		})
-		if err != nil {
-			if err == model.NotConnectedErr {
-				return nil, err
-			}
-			failed = append(failed, id)
-			syncResults[id] = false
-			continue
-		}
-		syncResults[id] = true
-	}
-	for _, id := range isOfflineIDs {
-		if err = h.unsubscribe(topic.Handler.CloudDeviceServiceCmdSub(id)); err != nil {
-			failed = append(failed, id)
-		}
-		if err != nil {
-			if err == model.NotConnectedErr {
-				return nil, err
-			}
-			failed = append(failed, id)
-			syncResults[id] = false
-			continue
-		}
-		syncResults[id] = true
-	}
-	for id, device := range devices {
-		if _, ok := syncResults[id]; !ok {
-			t := topic.Handler.CloudDeviceServiceCmdSub(id)
-			if device.State == model.Online && !h.isSubscribed(t) {
-				err = h.subscribe(t, func(m handler.Message) {
-					if err := h.deviceCmdMsgRelayHdl.Put(m); err != nil {
-						util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
-					}
-				})
-				if err != nil {
-					if err == model.NotConnectedErr {
-						return nil, err
-					}
-					failed = append(failed, id)
-				}
-			}
-		}
-	}
-	return failed, nil
 }
 
 func (h *Handler) subscribe(t string, mhf func(m handler.Message)) error {
-	if h.isSubscribed(t) {
-		return nil
+	if !h.inSub(t) {
+		util.Logger.Debugf(model.SubscribeString, LogPrefix, t)
+		if err := h.client.Subscribe(t, h.qos, mhf); err != nil {
+			util.Logger.Errorf(model.SubscribeErrString, LogPrefix, t, err)
+			return err
+		}
+		h.addSub(t)
+		util.Logger.Infof(model.SubscribedString, LogPrefix, t)
 	}
-	util.Logger.Debugf(model.SubscribeString, LogPrefix, t)
-	if err := h.client.Subscribe(t, h.qos, mhf); err != nil {
-		util.Logger.Errorf(model.SubscribeErrString, LogPrefix, t, err)
-		return err
-	}
-	h.mu.Lock()
-	h.subscriptions[t] = struct{}{}
-	h.mu.Unlock()
-	util.Logger.Infof(model.SubscribedString, LogPrefix, t)
 	return nil
 }
 
 func (h *Handler) unsubscribe(t string) error {
-	if !h.isSubscribed(t) {
-		return nil
+	if h.inSub(t) {
+		util.Logger.Debugf(model.UnsubscribeString, LogPrefix, t)
+		if err := h.client.Unsubscribe(t); err != nil {
+			util.Logger.Errorf(model.UnsubscribeErrString, LogPrefix, t, err)
+			return err
+		}
+		h.deleteSub(t)
+		util.Logger.Infof(model.UnsubscribedString, LogPrefix, t)
 	}
-	util.Logger.Debugf(model.UnsubscribeString, LogPrefix, t)
-	if err := h.client.Unsubscribe(t); err != nil {
-		util.Logger.Errorf(model.UnsubscribeErrString, LogPrefix, t, err)
-		return err
-	}
-	h.mu.Lock()
-	delete(h.subscriptions, t)
-	h.mu.Unlock()
-	util.Logger.Infof(model.UnsubscribedString, LogPrefix, t)
 	return nil
 }
 
-func (h *Handler) resubscribe(t string, mhf func(m handler.Message)) error {
-	util.Logger.Debugf(model.ResubscribeString, LogPrefix, t)
-	if err := h.client.Unsubscribe(t); err != nil {
-		util.Logger.Errorf(model.UnsubscribeErrString, LogPrefix, t, err)
-		return err
+func (h *Handler) diffSubs(topics map[string]struct{}) (missingTopics, newTopics []string) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for t := range h.subscriptions {
+		if _, k := topics[t]; !k {
+			missingTopics = append(missingTopics, t)
+		}
 	}
-	if err := h.client.Subscribe(t, h.qos, mhf); err != nil {
-		util.Logger.Errorf(model.SubscribeErrString, LogPrefix, t, err)
-		return err
+	for t := range topics {
+		if _, ok := h.subscriptions[t]; !ok {
+			newTopics = append(newTopics, t)
+		}
 	}
-	h.mu.Lock()
-	h.subscriptions[t] = struct{}{}
-	h.mu.Unlock()
-	util.Logger.Infof(model.ResubscribedString, LogPrefix, t)
-	return nil
+	return
 }
 
-func (h *Handler) isSubscribed(t string) (ok bool) {
+func (h *Handler) inSub(t string) (ok bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	_, ok = h.subscriptions[t]
 	return
+}
+
+func (h *Handler) addSub(t string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.subscriptions[t] = struct{}{}
+}
+
+func (h *Handler) deleteSub(t string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	delete(h.subscriptions, t)
 }
