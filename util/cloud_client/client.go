@@ -16,6 +16,7 @@ type ClientItf interface {
 	GetDevice(ctx context.Context, id string) (models.Device, error)
 	GetDeviceL(ctx context.Context, id string) (models.Device, error)
 	GetDevices(ctx context.Context, ids []string) ([]models.Device, error)
+	GetDevicesL(ctx context.Context, ids []string) ([]models.Device, error)
 	UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error
 	GetAccessPolicies(ctx context.Context) (EndpointAccPolItf, error)
 }
