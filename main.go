@@ -209,7 +209,7 @@ func main() {
 	cloudMqttHdl.SetMessageRelayHdl(deviceCmdMsgRelayHdl, processesCmdMsgRelayHdl)
 
 	localDeviceHdl.SetDeviceSyncFunc(cloudHdl.Sync)
-	localDeviceHdl.SetDeviceStateSyncFunc(cloudMqttHdl.HandleSubscriptions)
+	cloudHdl.SetDeviceStateSyncFunc(cloudMqttHdl.HandleSubscriptions)
 
 	localDeviceHdl.Start()
 
