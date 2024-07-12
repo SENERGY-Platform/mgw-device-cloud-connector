@@ -100,7 +100,7 @@ var defaultCloudMqttClientConfig = CloudMqttClientConfig{
 	ConnectTimeout:    30000000000, // 30s
 	ConnectRetryDelay: 30000000000, // 30s
 	MaxReconnectDelay: 60000000000, // 1m
-	WaitTimeout:       5000000000,  // 5s
+	WaitTimeout:       30000000000, // 30s
 	PublishQOSLevel:   0,
 	SubscribeQOSLevel: 2,
 }
