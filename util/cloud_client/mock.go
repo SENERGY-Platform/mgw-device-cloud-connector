@@ -17,6 +17,7 @@ type Mock struct {
 	HubErr             error
 	DeviceErr          error
 	DevicesErr         error
+	DevicesLErr        error
 	AccPolErr          error
 	CreateHubC         int
 	GetHubC            int
@@ -25,6 +26,7 @@ type Mock struct {
 	GetDeviceC         int
 	GetDeviceLC        int
 	GetDevicesC        int
+	GetDevicesLC       int
 	UpdateDeviceC      int
 	GetAccessPoliciesC int
 }
@@ -126,7 +128,7 @@ func (m *Mock) GetDeviceL(_ context.Context, id string) (models.Device, error) {
 	return device, nil
 }
 
-func (m *Mock) GetDevices(ctx context.Context, ids []string) ([]models.Device, error) {
+func (m *Mock) GetDevices(_ context.Context, ids []string) ([]models.Device, error) {
 	m.GetDevicesC++
 	if m.DevicesErr != nil {
 		return nil, m.DevicesErr
@@ -135,8 +137,31 @@ func (m *Mock) GetDevices(ctx context.Context, ids []string) ([]models.Device, e
 		return nil, m.Err
 	}
 	var devices []models.Device
+	for _, cID := range ids {
+		if device, ok := m.Devices[cID]; ok {
+			devices = append(devices, device)
+		}
+	}
+	return devices, nil
+}
+
+func (m *Mock) GetDevicesL(_ context.Context, ids []string) ([]models.Device, error) {
+	m.GetDevicesLC++
+	if m.DevicesLErr != nil {
+		return nil, m.DevicesLErr
+	}
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	deviceMap := make(map[string]models.Device)
 	for _, device := range m.Devices {
-		devices = append(devices, device)
+		deviceMap[device.LocalId] = device
+	}
+	var devices []models.Device
+	for _, lID := range ids {
+		if device, ok := deviceMap[lID]; ok {
+			devices = append(devices, device)
+		}
 	}
 	return devices, nil
 }
