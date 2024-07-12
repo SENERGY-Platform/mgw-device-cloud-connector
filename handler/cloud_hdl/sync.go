@@ -12,73 +12,75 @@ import (
 	"time"
 )
 
-func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) ([]string, []string, []string, []string, error) {
-	if len(newIDs)+len(changedIDs) == 0 && time.Since(h.lastSync) < h.syncInterval {
-		return nil, nil, nil, nil, nil
-	}
-	if len(newIDs)+len(changedIDs) > 0 {
-		util.Logger.Info(logPrefix, " begin devices and network sync")
+func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs, onlineIDs, offlineIDs []string) {
+	var err error
+	if len(newIDs)+len(changedIDs) > 0 || !h.syncOK {
+		util.Logger.Info(logPrefix, " synchronisation")
+		h.syncOK, err = h.syncDevAndNet(ctx, devices, newIDs, changedIDs, missingIDs)
 	} else {
-		util.Logger.Debug(logPrefix, " begin periodic devices and network sync")
+		if time.Since(h.lastSync) > h.syncInterval {
+			util.Logger.Debug(logPrefix, " periodic synchronisation")
+			h.syncOK, err = h.syncDevAndNet(ctx, devices, newIDs, changedIDs, missingIDs)
+		}
 	}
+	if err != nil {
+		util.Logger.Errorf("%s synchronisation: %s", logPrefix, err)
+		h.syncOK = false
+		return
+	}
+	if h.stateSyncFunc != nil {
+		devices2 := make(map[string]model.Device)
+		for lID, lDevice := range devices {
+			if _, k := h.syncedIDs[lID]; k {
+				devices2[lID] = lDevice
+			}
+		}
+		h.stateSyncFunc(ctx, devices2, missingIDs, onlineIDs, offlineIDs)
+	}
+}
+
+func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (bool, error) {
 	devSyncAllowed, err := h.checkAccPols(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return false, err
 	}
 	network, err := h.getNetwork(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return false, err
 	}
 	cloudDevices, err := h.getCloudDevices(ctx, network.DeviceIds)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return false, err
 	}
 	syncedIDs := make(map[string]string)
-	var createFailed []string
-	for _, lID := range newIDs {
-		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
+	var syncOK bool
+	if devSyncAllowed {
+		syncOK, err = h.syncDevices(ctx, devices, cloudDevices, syncedIDs)
 		if err != nil {
-			util.Logger.Errorf("%s %s", logPrefix, err)
-			createFailed = append(createFailed, lID)
+			return false, err
 		}
-		syncedIDs[lID] = cID
-	}
-	var updateFailed []string
-	for _, lID := range changedIDs {
-		cID, err := h.syncDevice(ctx, cloudDevices, devices[lID])
+	} else {
+		err = h.syncDeviceIDs(ctx, devices, cloudDevices, syncedIDs)
 		if err != nil {
-			util.Logger.Errorf("%s %s", logPrefix, err)
-			updateFailed = append(updateFailed, lID)
-		}
-		syncedIDs[lID] = cID
-	}
-	var recreated []string
-	for lID, lDevice := range devices {
-		if _, ok := syncedIDs[lID]; !ok {
-			_, inCloud := cloudDevices[lID]
-			cID, err := h.syncDevice(ctx, cloudDevices, lDevice)
-			if err != nil {
-				util.Logger.Errorf("%s %s", logPrefix, err)
-				if !inCloud {
-					createFailed = append(createFailed, lID)
-				}
-				continue
-			}
-			if !inCloud {
-				recreated = append(recreated, lID)
-			}
-			syncedIDs[lID] = cID
+			return false, err
 		}
 	}
+	if err = h.syncNetwork(ctx, network, syncedIDs); err != nil {
+		return false, err
+	}
+	h.syncedIDs = syncedIDs
+	h.lastSync = time.Now()
+	return syncOK, nil
+}
+
+func (h *Handler) syncNetwork(ctx context.Context, network models.Hub, syncedIDs map[string]string) error {
 	networkDeviceIDSet := make(map[string]struct{})
 	for _, id := range network.DeviceIds {
 		networkDeviceIDSet[id] = struct{}{}
 	}
 	lenOld := len(networkDeviceIDSet)
 	for _, cID := range syncedIDs {
-		if cID != "" {
-			networkDeviceIDSet[cID] = struct{}{}
-		}
+		networkDeviceIDSet[cID] = struct{}{}
 	}
 	if lenOld != len(networkDeviceIDSet) {
 		var deviceIDs []string
@@ -86,48 +88,77 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 			deviceIDs = append(deviceIDs, id)
 		}
 		network.DeviceIds = deviceIDs
-		if err = h.updateNetwork(ctx, network); err != nil {
-			return nil, nil, nil, nil, err
+		if err := h.updateNetwork(ctx, network); err != nil {
+			return err
 		}
 	}
-	h.lastSync = time.Now()
-	return recreated, createFailed, updateFailed, nil, nil
+	return nil
 }
 
-func (h *Handler) syncDevice(ctx context.Context, cDevices map[string]models.Device, lDevice model.Device) (string, error) {
+func (h *Handler) syncDevices(ctx context.Context, lDevices map[string]model.Device, cDevices map[string]models.Device, syncedIDs map[string]string) (bool, error) {
 	ch := context_hdl.New()
 	defer ch.CancelAll()
-	cDevice, ok := cDevices[lDevice.ID]
-	if !ok {
-		util.Logger.Debugf("%s create device (%s)", logPrefix, lDevice.ID)
-		ncd := newCloudDevice(lDevice, "", h.attrOrigin)
-		cID, err := h.cloudClient.CreateDevice(ch.Add(context.WithCancel(ctx)), ncd)
-		if err == nil {
-			util.Logger.Infof("%s created device (%s)", logPrefix, lDevice.ID)
-			return cID, nil
-		} else {
-			var bre *cloud_client.BadRequestError
-			if !errors.As(err, &bre) {
-				return "", fmt.Errorf("create device (%s): %s", lDevice.ID, err)
-			}
-			util.Logger.Warningf("%s create device (%s): %s", logPrefix, lDevice.ID, err)
-			util.Logger.Debugf("%s get device (%s)", logPrefix, lDevice.ID)
-			cDevice, err = h.cloudClient.GetDeviceL(ch.Add(context.WithCancel(ctx)), lDevice.ID)
+	var missingIDs []string
+	for lID := range lDevices {
+		if _, ok := cDevices[lID]; !ok {
+			missingIDs = append(missingIDs, lID)
+		}
+	}
+	cDevices2, err := h.getCloudDevicesL(ctx, missingIDs)
+	if err != nil {
+		return false, err
+	}
+	for lID, cDevice := range cDevices2 {
+		cDevices[lID] = cDevice
+	}
+	syncOk := true
+	for lID, lDevice := range lDevices {
+		cDevice, ok := cDevices[lID]
+		if !ok {
+			util.Logger.Debugf("%s create device (%s)", logPrefix, lID)
+			cID, err := h.cloudClient.CreateDevice(ch.Add(context.WithCancel(ctx)), newCloudDevice(lDevice, "", h.attrOrigin))
 			if err != nil {
-				return "", fmt.Errorf("get device (%s): %s", lDevice.ID, err)
+				util.Logger.Errorf("%s create device (%s): %s", logPrefix, lID, err)
+				syncOk = false
+				continue
 			}
+			util.Logger.Infof("%s created device (%s)", logPrefix, lID)
+			syncedIDs[lID] = cID
+		} else {
+			if notEqual(cDevice, lDevice, h.attrOrigin) {
+				util.Logger.Debugf("%s update device (%s)", logPrefix, lID)
+				if err = h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), newCloudDevice(lDevice, cDevice.Id, h.attrOrigin), h.attrOrigin); err != nil {
+					util.Logger.Errorf("%s update device (%s): %s", logPrefix, lID, err)
+					syncOk = false
+				} else {
+					util.Logger.Infof("%s updated device (%s)", logPrefix, lID)
+				}
+			}
+			syncedIDs[lID] = cDevice.Id
 		}
 	}
-	if notEqual(cDevice, lDevice, h.attrOrigin) {
-		util.Logger.Debugf("%s update device (%s)", logPrefix, lDevice.ID)
-		ncd := newCloudDevice(lDevice, cDevice.Id, h.attrOrigin)
-		if err := h.cloudClient.UpdateDevice(ch.Add(context.WithCancel(ctx)), ncd, h.attrOrigin); err != nil {
-			return "", fmt.Errorf("update device (%s): %s", lDevice.ID, err)
+	return syncOk, nil
+}
+
+func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.Device, cloudDevices map[string]models.Device, syncedIDs map[string]string) error {
+	var missingIDs []string
+	for lID := range devices {
+		if cDevice, ok := cloudDevices[lID]; ok {
+			syncedIDs[lID] = cDevice.Id
+		} else {
+			missingIDs = append(missingIDs, lID)
 		}
-		util.Logger.Infof("%s updated device (%s)", logPrefix, lDevice.ID)
-		return cDevice.Id, nil
 	}
-	return cDevice.Id, nil
+	cloudDevices2, err := h.getCloudDevicesL(ctx, missingIDs)
+	if err != nil {
+		return err
+	}
+	for _, lID := range missingIDs {
+		if cDevice, ok := cloudDevices2[lID]; ok {
+			syncedIDs[lID] = cDevice.Id
+		}
+	}
+	return nil
 }
 
 func (h *Handler) getNetwork(ctx context.Context) (models.Hub, error) {
@@ -170,11 +201,20 @@ func (h *Handler) updateNetwork(ctx context.Context, network models.Hub) error {
 }
 
 func (h *Handler) getCloudDevices(ctx context.Context, cDeviceIDs []string) (map[string]models.Device, error) {
+	return h.getCloudDevs(ctx, cDeviceIDs, h.cloudClient.GetDevices)
+}
+
+func (h *Handler) getCloudDevicesL(ctx context.Context, lDeviceIDs []string) (map[string]models.Device, error) {
+	return h.getCloudDevs(ctx, lDeviceIDs, h.cloudClient.GetDevicesL)
+}
+
+func (h *Handler) getCloudDevs(ctx context.Context, ids []string, gf func(context.Context, []string) ([]models.Device, error)) (map[string]models.Device, error) {
 	cloudDevices := make(map[string]models.Device)
-	if len(cDeviceIDs) > 0 {
+	if len(ids) > 0 {
+		util.Logger.Debugf("%s get devices (%s)", logPrefix, ids)
 		ctxWc, cf := context.WithCancel(ctx)
 		defer cf()
-		devicesList, err := h.cloudClient.GetDevices(ctxWc, cDeviceIDs)
+		devicesList, err := gf(ctxWc, ids)
 		if err != nil {
 			return nil, fmt.Errorf("get devices: %s", err)
 		}

@@ -18,6 +18,8 @@ type Handler struct {
 	attrOrigin      string
 	userID          string
 	data            data
+	syncOK          bool
+	syncedIDs       map[string]string
 	lastSync        time.Time
 	syncInterval    time.Duration
 	noNetwork       bool
