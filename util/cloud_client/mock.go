@@ -98,35 +98,35 @@ func (m *Mock) CreateDevice(_ context.Context, device models.Device) (string, er
 	return device.Id, nil
 }
 
-func (m *Mock) GetDevice(_ context.Context, id string) (models.Device, error) {
-	m.GetDeviceC += 1
-	if m.DeviceErr != nil {
-		return models.Device{}, m.DeviceErr
-	}
-	if m.Err != nil {
-		return models.Device{}, m.Err
-	}
-	device, ok := m.Devices[id]
-	if !ok {
-		return models.Device{}, newNotFoundError(errors.New("not found"))
-	}
-	return device, nil
-}
-
-func (m *Mock) GetDeviceL(_ context.Context, id string) (models.Device, error) {
-	m.GetDeviceLC += 1
-	if m.DeviceErr != nil {
-		return models.Device{}, m.DeviceErr
-	}
-	if m.Err != nil {
-		return models.Device{}, m.Err
-	}
-	device, ok := m.Devices[m.DeviceIDMap[id]]
-	if !ok {
-		return models.Device{}, newNotFoundError(errors.New("not found"))
-	}
-	return device, nil
-}
+//func (m *Mock) GetDevice(_ context.Context, id string) (models.Device, error) {
+//	m.GetDeviceC += 1
+//	if m.DeviceErr != nil {
+//		return models.Device{}, m.DeviceErr
+//	}
+//	if m.Err != nil {
+//		return models.Device{}, m.Err
+//	}
+//	device, ok := m.Devices[id]
+//	if !ok {
+//		return models.Device{}, newNotFoundError(errors.New("not found"))
+//	}
+//	return device, nil
+//}
+//
+//func (m *Mock) GetDeviceL(_ context.Context, id string) (models.Device, error) {
+//	m.GetDeviceLC += 1
+//	if m.DeviceErr != nil {
+//		return models.Device{}, m.DeviceErr
+//	}
+//	if m.Err != nil {
+//		return models.Device{}, m.Err
+//	}
+//	device, ok := m.Devices[m.DeviceIDMap[id]]
+//	if !ok {
+//		return models.Device{}, newNotFoundError(errors.New("not found"))
+//	}
+//	return device, nil
+//}
 
 func (m *Mock) GetDevices(_ context.Context, ids []string) ([]models.Device, error) {
 	m.GetDevicesC++

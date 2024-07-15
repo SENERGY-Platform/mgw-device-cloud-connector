@@ -13,8 +13,6 @@ type ClientItf interface {
 	GetHub(ctx context.Context, id string) (models.Hub, error)
 	UpdateHub(ctx context.Context, hub models.Hub) error
 	CreateDevice(ctx context.Context, device models.Device) (string, error)
-	GetDevice(ctx context.Context, id string) (models.Device, error)
-	GetDeviceL(ctx context.Context, id string) (models.Device, error)
 	GetDevices(ctx context.Context, ids []string) ([]models.Device, error)
 	GetDevicesL(ctx context.Context, ids []string) ([]models.Device, error)
 	UpdateDevice(ctx context.Context, device models.Device, attributeOrigin string) error
