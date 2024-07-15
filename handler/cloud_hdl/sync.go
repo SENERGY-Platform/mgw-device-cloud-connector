@@ -52,15 +52,15 @@ func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.De
 	if err != nil {
 		return false, err
 	}
-	syncedIDs := make(map[string]string)
+	var syncedIDs map[string]string
 	var syncOK bool
 	if devSyncAllowed {
-		syncOK, err = h.syncDevices(ctx, devices, cloudDevices, syncedIDs)
+		syncedIDs, syncOK, err = h.syncDevices(ctx, devices, cloudDevices)
 		if err != nil {
 			return false, err
 		}
 	} else {
-		err = h.syncDeviceIDs(ctx, devices, cloudDevices, syncedIDs)
+		syncedIDs, err = h.syncDeviceIDs(ctx, devices, cloudDevices)
 		if err != nil {
 			return false, err
 		}
@@ -95,7 +95,7 @@ func (h *Handler) syncNetwork(ctx context.Context, network models.Hub, syncedIDs
 	return nil
 }
 
-func (h *Handler) syncDevices(ctx context.Context, lDevices map[string]model.Device, cDevices map[string]models.Device, syncedIDs map[string]string) (bool, error) {
+func (h *Handler) syncDevices(ctx context.Context, lDevices map[string]model.Device, cDevices map[string]models.Device) (map[string]string, bool, error) {
 	ch := context_hdl.New()
 	defer ch.CancelAll()
 	var missingIDs []string
@@ -106,11 +106,12 @@ func (h *Handler) syncDevices(ctx context.Context, lDevices map[string]model.Dev
 	}
 	cDevices2, err := h.getCloudDevicesL(ctx, missingIDs)
 	if err != nil {
-		return false, err
+		return nil, false, err
 	}
 	for lID, cDevice := range cDevices2 {
 		cDevices[lID] = cDevice
 	}
+	syncedIDs := make(map[string]string)
 	syncOk := true
 	for lID, lDevice := range lDevices {
 		cDevice, ok := cDevices[lID]
@@ -137,10 +138,11 @@ func (h *Handler) syncDevices(ctx context.Context, lDevices map[string]model.Dev
 			syncedIDs[lID] = cDevice.Id
 		}
 	}
-	return syncOk, nil
+	return syncedIDs, syncOk, nil
 }
 
-func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.Device, cloudDevices map[string]models.Device, syncedIDs map[string]string) error {
+func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.Device, cloudDevices map[string]models.Device) (map[string]string, error) {
+	syncedIDs := make(map[string]string)
 	var missingIDs []string
 	for lID := range devices {
 		if cDevice, ok := cloudDevices[lID]; ok {
@@ -151,14 +153,14 @@ func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.De
 	}
 	cloudDevices2, err := h.getCloudDevicesL(ctx, missingIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, lID := range missingIDs {
 		if cDevice, ok := cloudDevices2[lID]; ok {
 			syncedIDs[lID] = cDevice.Id
 		}
 	}
-	return nil
+	return syncedIDs, nil
 }
 
 func (h *Handler) getNetwork(ctx context.Context) (models.Hub, error) {
