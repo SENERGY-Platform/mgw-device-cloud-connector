@@ -540,18 +540,13 @@ func TestHandler_syncDevices(t *testing.T) {
 }
 
 func TestHandler_getNetwork(t *testing.T) {
-	var mockCC *cloud_client.Mock
-	var handler *Handler
-	initTest := func() {
-		mockCC = &cloud_client.Mock{}
-		handler = &Handler{
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("network not found", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
 			cloudClient: mockCC,
 			data:        data{NetworkID: "1"},
 		}
-	}
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
-	t.Run("network not found", func(t *testing.T) {
-		initTest()
 		_, err := handler.getNetwork(context.Background())
 		if err == nil {
 			t.Error("error expected")
@@ -561,7 +556,11 @@ func TestHandler_getNetwork(t *testing.T) {
 		}
 	})
 	t.Run("network user id not equal", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
 		mockCC.Hubs = map[string]models.Hub{
 			"1": {
 				Id:        "1",
@@ -579,7 +578,11 @@ func TestHandler_getNetwork(t *testing.T) {
 		}
 	})
 	t.Run("request error", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
 		mockCC.Err = errors.New("test error")
 		_, err := handler.getNetwork(context.Background())
 		if err == nil {
@@ -592,18 +595,13 @@ func TestHandler_getNetwork(t *testing.T) {
 }
 
 func TestHandler_updateNetwork(t *testing.T) {
-	var mockCC *cloud_client.Mock
-	var handler *Handler
-	initTest := func() {
-		mockCC = &cloud_client.Mock{}
-		handler = &Handler{
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("network not found", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
 			cloudClient: mockCC,
 			data:        data{NetworkID: "1"},
 		}
-	}
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
-	t.Run("network not found", func(t *testing.T) {
-		initTest()
 		err := handler.updateNetwork(context.Background(), models.Hub{})
 		if err == nil {
 			t.Error("error expected")
@@ -613,7 +611,11 @@ func TestHandler_updateNetwork(t *testing.T) {
 		}
 	})
 	t.Run("request error", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+			data:        data{NetworkID: "1"},
+		}
 		mockCC.Err = errors.New("test error")
 		err := handler.updateNetwork(context.Background(), models.Hub{})
 		if err == nil {
@@ -625,18 +627,13 @@ func TestHandler_updateNetwork(t *testing.T) {
 	})
 }
 
-func TestHandler_getCloudDevices(t *testing.T) {
-	var mockCC *cloud_client.Mock
-	var handler *Handler
-	initTest := func() {
-		mockCC = &cloud_client.Mock{}
-		handler = &Handler{
-			cloudClient: mockCC,
-		}
-	}
+func TestHandler_getCloudDevs(t *testing.T) {
 	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("no error", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		cD1 := models.Device{
 			Id:      "1",
 			LocalId: "l1",
@@ -649,7 +646,7 @@ func TestHandler_getCloudDevices(t *testing.T) {
 			"1": cD1,
 			"2": cD2,
 		}
-		cloudDevices, err := handler.getCloudDevices(context.Background(), []string{"1", "2"})
+		cloudDevices, err := handler.getCloudDevs(context.Background(), []string{"1", "2"}, mockCC.GetDevices)
 		if err != nil {
 			t.Error(err)
 		}
@@ -664,15 +661,21 @@ func TestHandler_getCloudDevices(t *testing.T) {
 		}
 	})
 	t.Run("error", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.Err = errors.New("test error")
-		_, err := handler.getCloudDevices(context.Background(), []string{"1", "2"})
+		_, err := handler.getCloudDevs(context.Background(), []string{"1", "2"}, mockCC.GetDevices)
 		if err == nil {
 			t.Error("error expected")
 		}
 	})
 	t.Run("device user id not equal", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		cD1 := models.Device{
 			Id:      "1",
 			LocalId: "l1",
@@ -687,7 +690,7 @@ func TestHandler_getCloudDevices(t *testing.T) {
 			},
 		}
 		handler.userID = "123"
-		cloudDevices, err := handler.getCloudDevices(context.Background(), []string{"1", "2"})
+		cloudDevices, err := handler.getCloudDevs(context.Background(), []string{"1", "2"}, mockCC.GetDevices)
 		if err != nil {
 			t.Error(err)
 		}
@@ -701,17 +704,12 @@ func TestHandler_getCloudDevices(t *testing.T) {
 }
 
 func TestHandler_checkAccPols(t *testing.T) {
-	var mockCC *cloud_client.Mock
-	var handler *Handler
-	initTest := func() {
-		mockCC = &cloud_client.Mock{}
-		handler = &Handler{
-			cloudClient: mockCC,
-		}
-	}
 	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("network read not allowed", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{HubsAccPol: cloud_client.HttpMethodAccPolMock{
 			ReadAP:   false,
 			CreateAP: true,
@@ -723,7 +721,10 @@ func TestHandler_checkAccPols(t *testing.T) {
 		}
 	})
 	t.Run("network update not allowed", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{HubsAccPol: cloud_client.HttpMethodAccPolMock{
 			ReadAP:   true,
 			CreateAP: true,
@@ -735,7 +736,10 @@ func TestHandler_checkAccPols(t *testing.T) {
 		}
 	})
 	t.Run("devices (cloud id) read not allowed", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
 			HubsAccPol: cloud_client.HttpMethodAccPolMock{
 				ReadAP:   true,
@@ -755,7 +759,10 @@ func TestHandler_checkAccPols(t *testing.T) {
 		}
 	})
 	t.Run("devices (local id) read not allowed", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
 			HubsAccPol: cloud_client.HttpMethodAccPolMock{
 				ReadAP:   true,
@@ -781,7 +788,10 @@ func TestHandler_checkAccPols(t *testing.T) {
 		}
 	})
 	t.Run("devices (cloud id) create not allowed", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
 			HubsAccPol: cloud_client.HttpMethodAccPolMock{
 				ReadAP:   true,
@@ -811,7 +821,10 @@ func TestHandler_checkAccPols(t *testing.T) {
 		}
 	})
 	t.Run("devices (cloud id) update not allowed", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
 			HubsAccPol: cloud_client.HttpMethodAccPolMock{
 				ReadAP:   true,
@@ -841,7 +854,10 @@ func TestHandler_checkAccPols(t *testing.T) {
 		}
 	})
 	t.Run("devices (local & cloud id) read only", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.EptAccPol = cloud_client.EndpointAccPolMock{
 			HubsAccPol: cloud_client.HttpMethodAccPolMock{
 				ReadAP:   true,
@@ -871,7 +887,10 @@ func TestHandler_checkAccPols(t *testing.T) {
 		}
 	})
 	t.Run("error", func(t *testing.T) {
-		initTest()
+		mockCC := &cloud_client.Mock{}
+		handler := &Handler{
+			cloudClient: mockCC,
+		}
 		mockCC.Err = errors.New("test")
 		if _, err := handler.checkAccPols(context.Background()); err == nil {
 			t.Error("error expected")
