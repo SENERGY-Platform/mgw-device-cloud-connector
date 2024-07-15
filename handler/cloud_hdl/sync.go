@@ -84,13 +84,22 @@ func (h *Handler) syncNetwork(ctx context.Context, network models.Hub, syncedIDs
 		networkDeviceIDSet[cID] = struct{}{}
 	}
 	if lenOld != len(networkDeviceIDSet) {
+		util.Logger.Infof("%s update network (%s)", logPrefix, h.data.NetworkID)
 		var deviceIDs []string
 		for id := range networkDeviceIDSet {
 			deviceIDs = append(deviceIDs, id)
 		}
 		network.DeviceIds = deviceIDs
-		if err := h.updateNetwork(ctx, network); err != nil {
-			return err
+		ctxWc, cf := context.WithCancel(ctx)
+		defer cf()
+		if err := h.cloudClient.UpdateHub(ctxWc, network); err != nil {
+			var nfe *cloud_client.NotFoundError
+			if errors.As(err, &nfe) {
+				h.mu.Lock()
+				defer h.mu.Unlock()
+				h.noNetwork = true
+			}
+			return fmt.Errorf("update network (%s): %s", h.data.NetworkID, err)
 		}
 	}
 	return nil
@@ -185,22 +194,6 @@ func (h *Handler) getNetwork(ctx context.Context) (models.Hub, error) {
 		return models.Hub{}, fmt.Errorf("get network (%s): invalid user ID", h.data.NetworkID)
 	}
 	return network, nil
-}
-
-func (h *Handler) updateNetwork(ctx context.Context, network models.Hub) error {
-	util.Logger.Infof("%s update network (%s)", logPrefix, h.data.NetworkID)
-	ctxWc, cf := context.WithCancel(ctx)
-	defer cf()
-	if err := h.cloudClient.UpdateHub(ctxWc, network); err != nil {
-		var nfe *cloud_client.NotFoundError
-		if errors.As(err, &nfe) {
-			h.mu.Lock()
-			defer h.mu.Unlock()
-			h.noNetwork = true
-		}
-		return fmt.Errorf("update network (%s): %s", h.data.NetworkID, err)
-	}
-	return nil
 }
 
 func (h *Handler) getCloudDevices(ctx context.Context, cDeviceIDs []string) (map[string]models.Device, error) {
