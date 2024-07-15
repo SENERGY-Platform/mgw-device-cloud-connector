@@ -17,11 +17,11 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	var err error
 	if len(newIDs)+len(changedIDs) > 0 || !h.syncOK {
 		util.Logger.Info(logPrefix, " synchronisation")
-		h.syncOK, err = h.syncDevAndNet(ctx, devices, newIDs, changedIDs, missingIDs)
+		h.syncOK, err = h.syncDevAndNet(ctx, devices)
 	} else {
 		if time.Since(h.lastSync) > h.syncInterval {
 			util.Logger.Debug(logPrefix, " periodic synchronisation")
-			h.syncOK, err = h.syncDevAndNet(ctx, devices, newIDs, changedIDs, missingIDs)
+			h.syncOK, err = h.syncDevAndNet(ctx, devices)
 		}
 	}
 	if err != nil {
@@ -40,7 +40,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 	}
 }
 
-func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs []string) (bool, error) {
+func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.Device) (bool, error) {
 	devSyncAllowed, err := h.checkAccPols(ctx)
 	if err != nil {
 		return false, err
