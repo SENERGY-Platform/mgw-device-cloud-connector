@@ -12,21 +12,9 @@ import (
 )
 
 func TestHandler_Init(t *testing.T) {
-	var mockCC *cloud_client.Mock
-	var mockSP *auth_client.Mock
-	var handler *Handler
 	tmpDir := t.TempDir()
 	userID := "123"
-	initHandler := func() {
-		mockCC = &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
-		mockSP = &auth_client.Mock{UserID: userID}
-		handler = &Handler{
-			cloudClient:     mockCC,
-			subjectProvider: mockSP,
-			wrkSpacePath:    tmpDir,
-		}
-	}
-	check := func(networkID, networkName string) {
+	check := func(networkID, networkName string, handler *Handler, mockCC *cloud_client.Mock) {
 		if handler.data.NetworkID != networkID {
 			t.Error("network ID not equal")
 		}
@@ -47,7 +35,13 @@ func TestHandler_Init(t *testing.T) {
 	}
 	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("get user ID", func(t *testing.T) {
-		initHandler()
+		mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+		mockSP := &auth_client.Mock{UserID: userID}
+		handler := &Handler{
+			cloudClient:     mockCC,
+			subjectProvider: mockSP,
+			wrkSpacePath:    tmpDir,
+		}
 		_, uID, err := handler.Init(context.Background(), "", "", time.Second)
 		if err != nil {
 			t.Error(err)
@@ -59,15 +53,27 @@ func TestHandler_Init(t *testing.T) {
 	t.Run("no cloud network", func(t *testing.T) {
 		networkName := "test"
 		t.Run("no saved network ID parameter not set", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			nID, _, err := handler.Init(context.Background(), "", networkName, time.Second)
 			if err != nil {
 				t.Error(err)
 			}
-			check(nID, networkName)
+			check(nID, networkName, handler, mockCC)
 		})
 		t.Run("saved network ID parameter not set", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			err := writeData(tmpDir, data{NetworkID: "123"})
 			if err != nil {
 				t.Error(err)
@@ -76,18 +82,30 @@ func TestHandler_Init(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			check(nID, networkName)
+			check(nID, networkName, handler, mockCC)
 		})
 		t.Run("no saved networkID parameter set", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			nID, _, err := handler.Init(context.Background(), "123", networkName, time.Second)
 			if err != nil {
 				t.Error(err)
 			}
-			check(nID, networkName)
+			check(nID, networkName, handler, mockCC)
 		})
 		t.Run("saved networkID parameter set equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			err := writeData(tmpDir, data{NetworkID: "123"})
 			if err != nil {
 				t.Error(err)
@@ -96,10 +114,16 @@ func TestHandler_Init(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			check(nID, networkName)
+			check(nID, networkName, handler, mockCC)
 		})
 		t.Run("saved networkID parameter set not equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			err := writeData(tmpDir, data{NetworkID: "123"})
 			if err != nil {
 				t.Error(err)
@@ -108,7 +132,7 @@ func TestHandler_Init(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			check(nID, networkName)
+			check(nID, networkName, handler, mockCC)
 		})
 	})
 	t.Run("cloud network exists", func(t *testing.T) {
@@ -119,7 +143,13 @@ func TestHandler_Init(t *testing.T) {
 			OwnerId: userID,
 		}
 		t.Run("saved network ID parameter not set", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			mockCC.Hubs[networkID] = network
 			err := writeData(tmpDir, data{NetworkID: networkID})
 			if err != nil {
@@ -132,10 +162,16 @@ func TestHandler_Init(t *testing.T) {
 			if nID != networkID {
 				t.Error("network id not equal")
 			}
-			check(nID, network.Name)
+			check(nID, network.Name, handler, mockCC)
 		})
 		t.Run("saved network ID parameter set equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			mockCC.Hubs[networkID] = network
 			err := writeData(tmpDir, data{NetworkID: networkID})
 			if err != nil {
@@ -148,10 +184,16 @@ func TestHandler_Init(t *testing.T) {
 			if nID != networkID {
 				t.Error("network id not equal")
 			}
-			check(nID, network.Name)
+			check(nID, network.Name, handler, mockCC)
 		})
 		t.Run("saved network ID not equal parameter set equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			mockCC.Hubs[networkID] = network
 			err := writeData(tmpDir, data{NetworkID: "456"})
 			if err != nil {
@@ -164,10 +206,16 @@ func TestHandler_Init(t *testing.T) {
 			if nID != networkID {
 				t.Error("network id not equal")
 			}
-			check(nID, network.Name)
+			check(nID, network.Name, handler, mockCC)
 		})
 		t.Run("saved network ID equal parameter set not equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			mockCC.Hubs[networkID] = network
 			err := writeData(tmpDir, data{NetworkID: networkID})
 			if err != nil {
@@ -180,19 +228,31 @@ func TestHandler_Init(t *testing.T) {
 			if nID != networkID {
 				t.Error("network id not equal")
 			}
-			check(nID, network.Name)
+			check(nID, network.Name, handler, mockCC)
 		})
 		t.Run("no saved networkID parameter set", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			mockCC.Hubs[networkID] = network
 			nID, _, err := handler.Init(context.Background(), networkID, "", time.Second)
 			if err != nil {
 				t.Error(err)
 			}
-			check(nID, network.Name)
+			check(nID, network.Name, handler, mockCC)
 		})
 		t.Run("user ID mismatch", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
+			mockSP := &auth_client.Mock{UserID: userID}
+			handler := &Handler{
+				cloudClient:     mockCC,
+				subjectProvider: mockSP,
+				wrkSpacePath:    tmpDir,
+			}
 			network.OwnerId = "456"
 			mockCC.Hubs[networkID] = network
 			nID, _, err := handler.Init(context.Background(), networkID, "test", time.Second)
@@ -202,7 +262,7 @@ func TestHandler_Init(t *testing.T) {
 			if nID == networkID {
 				t.Error("network id is equal")
 			}
-			check(nID, "test")
+			check(nID, "test", handler, mockCC)
 		})
 	})
 }
