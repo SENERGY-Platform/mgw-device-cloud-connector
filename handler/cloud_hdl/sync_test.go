@@ -539,6 +539,66 @@ func TestHandler_syncDevices(t *testing.T) {
 	})
 }
 
+func TestHandler_syncDeviceIDs(t *testing.T) {
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	cID := "1"
+	lID := "123"
+	cDevice := models.Device{
+		Id:      cID,
+		LocalId: lID,
+	}
+	lDevice := model.Device{
+		ID: lID,
+	}
+	t.Run("cloud device does not exist", func(t *testing.T) {
+		mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+		handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
+		syncedIDs, err := handler.syncDeviceIDs(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{})
+		if err != nil {
+			t.Error(err)
+		}
+		if len(syncedIDs) > 0 {
+			t.Error("invalid length")
+		}
+	})
+	t.Run("cloud device exists", func(t *testing.T) {
+		t.Run("in network", func(t *testing.T) {
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
+			mockCC.Devices[cID] = cDevice
+			mockCC.DeviceIDMap[lID] = cID
+			syncedIDs, err := handler.syncDeviceIDs(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{lID: cDevice})
+			if err != nil {
+				t.Error(err)
+			}
+			id, ok := syncedIDs[lID]
+			if !ok {
+				t.Error("local device ID not in map")
+			}
+			if id != cID {
+				t.Error("cloud ID not equal")
+			}
+		})
+		t.Run("not in network", func(t *testing.T) {
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
+			mockCC.Devices[cID] = cDevice
+			mockCC.DeviceIDMap[lID] = cID
+			syncedIDs, err := handler.syncDeviceIDs(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{})
+			if err != nil {
+				t.Error(err)
+			}
+			id, ok := syncedIDs[lID]
+			if !ok {
+				t.Error("local device ID not in map")
+			}
+			if id != cID {
+				t.Error("cloud ID not equal")
+			}
+		})
+	})
+}
+
 func TestHandler_getNetwork(t *testing.T) {
 	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("network not found", func(t *testing.T) {
