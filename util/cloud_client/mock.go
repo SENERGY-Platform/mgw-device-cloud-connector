@@ -8,23 +8,25 @@ import (
 )
 
 type Mock struct {
-	Devices            map[string]models.Device
-	Hubs               map[string]models.Hub
-	DeviceIDMap        map[string]string
-	AttributeOrigin    string
-	EptAccPol          EndpointAccPolMock
-	Err                error
-	HubErr             error
-	DeviceErr          error
-	DevicesErr         error
-	DevicesLErr        error
-	AccPolErr          error
-	CreateHubC         int
-	GetHubC            int
-	UpdateHubC         int
-	CreateDeviceC      int
-	GetDeviceC         int
-	GetDeviceLC        int
+	Devices         map[string]models.Device
+	Hubs            map[string]models.Hub
+	DeviceIDMap     map[string]string
+	AttributeOrigin string
+	EptAccPol       EndpointAccPolMock
+	Err             error
+	HubErr          error
+	DeviceErr       error
+	DevicesErr      error
+	DevicesLErr     error
+	CreateDeviceErr error
+	UpdateDeviceErr error
+	AccPolErr       error
+	CreateHubC      int
+	GetHubC         int
+	UpdateHubC      int
+	CreateDeviceC   int
+	//GetDeviceC         int
+	//GetDeviceLC        int
 	GetDevicesC        int
 	GetDevicesLC       int
 	UpdateDeviceC      int
@@ -85,6 +87,9 @@ func (m *Mock) CreateDevice(_ context.Context, device models.Device) (string, er
 	m.CreateDeviceC += 1
 	if m.DeviceErr != nil {
 		return "", m.DeviceErr
+	}
+	if m.CreateDeviceErr != nil {
+		return "", m.CreateDeviceErr
 	}
 	if m.Err != nil {
 		return "", m.Err
@@ -171,6 +176,9 @@ func (m *Mock) UpdateDevice(_ context.Context, device models.Device, attributeOr
 	m.UpdateDeviceC += 1
 	if m.DeviceErr != nil {
 		return m.DeviceErr
+	}
+	if m.UpdateDeviceErr != nil {
+		return m.UpdateDeviceErr
 	}
 	if m.Err != nil {
 		return m.Err
