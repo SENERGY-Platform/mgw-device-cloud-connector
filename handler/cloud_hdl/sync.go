@@ -9,6 +9,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	"github.com/SENERGY-Platform/models/go/models"
+	"strings"
 	"time"
 )
 
@@ -213,7 +214,7 @@ func (h *Handler) getCloudDevicesL(ctx context.Context, lDeviceIDs []string) (ma
 func (h *Handler) getCloudDevs(ctx context.Context, ids []string, gf func(context.Context, []string) ([]models.Device, error)) (map[string]models.Device, error) {
 	cloudDevices := make(map[string]models.Device)
 	if len(ids) > 0 {
-		util.Logger.Debugf("%s get devices (%s)", logPrefix, ids)
+		util.Logger.Debugf("%s get devices (%s)", logPrefix, strings.Join(ids, ", "))
 		ctxWc, cf := context.WithCancel(ctx)
 		defer cf()
 		devicesList, err := gf(ctxWc, ids)
