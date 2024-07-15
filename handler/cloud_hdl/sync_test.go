@@ -310,13 +310,7 @@ func TestHandler_Sync(t *testing.T) {
 	})
 }
 
-func TestHandler_syncDevice(t *testing.T) {
-	var mockCC *cloud_client.Mock
-	var handler *Handler
-	initHandler := func() {
-		mockCC = &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
-		handler = &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
-	}
+func TestHandler_syncDevices(t *testing.T) {
 	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
 	cID := "1"
 	lID := "123"
@@ -346,10 +340,18 @@ func TestHandler_syncDevice(t *testing.T) {
 		},
 	}
 	t.Run("cloud device does not exist", func(t *testing.T) {
-		initHandler()
-		id, err := handler.syncDevice(context.Background(), map[string]models.Device{}, lDevice)
+		mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+		handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
+		syncedIDs, ok, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{})
 		if err != nil {
 			t.Error(err)
+		}
+		if !ok {
+			t.Error("should be true")
+		}
+		id, ok := syncedIDs[lID]
+		if !ok {
+			t.Error("local device ID not in map")
 		}
 		cd, ok := mockCC.Devices[id]
 		if !ok {
@@ -361,22 +363,30 @@ func TestHandler_syncDevice(t *testing.T) {
 	})
 	t.Run("cloud device exists", func(t *testing.T) {
 		t.Run("in network equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
 			mockCC.Devices[cID] = cDevice
 			mockCC.DeviceIDMap[lID] = cID
-			id, err := handler.syncDevice(context.Background(), map[string]models.Device{
+			syncedIDs, ok, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{
 				lID: cDevice,
-			}, lDevice)
+			})
 			if err != nil {
 				t.Error(err)
+			}
+			if !ok {
+				t.Error("should be true")
+			}
+			id, ok := syncedIDs[lID]
+			if !ok {
+				t.Error("local device ID not in map")
 			}
 			if id != cID {
 				t.Error("cloud ID not equal")
 			}
-			if mockCC.CreateDeviceC > 0 {
+			if mockCC.GetDevicesLC > 0 {
 				t.Error("illegal call")
 			}
-			if mockCC.GetDeviceLC > 0 {
+			if mockCC.CreateDeviceC > 0 {
 				t.Error("illegal call")
 			}
 			if mockCC.UpdateDeviceC > 0 {
@@ -384,78 +394,145 @@ func TestHandler_syncDevice(t *testing.T) {
 			}
 		})
 		t.Run("not in network equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
 			mockCC.Devices[cID] = cDevice
 			mockCC.DeviceIDMap[lID] = cID
-			id, err := handler.syncDevice(context.Background(), map[string]models.Device{}, lDevice)
+			syncedIDs, ok, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{})
 			if err != nil {
 				t.Error(err)
+			}
+			if !ok {
+				t.Error("should be true")
+			}
+			id, ok := syncedIDs[lID]
+			if !ok {
+				t.Error("local device ID not in map")
 			}
 			if id != cID {
 				t.Error("cloud ID not equal")
 			}
-			if mockCC.CreateDeviceC != 1 {
+			if mockCC.GetDevicesLC != 1 {
 				t.Error("missing call")
 			}
-			if mockCC.GetDeviceLC != 1 {
+			if mockCC.CreateDeviceC > 0 {
 				t.Error("missing call")
 			}
 			if mockCC.UpdateDeviceC > 0 {
 				t.Error("illegal call")
 			}
 		})
-		lDevice.Name = "test"
 		t.Run("in network not equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
 			mockCC.Devices[cID] = cDevice
 			mockCC.DeviceIDMap[lID] = cID
-			id, err := handler.syncDevice(context.Background(), map[string]models.Device{
+			lDevice2 := lDevice
+			lDevice2.Name = "test"
+			syncedIDs, ok, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice2}, map[string]models.Device{
 				lID: cDevice,
-			}, lDevice)
+			})
 			if err != nil {
 				t.Error(err)
 			}
+			if !ok {
+				t.Error("should be true")
+			}
+			id, ok := syncedIDs[lID]
+			if !ok {
+				t.Error("local device ID not in map")
+			}
 			if id != cID {
 				t.Error("cloud ID not equal")
+			}
+			if mockCC.GetDevicesLC > 0 {
+				t.Error("illegal call")
 			}
 			if mockCC.CreateDeviceC > 0 {
 				t.Error("illegal call")
 			}
-			if mockCC.GetDeviceLC > 0 {
-				t.Error("illegal call")
+			if mockCC.UpdateDeviceC != 1 {
+				t.Error("missing call")
 			}
 			cd := mockCC.Devices[cID]
-			if cd.Name != lDevice.Name {
+			if cd.Name != lDevice2.Name {
 				t.Error("name not equal")
 			}
 		})
 		t.Run("not in network not equal", func(t *testing.T) {
-			initHandler()
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
 			mockCC.Devices[cID] = cDevice
 			mockCC.DeviceIDMap[lID] = cID
-			id, err := handler.syncDevice(context.Background(), map[string]models.Device{}, lDevice)
+			lDevice2 := lDevice
+			lDevice2.Name = "test"
+			syncedIDs, ok, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice2}, map[string]models.Device{})
 			if err != nil {
 				t.Error(err)
+			}
+			if !ok {
+				t.Error("should be true")
+			}
+			id, ok := syncedIDs[lID]
+			if !ok {
+				t.Error("local device ID not in map")
 			}
 			if id != cID {
 				t.Error("cloud ID not equal")
 			}
-			if mockCC.CreateDeviceC != 1 {
+			if mockCC.GetDevicesLC != 1 {
 				t.Error("missing call")
 			}
-			if mockCC.GetDeviceLC != 1 {
-				t.Error("missing call")
+			if mockCC.CreateDeviceC > 0 {
+				t.Error("illegal call")
 			}
 			cd := mockCC.Devices[cID]
-			if cd.Name != lDevice.Name {
+			if cd.Name != lDevice2.Name {
 				t.Error("name not equal")
 			}
 		})
 	})
+	t.Run("incomplete sync", func(t *testing.T) {
+		t.Run("create device error", func(t *testing.T) {
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
+			mockCC.CreateDeviceErr = errors.New("test")
+			syncedIDs, ok, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{})
+			if err != nil {
+				t.Error(err)
+			}
+			if ok {
+				t.Error("should be false")
+			}
+			if len(syncedIDs) > 0 {
+				t.Error("invalid length")
+			}
+		})
+		t.Run("update device error", func(t *testing.T) {
+			mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+			handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
+			mockCC.UpdateDeviceErr = errors.New("test")
+			lDevice2 := lDevice
+			lDevice2.Name = "test"
+			syncedIDs, ok, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice2}, map[string]models.Device{
+				lID: cDevice,
+			})
+			if err != nil {
+				t.Error(err)
+			}
+			if ok {
+				t.Error("should be false")
+			}
+			if len(syncedIDs) != 1 {
+				t.Error("invalid length")
+			}
+		})
+	})
 	t.Run("request error", func(t *testing.T) {
-		initHandler()
+		mockCC := &cloud_client.Mock{Devices: make(map[string]models.Device), DeviceIDMap: make(map[string]string)}
+		handler := &Handler{cloudClient: mockCC, attrOrigin: "test-origin"}
 		mockCC.Err = errors.New("test error")
-		_, err := handler.syncDevice(context.Background(), map[string]models.Device{}, lDevice)
+		_, _, err := handler.syncDevices(context.Background(), map[string]model.Device{lID: lDevice}, map[string]models.Device{})
 		if err == nil {
 			t.Error("error expected")
 		}
