@@ -61,7 +61,7 @@ func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.De
 			return false, err
 		}
 	} else {
-		syncedIDs, err = h.syncDeviceIDs(ctx, devices, cloudDevices)
+		syncedIDs, syncOK, err = h.syncDeviceIDs(ctx, devices, cloudDevices)
 		if err != nil {
 			return false, err
 		}
@@ -151,7 +151,7 @@ func (h *Handler) syncDevices(ctx context.Context, lDevices map[string]model.Dev
 	return syncedIDs, syncOk, nil
 }
 
-func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.Device, cloudDevices map[string]models.Device) (map[string]string, error) {
+func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.Device, cloudDevices map[string]models.Device) (map[string]string, bool, error) {
 	syncedIDs := make(map[string]string)
 	var missingIDs []string
 	for lID := range devices {
@@ -163,14 +163,14 @@ func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.De
 	}
 	cloudDevices2, err := h.getCloudDevicesL(ctx, missingIDs)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	for _, lID := range missingIDs {
 		if cDevice, ok := cloudDevices2[lID]; ok {
 			syncedIDs[lID] = cDevice.Id
 		}
 	}
-	return syncedIDs, nil
+	return syncedIDs, true, nil
 }
 
 func (h *Handler) getNetwork(ctx context.Context) (models.Hub, error) {
