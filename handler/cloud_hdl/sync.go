@@ -14,23 +14,15 @@ import (
 )
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs, onlineIDs, offlineIDs []string) {
-	var err error
-	var ok bool
-	if len(newIDs)+len(changedIDs) > 0 || !h.syncOK {
-		util.Logger.Info(logPrefix, " synchronisation")
-		ok, err = h.syncDevAndNet(ctx, devices)
-	} else {
-		if time.Since(h.lastSync) > h.syncInterval {
-			util.Logger.Debug(logPrefix, " periodic synchronisation")
-			ok, err = h.syncDevAndNet(ctx, devices)
+	if h.syncRequired(newIDs, changedIDs) {
+		ok, err := h.syncDevAndNet(ctx, devices)
+		if err != nil {
+			util.Logger.Errorf("%s synchronisation: %s", logPrefix, err)
+			h.syncOK = false
+			return
 		}
+		h.syncOK = ok
 	}
-	if err != nil {
-		util.Logger.Errorf("%s synchronisation: %s", logPrefix, err)
-		h.syncOK = false
-		return
-	}
-	h.syncOK = ok
 	if h.stateSyncFunc != nil {
 		devices2 := make(map[string]model.Device)
 		for lID, lDevice := range devices {
@@ -40,6 +32,19 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		}
 		h.stateSyncFunc(ctx, devices2, missingIDs, onlineIDs, offlineIDs)
 	}
+}
+
+func (h *Handler) syncRequired(newIDs, changedIDs []string) bool {
+	if len(newIDs)+len(changedIDs) > 0 || !h.syncOK {
+		util.Logger.Info(logPrefix, " synchronisation")
+		return true
+	} else {
+		if time.Since(h.lastSync) > h.syncInterval {
+			util.Logger.Debug(logPrefix, " periodic synchronisation")
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.Device) (bool, error) {
