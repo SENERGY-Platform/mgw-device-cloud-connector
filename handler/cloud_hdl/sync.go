@@ -15,13 +15,14 @@ import (
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs, onlineIDs, offlineIDs []string) {
 	var err error
+	var ok bool
 	if len(newIDs)+len(changedIDs) > 0 || !h.syncOK {
 		util.Logger.Info(logPrefix, " synchronisation")
-		h.syncOK, err = h.syncDevAndNet(ctx, devices)
+		ok, err = h.syncDevAndNet(ctx, devices)
 	} else {
 		if time.Since(h.lastSync) > h.syncInterval {
 			util.Logger.Debug(logPrefix, " periodic synchronisation")
-			h.syncOK, err = h.syncDevAndNet(ctx, devices)
+			ok, err = h.syncDevAndNet(ctx, devices)
 		}
 	}
 	if err != nil {
@@ -29,6 +30,7 @@ func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, new
 		h.syncOK = false
 		return
 	}
+	h.syncOK = ok
 	if h.stateSyncFunc != nil {
 		devices2 := make(map[string]model.Device)
 		for lID, lDevice := range devices {
