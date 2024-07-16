@@ -43,7 +43,7 @@ func (h *Handler) HandleOnDisconnect() {
 	util.Logger.Debugf(LogPrefix + " subscriptions cleared")
 }
 
-func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]model.Device, missingIDs, onlineIDs, offlineIDs []string) {
+func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]model.Device, _, _, _ []string) {
 	err := h.subscribe(topic.Handler.CloudProcessesCmdSub(), func(m handler.Message) {
 		if err := h.processesCmdMsgRelayHdl.Put(m); err != nil {
 			util.Logger.Errorf(model.RelayMsgErrString, LogPrefix, m.Topic(), err)
