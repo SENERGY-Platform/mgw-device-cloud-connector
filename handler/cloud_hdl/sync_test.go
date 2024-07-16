@@ -10,7 +10,64 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 	"reflect"
 	"testing"
+	"time"
 )
+
+func TestHandler_syncRequired(t *testing.T) {
+	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	t.Run("no sync", func(t *testing.T) {
+		handler := &Handler{
+			syncInterval: time.Second * 5,
+		}
+		handler.syncOK = true
+		handler.lastSync = time.Now()
+		if handler.syncRequired(nil, nil) {
+			t.Error("expected false")
+		}
+		if handler.syncRequired([]string{}, []string{}) {
+			t.Error("expected false")
+		}
+	})
+	t.Run("new IDs", func(t *testing.T) {
+		handler := &Handler{
+			syncInterval: time.Second * 5,
+		}
+		handler.syncOK = true
+		handler.lastSync = time.Now()
+		if !handler.syncRequired([]string{"a"}, nil) {
+			t.Error("expected true")
+		}
+	})
+	t.Run("changed IDs", func(t *testing.T) {
+		handler := &Handler{
+			syncInterval: time.Second * 5,
+		}
+		handler.syncOK = true
+		handler.lastSync = time.Now()
+		if !handler.syncRequired(nil, []string{"a"}) {
+			t.Error("expected true")
+		}
+	})
+	t.Run("last sync not ok", func(t *testing.T) {
+		handler := &Handler{
+			syncInterval: time.Second * 5,
+		}
+		handler.syncOK = false
+		handler.lastSync = time.Now()
+		if !handler.syncRequired(nil, nil) {
+			t.Error("expected true")
+		}
+	})
+	t.Run("periodic", func(t *testing.T) {
+		handler := &Handler{
+			syncInterval: time.Second * 5,
+		}
+		handler.syncOK = true
+		if !handler.syncRequired(nil, nil) {
+			t.Error("expected true")
+		}
+	})
+}
 
 func TestHandler_syncDevAndNet(t *testing.T) {
 	cID := "1"
