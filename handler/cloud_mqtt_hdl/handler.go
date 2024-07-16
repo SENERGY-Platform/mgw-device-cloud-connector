@@ -55,8 +55,10 @@ func (h *Handler) HandleSubscriptions(_ context.Context, devices map[string]mode
 	topics := map[string]struct{}{
 		topic.Handler.CloudProcessesCmdSub(): {},
 	}
-	for id := range devices {
-		topics[topic.Handler.CloudDeviceServiceCmdSub(id)] = struct{}{}
+	for id, device := range devices {
+		if device.State == model.Online {
+			topics[topic.Handler.CloudDeviceServiceCmdSub(id)] = struct{}{}
+		}
 	}
 	missingTopics, newTopics := h.diffSubs(topics)
 	for _, t := range missingTopics {

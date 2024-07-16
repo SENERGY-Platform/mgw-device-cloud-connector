@@ -34,6 +34,7 @@ func TestHandler_HandleSubscriptions(t *testing.T) {
 			topic.Handler.CloudDeviceServiceCmdSub("b"): {},
 			topic.Handler.CloudDeviceServiceCmdSub("c"): {},
 			topic.Handler.CloudDeviceServiceCmdSub("d"): {},
+			topic.Handler.CloudDeviceServiceCmdSub("x"): {},
 		},
 		QOS: 1,
 		T:   t,
@@ -43,12 +44,14 @@ func TestHandler_HandleSubscriptions(t *testing.T) {
 		subscriptions: map[string]struct{}{
 			topic.Handler.CloudDeviceServiceCmdSub("a"): {},
 			topic.Handler.CloudDeviceServiceCmdSub("b"): {},
+			topic.Handler.CloudDeviceServiceCmdSub("x"): {},
 		},
 		qos: 1,
 	}
 	h.HandleSubscriptions(nil, map[string]model.Device{
-		"a": {},
-		"c": {},
+		"a": {State: model.Online},
+		"c": {State: model.Online},
+		"x": {State: model.Offline},
 	}, nil, nil, nil)
 	if len(h.subscriptions) != 3 {
 		t.Error("invalid length")
@@ -65,14 +68,14 @@ func TestHandler_HandleSubscriptions(t *testing.T) {
 	if mc.SubscribeC != 2 {
 		t.Error("missing call")
 	}
-	if mc.UnsubscribeC != 1 {
+	if mc.UnsubscribeC != 2 {
 		t.Error("missing call")
 	}
 	t.Run("error", func(t *testing.T) {
 		mc.UnsubErr = errors.New("test error")
 		h.HandleSubscriptions(nil, map[string]model.Device{
-			"a": {},
-			"d": {},
+			"a": {State: model.Online},
+			"d": {State: model.Online},
 		}, nil, nil, nil)
 		if len(h.subscriptions) != 4 {
 			t.Error("invalid length")
@@ -84,9 +87,9 @@ func TestHandler_HandleSubscriptions(t *testing.T) {
 	t.Run("not connected", func(t *testing.T) {
 		mc.UnsubErr = model.NotConnectedErr
 		h.HandleSubscriptions(nil, map[string]model.Device{
-			"a": {},
-			"d": {},
-			"e": {},
+			"a": {State: model.Online},
+			"d": {State: model.Online},
+			"e": {State: model.Online},
 		}, nil, nil, nil)
 		if len(h.subscriptions) != 4 {
 			t.Error("invalid length")
