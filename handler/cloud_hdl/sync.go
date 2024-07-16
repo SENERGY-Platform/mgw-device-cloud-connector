@@ -49,38 +49,45 @@ func (h *Handler) syncRequired(newIDs, changedIDs []string) bool {
 	return false
 }
 
-func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.Device) (bool, error) {
+func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.Device) error {
+	var err error
+	defer func() {
+		if err != nil {
+			h.syncOK = false
+		}
+	}()
 	devSyncAllowed, err := h.checkAccPols(ctx)
 	if err != nil {
-		return false, err
+		return err
 	}
 	network, err := h.getNetwork(ctx)
 	if err != nil {
-		return false, err
+		return err
 	}
 	cloudDevices, err := h.getCloudDevices(ctx, network.DeviceIds)
 	if err != nil {
-		return false, err
+		return err
 	}
 	var syncedIDs map[string]string
-	var syncOK bool
+	var ok bool
 	if devSyncAllowed {
-		syncedIDs, syncOK, err = h.syncDevices(ctx, devices, cloudDevices)
+		syncedIDs, ok, err = h.syncDevices(ctx, devices, cloudDevices)
 		if err != nil {
-			return false, err
+			return err
 		}
 	} else {
-		syncedIDs, syncOK, err = h.syncDeviceIDs(ctx, devices, cloudDevices)
+		syncedIDs, ok, err = h.syncDeviceIDs(ctx, devices, cloudDevices)
 		if err != nil {
-			return false, err
+			return err
 		}
 	}
 	if err = h.syncNetwork(ctx, network, syncedIDs); err != nil {
-		return false, err
+		return err
 	}
+	h.syncOK = ok
 	h.syncedIDs = syncedIDs
 	h.lastSync = time.Now()
-	return syncOK, nil
+	return nil
 }
 
 func (h *Handler) syncNetwork(ctx context.Context, network models.Hub, syncedIDs map[string]string) error {
