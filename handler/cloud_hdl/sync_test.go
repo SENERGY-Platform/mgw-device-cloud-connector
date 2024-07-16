@@ -136,11 +136,11 @@ func TestHandler_syncDevAndNet(t *testing.T) {
 		attrOrigin:  "test-origin",
 	}
 	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
-	ok, err := handler.syncDevAndNet(context.Background(), map[string]model.Device{lID: lDevice})
+	err := handler.syncDevAndNet(context.Background(), map[string]model.Device{lID: lDevice})
 	if err != nil {
 		t.Error(err)
 	}
-	if !ok {
+	if !handler.syncOK {
 		t.Error("should be true")
 	}
 	if handler.lastSync.IsZero() {
@@ -162,11 +162,11 @@ func TestHandler_syncDevAndNet(t *testing.T) {
 			UpdateAP: false,
 			DeleteAP: false,
 		}
-		ok, err = handler.syncDevAndNet(context.Background(), map[string]model.Device{lID: lDevice})
+		err = handler.syncDevAndNet(context.Background(), map[string]model.Device{lID: lDevice})
 		if err != nil {
 			t.Error(err)
 		}
-		if !ok {
+		if !handler.syncOK {
 			t.Error("should be true")
 		}
 		if handler.lastSync.IsZero() {
