@@ -15,14 +15,16 @@ import (
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs, onlineIDs, offlineIDs []string) {
 	if h.syncRequired(newIDs, changedIDs) {
-		ok, err := h.syncDevAndNet(ctx, devices)
+		err := h.syncDevAndNet(ctx, devices)
 		if err != nil {
 			util.Logger.Errorf("%s synchronisation: %s", logPrefix, err)
-			h.syncOK = false
 			return
 		}
-		h.syncOK = ok
 	}
+	h.syncStates(ctx, devices, missingIDs, onlineIDs, offlineIDs)
+}
+
+func (h *Handler) syncStates(ctx context.Context, devices map[string]model.Device, missingIDs, onlineIDs, offlineIDs []string) {
 	if h.stateSyncFunc != nil {
 		devices2 := make(map[string]model.Device)
 		for lID, lDevice := range devices {
