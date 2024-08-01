@@ -17,8 +17,12 @@
 package util
 
 import (
-	sb_util "github.com/SENERGY-Platform/go-service-base/util"
+	"github.com/SENERGY-Platform/go-service-base/config-hdl"
+	cfg_types "github.com/SENERGY-Platform/go-service-base/config-hdl/types"
+	sb_logger "github.com/SENERGY-Platform/go-service-base/logger"
+	envldr "github.com/y-du/go-env-loader"
 	"github.com/y-du/go-log-level/level"
+	"reflect"
 )
 
 type CloudMqttClientConfig struct {
@@ -54,9 +58,9 @@ type HttpClientConfig struct {
 }
 
 type CloudAuthConfig struct {
-	User     string               `json:"user" env_var:"CLOUD_USER"`
-	Password sb_util.SecretString `json:"password" env_var:"CLOUD_PASSWORD"`
-	ClientID string               `json:"client_id" env_var:"CLOUD_CLIENT_ID"`
+	User     string           `json:"user" env_var:"CLOUD_USER"`
+	Password cfg_types.Secret `json:"password" env_var:"CLOUD_PASSWORD"`
+	ClientID string           `json:"client_id" env_var:"CLOUD_CLIENT_ID"`
 }
 
 type CloudHandlerConfig struct {
@@ -80,8 +84,18 @@ type RelayHandlerConfig struct {
 	MaxDeviceEventAge  int64 `json:"max_device_event_age" env_var:"RH_MAX_DEVICE_EVENT_AGE"`
 }
 
+type LoggerConfig struct {
+	Level        level.Level `json:"level" env_var:"LOGGER_LEVEL"`
+	Utc          bool        `json:"utc" env_var:"LOGGER_UTC"`
+	Path         string      `json:"path" env_var:"LOGGER_PATH"`
+	FileName     string      `json:"file_name" env_var:"LOGGER_FILE_NAME"`
+	Terminal     bool        `json:"terminal" env_var:"LOGGER_TERMINAL"`
+	Microseconds bool        `json:"microseconds" env_var:"LOGGER_MICROSECONDS"`
+	Prefix       string      `json:"prefix" env_var:"LOGGER_PREFIX"`
+}
+
 type Config struct {
-	Logger             sb_util.LoggerConfig     `json:"logger" env_var:"LOGGER_CONFIG"`
+	Logger             LoggerConfig             `json:"logger" env_var:"LOGGER_CONFIG"`
 	CloudMqttClient    CloudMqttClientConfig    `json:"cloud_mqtt_client" env_var:"CLOUD_MQTT_CLIENT_CONFIG"`
 	LocalMqttClient    LocalMqttClientConfig    `json:"local_mqtt_client" env_var:"LOCAL_MQTT_CLIENT_CONFIG"`
 	HttpClient         HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
@@ -117,7 +131,7 @@ var defaultLocalMqttClientConfig = LocalMqttClientConfig{
 
 func NewConfig(path string) (*Config, error) {
 	cfg := Config{
-		Logger: sb_util.LoggerConfig{
+		Logger: LoggerConfig{
 			Level:        level.Warning,
 			Utc:          true,
 			Microseconds: true,
@@ -146,6 +160,6 @@ func NewConfig(path string) (*Config, error) {
 			MaxDeviceEventAge:  300000000000, // 5m
 		},
 	}
-	err := sb_util.LoadConfig(path, &cfg, nil, nil, nil)
+	err := config_hdl.Load(&cfg, nil, map[reflect.Type]envldr.Parser{reflect.TypeOf(level.Off): sb_logger.LevelParser}, nil, path)
 	return &cfg, err
 }

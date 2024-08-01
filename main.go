@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	sb_logger "github.com/SENERGY-Platform/go-service-base/logger"
 	"github.com/SENERGY-Platform/go-service-base/srv-info-hdl"
 	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/go-service-base/watchdog"
@@ -53,7 +54,7 @@ func main() {
 	logFile, err := util.InitLogger(config.Logger)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
-		var logFileError *sb_util.LogFileError
+		var logFileError *sb_logger.LogFileError
 		if errors.As(err, &logFileError) {
 			ec = 1
 			return
@@ -108,7 +109,7 @@ func main() {
 		},
 	}
 
-	cloutAuthClient := auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.String(), config.CloudAuth.ClientID)
+	cloutAuthClient := auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.Value(), config.CloudAuth.ClientID)
 	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl, cloutAuthClient)
 	cloudHdl := cloud_hdl.New(cloudClient, cloutAuthClient, time.Duration(config.CloudHandler.SyncInterval), config.CloudHandler.WrkSpcPath, config.CloudHandler.AttributeOrigin)
 
