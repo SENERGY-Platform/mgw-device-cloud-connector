@@ -33,7 +33,7 @@ func SetCloudClientOptions(co *mqtt.ClientOptions, clientID string, mqttConf uti
 	co.AutoReconnect = true
 	if authConf != nil {
 		co.SetUsername(authConf.User)
-		co.SetPassword(authConf.Password.String())
+		co.SetPassword(authConf.Password.Value())
 	}
 	if tlsConf != nil {
 		co.SetTLSConfig(tlsConf)
