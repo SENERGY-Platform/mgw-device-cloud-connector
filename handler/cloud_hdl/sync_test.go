@@ -3,7 +3,6 @@ package cloud_hdl
 import (
 	"context"
 	"errors"
-	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
@@ -14,7 +13,7 @@ import (
 )
 
 func TestHandler_syncRequired(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("no sync", func(t *testing.T) {
 		handler := &Handler{
 			syncInterval: time.Second * 5,
@@ -135,7 +134,7 @@ func TestHandler_syncDevAndNet(t *testing.T) {
 		data:        data{NetworkID: "1"},
 		attrOrigin:  "test-origin",
 	}
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	err := handler.syncDevAndNet(context.Background(), map[string]model.Device{lID: lDevice})
 	if err != nil {
 		t.Error(err)
@@ -179,7 +178,7 @@ func TestHandler_syncDevAndNet(t *testing.T) {
 }
 
 func TestHandler_syncNetwork(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("no sync required", func(t *testing.T) {
 		hub := models.Hub{
 			Id:        "1",
@@ -281,7 +280,7 @@ func TestHandler_syncNetwork(t *testing.T) {
 }
 
 func TestHandler_syncDevices(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	cID := "1"
 	lID := "123"
 	cDevice := models.Device{
@@ -510,7 +509,7 @@ func TestHandler_syncDevices(t *testing.T) {
 }
 
 func TestHandler_syncDeviceIDs(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	cID := "1"
 	lID := "123"
 	cDevice := models.Device{
@@ -590,7 +589,7 @@ func TestHandler_syncDeviceIDs(t *testing.T) {
 }
 
 func TestHandler_getNetwork(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("network not found", func(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{
@@ -645,7 +644,7 @@ func TestHandler_getNetwork(t *testing.T) {
 }
 
 func TestHandler_getCloudDevs(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("no error", func(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{
@@ -721,7 +720,7 @@ func TestHandler_getCloudDevs(t *testing.T) {
 }
 
 func TestHandler_checkAccPols(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("network read not allowed", func(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{

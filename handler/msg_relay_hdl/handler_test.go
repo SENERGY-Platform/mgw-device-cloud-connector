@@ -3,7 +3,6 @@ package msg_relay_hdl
 import (
 	"bytes"
 	"errors"
-	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
@@ -31,7 +30,7 @@ func (m *mockMessage) Timestamp() time.Time {
 }
 
 func TestHandler(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	msg := &mockMessage{
 		topic:     "test",
 		payload:   []byte("test"),

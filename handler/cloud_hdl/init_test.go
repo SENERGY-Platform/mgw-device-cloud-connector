@@ -2,7 +2,6 @@ package cloud_hdl
 
 import (
 	"context"
-	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/auth_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
@@ -33,7 +32,7 @@ func TestHandler_Init(t *testing.T) {
 			t.Error("saved network ID not equal")
 		}
 	}
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("get user ID", func(t *testing.T) {
 		mockCC := &cloud_client.Mock{Hubs: make(map[string]models.Hub)}
 		mockSP := &auth_client.Mock{UserID: userID}

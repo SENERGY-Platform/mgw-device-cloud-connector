@@ -2,7 +2,6 @@ package cloud_mqtt_hdl
 
 import (
 	"errors"
-	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestHandler_HandleOnDisconnect(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	h := New(0)
 	h.SetMqttClient(nil)
 	h.subscriptions = map[string]struct{}{
@@ -25,7 +24,7 @@ func TestHandler_HandleOnDisconnect(t *testing.T) {
 }
 
 func TestHandler_HandleSubscriptions(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	topic.InitTopicHandler("userID", "netID")
 	mc := &mockMqttClient{
 		Topics: map[string]struct{}{
@@ -101,7 +100,7 @@ func TestHandler_HandleSubscriptions(t *testing.T) {
 }
 
 func TestHandler_subscribe(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("does not exist", func(t *testing.T) {
 		mc := &mockMqttClient{
 			Topics: map[string]struct{}{
@@ -172,7 +171,7 @@ func TestHandler_subscribe(t *testing.T) {
 }
 
 func TestHandler_unsubscribe(t *testing.T) {
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	t.Run("does not exist", func(t *testing.T) {
 		mc := &mockMqttClient{
 			Topics: map[string]struct{}{

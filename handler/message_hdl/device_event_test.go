@@ -2,7 +2,6 @@ package message_hdl
 
 import (
 	"encoding/json"
-	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/topic"
@@ -13,7 +12,7 @@ import (
 
 func TestHandleUpstreamDeviceEvent(t *testing.T) {
 	t.Cleanup(clearVars)
-	util.InitLogger(sb_util.LoggerConfig{Terminal: true, Level: 4})
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	topic.InitTopicHandler("usrID", "netID")
 	DeviceEventMaxAge = time.Second * 5
 	LocalDeviceIDPrefix = "123"
