@@ -178,7 +178,7 @@ func main() {
 		util.Logger.Warningf("%s connection lost: %s", cloud_mqtt_hdl.LogPrefix, err)
 		cloudMqttHdl.HandleOnDisconnect()
 	})
-	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, networkID, config.CloudMqttClient, &config.CloudAuth, &tls.Config{InsecureSkipVerify: true})
+	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, networkID, config.CloudMqttClient, &config.CloudAuth, nil)
 	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
 	cloudMqttClientPubF := func(topic string, data []byte) error {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.PublishQOSLevel, false, data)
