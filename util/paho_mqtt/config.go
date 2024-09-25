@@ -35,7 +35,9 @@ func SetCloudClientOptions(co *mqtt.ClientOptions, clientID string, mqttConf uti
 		co.SetUsername(authConf.User)
 		co.SetPassword(authConf.Password.Value())
 	}
-	if tlsConf != nil {
-		co.SetTLSConfig(tlsConf)
+	if tlsConf == nil {
+		tlsConf = &tls.Config{}
 	}
+	tlsConf.VerifyConnection = checkPeerCertValidityBounds
+	co.SetTLSConfig(tlsConf)
 }
