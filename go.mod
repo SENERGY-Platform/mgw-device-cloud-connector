@@ -1,6 +1,6 @@
 module github.com/SENERGY-Platform/mgw-device-cloud-connector
 
-go 1.22.0
+go 1.23
 
 require (
 	github.com/SENERGY-Platform/go-base-http-client v0.0.2
