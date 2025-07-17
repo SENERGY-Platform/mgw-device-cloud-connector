@@ -4,10 +4,26 @@ name: Device Cloud-Connector
 description: Connect local devices to the Cloud.
 license: Apache-2.0 license
 author: InfAI (CC SES)
-version: v0.5.8
+version: v0.6.0
 type: add-on
 deploymentType: single
 dependencies:
+  github.com/SENERGY-Platform/mgw-cloud-proxy/mgw-module:
+    version: "<v1.0.0"
+    requiredServices:
+      gateway:
+        - refVar: CLOUD_API_BASE_URL
+          template: "http://{ref}"
+          services:
+            - connector
+        - refVar: CLOUD_MQTT_SERVER
+          template: "mqtt://{ref}:1883"
+          services:
+            - connector
+        - refVar: LOCAL_CM_BASE_URL
+          template: "http://{ref}:8080/api"
+          services:
+            - connector
   github.com/SENERGY-Platform/mgw-mqtt-broker:
     version: "<v2.0.0"
     requiredServices:
@@ -27,12 +43,7 @@ dependencies:
 services:
   connector:
     name: Connector
-    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.4.8
-volumes:
-  ch-data:
-    - mountPoint: /opt/connector/ch-data
-      services:
-        - connector
+    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.5.0
 inputGroups:
   log-settings:
     name: Logging
@@ -49,30 +60,6 @@ inputGroups:
     group: cloud-settings
   msg-relay:
     name: Message relay settings
-secrets:
-  cloud-credentials:
-    type: basic-auth
-    targets:
-      - refVar: CLOUD_USER
-        item: username
-        services:
-          - connector
-      - refVar: CLOUD_PASSWORD
-        item: password
-        services:
-          - connector
-    userInput:
-      name: Cloud credentials
-      group: cloud-secrets
-  client-id:
-    type: client-id
-    targets:
-      - refVar: CLOUD_CLIENT_ID
-        services:
-          - connector
-    userInput:
-      name: Cloud client ID
-      group: cloud-secrets
 configs:
   log-level:
     value: "warning"
@@ -121,16 +108,6 @@ configs:
       name: MQTT log
       group: log-settings
     optional: true
-  cloud-mqtt-server:
-    targets:
-      - refVar: CLOUD_MQTT_SERVER
-        services:
-          - connector
-    userInput:
-      type: text
-      name: Cloud MQTT server address
-      description: "Address format: <mqtt|mqtts>://<host>:<port>"
-      group: cloud-mqtt
   cloud-mqtt-pub-qos:
     dataType: int
     value: 0
@@ -163,45 +140,6 @@ configs:
       name: Cloud MQTT subscription qos level
       group: cloud-mqtt
     optional: true
-  cloud-api-base-url:
-    targets:
-      - refVar: CLOUD_API_BASE_URL
-        services:
-          - connector
-    userInput:
-      type: text
-      name: Cloud API URL
-      group: cloud-api
-  cloud-auth-base-url:
-    targets:
-      - refVar: CLOUD_AUTH_BASE_URL
-        services:
-          - connector
-    userInput:
-      type: text
-      name: Cloud authentication URL
-      group: cloud-api
-  cloud-network-id:
-    targets:
-      - refVar: CH_NETWORK_ID
-        services:
-          - connector
-    userInput:
-      type: text
-      name: Cloud network ID
-      group: cloud-settings
-    optional: true
-  cloud-default-net-name:
-    value: "my-network"
-    targets:
-      - refVar: CH_DEFAULT_NETWORK_NAME
-        services:
-          - connector
-    userInput:
-      type: text
-      name: Cloud default network name
-      group: cloud-settings
-    optional: true
   cloud-sync-interval:
     dataType: int
     value: 1800000000000
@@ -228,12 +166,6 @@ configs:
       description: "Set interval for periodic discovery of local devices in nanoseconds."
       group: cloud-settings
     optional: true
-  local-mm-base-url:
-    value: http://core-api/module-manager
-    targets:
-      - refVar: LOCAL_MM_BASE_URL
-        services:
-          - connector
   relay-mgs-buffer:
     dataType: int
     value: 50000

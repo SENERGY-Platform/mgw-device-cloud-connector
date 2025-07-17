@@ -28,9 +28,6 @@ func (c *Client) CreateDevice(ctx context.Context, device models.Device) (string
 	if err != nil {
 		return "", err
 	}
-	if err = c.setAuthHeader(ctx, req); err != nil {
-		return "", err
-	}
 	var d models.Device
 	err = c.baseClient.ExecRequestJSON(req, &d)
 	if err != nil {
@@ -57,9 +54,6 @@ func (c *Client) GetDevices(ctx context.Context, ids []string) ([]models.Device,
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return nil, err
-	}
-	if err = c.setAuthHeader(ctx, req); err != nil {
 		return nil, err
 	}
 	var devices []models.Device
@@ -90,9 +84,6 @@ func (c *Client) GetDevicesL(ctx context.Context, ids []string) ([]models.Device
 	if err != nil {
 		return nil, err
 	}
-	if err = c.setAuthHeader(ctx, req); err != nil {
-		return nil, err
-	}
 	var devices []models.Device
 	err = c.baseClient.ExecRequestJSON(req, &devices)
 	if err != nil {
@@ -117,18 +108,12 @@ func (c *Client) UpdateDevice(ctx context.Context, device models.Device, attribu
 	if err != nil {
 		return err
 	}
-	if err = c.setAuthHeader(ctx, req); err != nil {
-		return err
-	}
 	return c.baseClient.ExecRequestVoid(req)
 }
 
 func (c *Client) getDevice(ctx context.Context, u string) (models.Device, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return models.Device{}, err
-	}
-	if err = c.setAuthHeader(ctx, req); err != nil {
 		return models.Device{}, err
 	}
 	var device models.Device

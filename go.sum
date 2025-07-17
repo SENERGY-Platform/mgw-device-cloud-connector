@@ -4,6 +4,8 @@ github.com/SENERGY-Platform/go-service-base/config-hdl v0.1.1 h1:ITwMKdB2EgWn6Mc
 github.com/SENERGY-Platform/go-service-base/config-hdl v0.1.1/go.mod h1:pQjV0KfwCM91I7LSTUg9t4tgSNSHKiefH/O5+J5N8z8=
 github.com/SENERGY-Platform/go-service-base/logger v0.2.0 h1:O8aGx+JJVyV6AxfcxIVHH6lyXeRMleui6L9J9JEI3vM=
 github.com/SENERGY-Platform/go-service-base/logger v0.2.0/go.mod h1:4g66GXZ3LBa0XSB2eSdDJtqLkm2xuju4qzc77Cf2Nhc=
+github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1 h1:cTUZ4sJLmLxXQUfP3hw50YVUJRd2OFpxyLIreIUEzpw=
+github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1/go.mod h1:UPtGbiAOtGd78qgM0HZrtiKxcn3HebSV5QAZvHme998=
 github.com/SENERGY-Platform/mgw-go-service-base/context-hdl v0.0.5 h1:68vSyjtdp8OfONRI5gbyZt2VQ7EkcKvufsQlW9sknMY=
 github.com/SENERGY-Platform/mgw-go-service-base/context-hdl v0.0.5/go.mod h1:3GvvHargFwrzD7E4+JTJxHTna90c7OwIeVTpqUXoNCI=
 github.com/SENERGY-Platform/mgw-go-service-base/srv-info-hdl v0.0.4 h1:8ozGX5zgkMLpk9ReGGCBITLeFFYI7w3EjVAsVpX5i5U=
@@ -14,12 +16,6 @@ github.com/SENERGY-Platform/mgw-go-service-base/util v1.1.1 h1:yLfe8h+0GIC9L9CYz
 github.com/SENERGY-Platform/mgw-go-service-base/util v1.1.1/go.mod h1:+eF5PG2D227rA0cu3cp3bdChBBvVK/a+o8yOku6Tstg=
 github.com/SENERGY-Platform/mgw-go-service-base/watchdog v0.4.3 h1:oVzrgDTBgHykjWG2ccghSvLBuWdXqxM3aEGCIsNjW88=
 github.com/SENERGY-Platform/mgw-go-service-base/watchdog v0.4.3/go.mod h1:HINAV84YZBzl0UvDeLe7ld38roLxNVvchmXYZx7zb7U=
-github.com/SENERGY-Platform/mgw-module-lib v0.22.0 h1:77ssTquaIf24da74a+9b/scIyYQdsH0ewVjbBp3jQm4=
-github.com/SENERGY-Platform/mgw-module-lib v0.22.0/go.mod h1:EIXS9Q/Clr+eBfnr+UgWwZ0vbqpZqDunCKrjpqTyppM=
-github.com/SENERGY-Platform/mgw-module-manager/clients/dep-adv-client v0.2.3 h1:sxEgp+KWTYrV6ddquh1T2UdLyLKt8cvzywUQ7a/sI2U=
-github.com/SENERGY-Platform/mgw-module-manager/clients/dep-adv-client v0.2.3/go.mod h1:eDEwEll1mHvXzcFBo09ePpV28YpToNRM2X2FA8IUSRA=
-github.com/SENERGY-Platform/mgw-module-manager/lib v0.7.3 h1:aVao9ObyFU0+tKu9CtVKwC8WeJMeHxtSWSfiUHTsWt0=
-github.com/SENERGY-Platform/mgw-module-manager/lib v0.7.3/go.mod h1:MGt4U30CF2wuT795zm6cAU0Z7E+j16aoCd5ck3eWIJc=
 github.com/SENERGY-Platform/models/go v0.0.0-20240614103449-f208279dad36 h1:K/CixW5j2aCJmjY/5YJlIhqwAimlTpur8wQNsEqcR0I=
 github.com/SENERGY-Platform/models/go v0.0.0-20240614103449-f208279dad36/go.mod h1:bCREPNRN4P8oxLgpC3/ZKK4jXSy4MSPXoiomhohE+aw=
 github.com/eclipse/paho.mqtt.golang v1.5.0 h1:EH+bUVJNgttidWFkLLVKaQPGmkTUfQQqjOsyvMGvD6o=
@@ -32,7 +28,7 @@ github.com/y-du/go-env-loader v0.5.2 h1:LxubTfx7zl1VpBNzUQidSp3yub3/7mxMg63QSuRl
 github.com/y-du/go-env-loader v0.5.2/go.mod h1:QBaFGtrTdp4eiMUjg9UFf1F3TzbEbUhWDeHYyEsqs8Y=
 github.com/y-du/go-log-level v1.0.0 h1:Q4Ffqxmf/tn9DBbOMwcjEGkWwQyYMwPn+FR06k5HJ70=
 github.com/y-du/go-log-level v1.0.0/go.mod h1:lhCvJlDCuSC9GfmtVDXuXc7lbbAd8igxl58qK8SjPX8=
-golang.org/x/net v0.35.0 h1:T5GQRQb2y08kTAByq9L4/bz8cipCdA8FbRTXewonqY8=
-golang.org/x/net v0.35.0/go.mod h1:EglIi67kWsHKlRzzVMUD93VMSWGFOMSZgxFjparz1Qk=
+golang.org/x/net v0.40.0 h1:79Xs7wF06Gbdcg4kdCCIQArK11Z1hr5POQ6+fIYHNuY=
+golang.org/x/net v0.40.0/go.mod h1:y0hY0exeL2Pku80/zKK7tpntoX23cqL3Oa6njdgRtds=
 golang.org/x/sync v0.11.0 h1:GGz8+XQP4FvTTrjZPzNKTMFtSXH80RAzG+5ghFPgK9w=
 golang.org/x/sync v0.11.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=

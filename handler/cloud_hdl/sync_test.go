@@ -131,7 +131,7 @@ func TestHandler_syncDevAndNet(t *testing.T) {
 	mockCC.DeviceIDMap[lID] = cID
 	handler := &Handler{
 		cloudClient: mockCC,
-		data:        data{NetworkID: "1"},
+		networkID:   "1",
 		attrOrigin:  "test-origin",
 	}
 	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
@@ -191,7 +191,7 @@ func TestHandler_syncNetwork(t *testing.T) {
 		}
 		handler := &Handler{
 			cloudClient: mockCC,
-			data:        data{NetworkID: "1"},
+			networkID:   "1",
 		}
 		t.Run("number of local devices match devices in network", func(t *testing.T) {
 			err := handler.syncNetwork(context.Background(), hub, map[string]string{"1": "a", "2": "b"})
@@ -224,7 +224,7 @@ func TestHandler_syncNetwork(t *testing.T) {
 		}
 		handler := &Handler{
 			cloudClient: mockCC,
-			data:        data{NetworkID: "1"},
+			networkID:   "1",
 		}
 		err := handler.syncNetwork(context.Background(), hub, map[string]string{"1": "a", "2": "b"})
 		if err != nil {
@@ -252,7 +252,7 @@ func TestHandler_syncNetwork(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{
 			cloudClient: mockCC,
-			data:        data{NetworkID: "1"},
+			networkID:   "1",
 		}
 		err := handler.syncNetwork(context.Background(), models.Hub{}, map[string]string{"": ""})
 		if err == nil {
@@ -266,7 +266,7 @@ func TestHandler_syncNetwork(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{
 			cloudClient: mockCC,
-			data:        data{NetworkID: "1"},
+			networkID:   "1",
 		}
 		mockCC.Err = errors.New("test error")
 		err := handler.syncNetwork(context.Background(), models.Hub{}, map[string]string{"": ""})
@@ -594,7 +594,7 @@ func TestHandler_getNetwork(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{
 			cloudClient: mockCC,
-			data:        data{NetworkID: "1"},
+			networkID:   "1",
 		}
 		_, err := handler.getNetwork(context.Background())
 		if err == nil {
@@ -608,7 +608,7 @@ func TestHandler_getNetwork(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{
 			cloudClient: mockCC,
-			data:        data{NetworkID: "1"},
+			networkID:   "1",
 		}
 		mockCC.Hubs = map[string]models.Hub{
 			"1": {
@@ -630,7 +630,7 @@ func TestHandler_getNetwork(t *testing.T) {
 		mockCC := &cloud_client.Mock{}
 		handler := &Handler{
 			cloudClient: mockCC,
-			data:        data{NetworkID: "1"},
+			networkID:   "1",
 		}
 		mockCC.Err = errors.New("test error")
 		_, err := handler.getNetwork(context.Background())
