@@ -167,22 +167,22 @@ func (h *Handler) syncDevices(ctx context.Context, lDevices map[string]model.Dev
 	return syncedIDs, syncOk, nil
 }
 
-func (h *Handler) syncDeviceIDs(ctx context.Context, devices map[string]model.Device, cloudDevices map[string]models.Device) (map[string]string, bool, error) {
+func (h *Handler) syncDeviceIDs(ctx context.Context, lDevices map[string]model.Device, cDevices map[string]models.Device) (map[string]string, bool, error) {
 	syncedIDs := make(map[string]string)
 	var missingIDs []string
-	for lID := range devices {
-		if cDevice, ok := cloudDevices[lID]; ok {
+	for lID := range lDevices {
+		if cDevice, ok := cDevices[lID]; ok {
 			syncedIDs[lID] = cDevice.Id
 		} else {
 			missingIDs = append(missingIDs, lID)
 		}
 	}
-	cloudDevices2, err := h.getCloudDevicesL(ctx, missingIDs)
+	cDevices2, err := h.getCloudDevicesL(ctx, missingIDs)
 	if err != nil {
 		return nil, false, err
 	}
 	for _, lID := range missingIDs {
-		if cDevice, ok := cloudDevices2[lID]; ok {
+		if cDevice, ok := cDevices2[lID]; ok {
 			syncedIDs[lID] = cDevice.Id
 		}
 	}
