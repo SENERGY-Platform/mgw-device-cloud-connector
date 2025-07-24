@@ -6,7 +6,7 @@ require (
 	github.com/SENERGY-Platform/go-base-http-client v0.0.2
 	github.com/SENERGY-Platform/go-service-base/config-hdl v0.1.1
 	github.com/SENERGY-Platform/go-service-base/logger v0.2.0
-	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1
+	github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.4
 	github.com/SENERGY-Platform/mgw-go-service-base/context-hdl v0.0.5
 	github.com/SENERGY-Platform/mgw-go-service-base/srv-info-hdl v0.0.4
 	github.com/SENERGY-Platform/mgw-go-service-base/util v1.1.1

@@ -27,7 +27,7 @@ func (h *Handler) Init(ctx context.Context, interval time.Duration) (string, str
 		select {
 		case <-timer.C:
 			util.Logger.Debugf("%s get network", logPrefix)
-			networkInfo, err := h.certManagerClient.NetworkInfo(ch.Add(context.WithCancel(ctx)), "")
+			networkInfo, err := h.certManagerClient.NetworkInfo(ch.Add(context.WithCancel(ctx)), true, "")
 			if err != nil {
 				util.Logger.Errorf("%s get network: %s", logPrefix, err)
 				timer.Reset(interval)

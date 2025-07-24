@@ -4,8 +4,8 @@ github.com/SENERGY-Platform/go-service-base/config-hdl v0.1.1 h1:ITwMKdB2EgWn6Mc
 github.com/SENERGY-Platform/go-service-base/config-hdl v0.1.1/go.mod h1:pQjV0KfwCM91I7LSTUg9t4tgSNSHKiefH/O5+J5N8z8=
 github.com/SENERGY-Platform/go-service-base/logger v0.2.0 h1:O8aGx+JJVyV6AxfcxIVHH6lyXeRMleui6L9J9JEI3vM=
 github.com/SENERGY-Platform/go-service-base/logger v0.2.0/go.mod h1:4g66GXZ3LBa0XSB2eSdDJtqLkm2xuju4qzc77Cf2Nhc=
-github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1 h1:cTUZ4sJLmLxXQUfP3hw50YVUJRd2OFpxyLIreIUEzpw=
-github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.1/go.mod h1:UPtGbiAOtGd78qgM0HZrtiKxcn3HebSV5QAZvHme998=
+github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.4 h1:+0g0T8Z2nJfmsVzqoKX4UyS2MiEAZQUbefbUGBDbsGc=
+github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib v0.0.4/go.mod h1:UPtGbiAOtGd78qgM0HZrtiKxcn3HebSV5QAZvHme998=
 github.com/SENERGY-Platform/mgw-go-service-base/context-hdl v0.0.5 h1:68vSyjtdp8OfONRI5gbyZt2VQ7EkcKvufsQlW9sknMY=
 github.com/SENERGY-Platform/mgw-go-service-base/context-hdl v0.0.5/go.mod h1:3GvvHargFwrzD7E4+JTJxHTna90c7OwIeVTpqUXoNCI=
 github.com/SENERGY-Platform/mgw-go-service-base/srv-info-hdl v0.0.4 h1:8ozGX5zgkMLpk9ReGGCBITLeFFYI7w3EjVAsVpX5i5U=

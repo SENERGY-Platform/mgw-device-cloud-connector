@@ -25,5 +25,5 @@ type MqttClient interface {
 }
 
 type CertManagerClient interface {
-	NetworkInfo(ctx context.Context, token string) (cm_models_service.NetworkInfo, error)
+	NetworkInfo(ctx context.Context, cloudStatus bool, token string) (cm_models_service.NetworkInfo, error)
 }
