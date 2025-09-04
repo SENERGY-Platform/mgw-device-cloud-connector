@@ -1,7 +1,6 @@
 package msg_relay_hdl
 
 import (
-	"errors"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
@@ -29,7 +28,7 @@ func (h *Handler) Put(m handler.Message) error {
 	select {
 	case h.messages <- m:
 	default:
-		return errors.New("buffer full")
+		return model.BufferFullErr
 	}
 	return nil
 }
