@@ -78,10 +78,13 @@ type LocalDeviceHandlerConfig struct {
 }
 
 type RelayHandlerConfig struct {
-	MessageBuffer      int   `json:"message_buffer" env_var:"RH_MESSAGE_BUFFER"`
-	EventMessageBuffer int   `json:"event_message_buffer" env_var:"RH_EVENT_MESSAGE_BUFFER"`
-	MaxDeviceCmdAge    int64 `json:"max_device_cmd_age" env_var:"RH_MAX_DEVICE_CMD_AGE"`
-	MaxDeviceEventAge  int64 `json:"max_device_event_age" env_var:"RH_MAX_DEVICE_EVENT_AGE"`
+	MessageBuffer                       int    `json:"message_buffer" env_var:"RH_MESSAGE_BUFFER"`
+	EventMessageBuffer                  int    `json:"event_message_buffer" env_var:"RH_EVENT_MESSAGE_BUFFER"`
+	EventMessagePersistent              bool   `json:"event_message_persistent" env_var:"RH_EVENT_MESSAGE_PERSISTENT"`
+	EventMessagePersistentWorkspacePath string `json:"event_message_persistent_workspace_path" env_var:"RH_EVENT_MESSAGE_PERSISTENT_WORKSPACE_PATH"`
+	EventMessagePersistentStorageSize   string `json:"event_message_persistent_storage_size" env_var:"RH_EVENT_MESSAGE_PERSISTENT_STORAGE_SIZE"`
+	MaxDeviceCmdAge                     int64  `json:"max_device_cmd_age" env_var:"RH_MAX_DEVICE_CMD_AGE"`
+	MaxDeviceEventAge                   int64  `json:"max_device_event_age" env_var:"RH_MAX_DEVICE_EVENT_AGE"`
 }
 
 type LoggerConfig struct {

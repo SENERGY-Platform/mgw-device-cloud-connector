@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
+func HandleUpstreamDeviceEventAgeLimit(m handler.Message) (string, []byte, error) {
 	if time.Since(m.Timestamp()) <= DeviceEventMaxAge {
 		var dID, sID string
 		if !parseTopic(topic.LocalDeviceEventSub, m.Topic(), &dID, &sID) {
@@ -23,4 +23,16 @@ func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
 	}
 	util.Logger.Warningf("%s ignored device event (%s)", logPrefix, m.Topic())
 	return "", nil, model.NoMsgErr
+}
+
+func HandleUpstreamDeviceEvent(m handler.Message) (string, []byte, error) {
+	var dID, sID string
+	if !parseTopic(topic.LocalDeviceEventSub, m.Topic(), &dID, &sID) {
+		return "", nil, newParseErr(m.Topic())
+	}
+	b, err := json.Marshal(CloudDeviceEventMsg{Data: string(m.Payload())})
+	if err != nil {
+		return "", nil, err
+	}
+	return topic.Handler.CloudDeviceEventPub(LocalDeviceIDPrefix+dID, sID), b, nil
 }

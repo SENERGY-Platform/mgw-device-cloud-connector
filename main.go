@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	sb_logger "github.com/SENERGY-Platform/go-service-base/logger"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_device_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/message_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/msg_relay_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/persistent_msg_relay_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/persistent_msg_relay_hdl/sqlite"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/auth_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
@@ -184,14 +187,60 @@ func main() {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.PublishQOSLevel, false, data)
 	}
 
-	message_hdl.DeviceEventMaxAge = time.Duration(config.RelayHandler.MaxDeviceEventAge)
+	msgRelayHdlCtx, msgRelayHdlCf := context.WithCancel(context.Background())
+	var deviceEventMessageRelayHdl handler.MessageRelayHandler
+	if config.RelayHandler.EventMessagePersistent {
+		message_hdl.DeviceEventMaxAge = time.Duration(config.RelayHandler.MaxDeviceEventAge)
+		deviceEventMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.EventMessageBuffer, message_hdl.HandleUpstreamDeviceEventAgeLimit, cloudMqttClientPubF)
+		deviceEventMsgRelayHdl.Start()
+		wtchdg.RegisterStopFunc(func() error {
+			deviceEventMsgRelayHdl.Stop()
+			return nil
+		})
+		deviceEventMessageRelayHdl = deviceEventMsgRelayHdl
+	} else {
+		size, err := util.ParseSize(config.RelayHandler.EventMessagePersistentStorageSize)
+		if err != nil {
+			util.Logger.Error(err)
+			ec = 1
+			return
+		}
+		storageHdl, err := sqlite.New(config.RelayHandler.EventMessagePersistentWorkspacePath)
+		if err != nil {
+			util.Logger.Error(err)
+			ec = 1
+			return
+		}
+		defer storageHdl.Close()
+		err = storageHdl.Init(msgRelayHdlCtx, size)
+		if err != nil {
+			util.Logger.Error(err)
+			ec = 1
+			return
+		}
+		storageHdl.PeriodicOptimization(msgRelayHdlCtx, time.Hour)
+		deviceEventPersistentMsgRelayHdl := persistent_msg_relay_hdl.New(config.RelayHandler.EventMessagePersistentWorkspacePath, config.RelayHandler.EventMessageBuffer, storageHdl, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF, 100)
+		err = deviceEventPersistentMsgRelayHdl.Init(msgRelayHdlCtx)
+		if err != nil {
+			util.Logger.Error(err)
+			ec = 1
+			return
+		}
+		deviceEventPersistentMsgRelayHdl.Start(msgRelayHdlCtx)
+		wtchdg.RegisterHealthFunc(deviceEventPersistentMsgRelayHdl.Running)
+		wtchdg.RegisterStopFunc(func() error {
+			deviceEventPersistentMsgRelayHdl.Stop(time.Minute)
+			return nil
+		})
+		deviceEventMessageRelayHdl = deviceEventPersistentMsgRelayHdl
+	}
+
 	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
 	message_hdl.DeviceCommandMaxAge = time.Duration(config.RelayHandler.MaxDeviceCmdAge)
 	message_hdl.LocalDeviceIDPrefix = config.LocalDeviceHandler.IDPrefix
 
 	deviceCmdMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleDownstreamDeviceCmd, localMqttClientPubF)
 	processesCmdMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleDownstreamProcessesCmd, localMqttClientPubF)
-	deviceEventMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.EventMessageBuffer, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF)
 	deviceCmdRespMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleUpstreamDeviceCmdResponse, cloudMqttClientPubF)
 	processesStateMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandleUpstreamProcessesState, cloudMqttClientPubF)
 	deviceConnectorErrMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandlerUpstreamDeviceConnectorErr, cloudMqttClientPubF)
@@ -200,7 +249,7 @@ func main() {
 
 	localMqttHdl.SetMqttClient(localMqttClient)
 	localMqttHdl.SetMessageRelayHdl(
-		deviceEventMsgRelayHdl,
+		deviceEventMessageRelayHdl,
 		deviceCmdRespMsgRelayHdl,
 		processesStateMsgRelayHdl,
 		deviceConnectorErrMsgRelayHdl,
@@ -216,7 +265,6 @@ func main() {
 
 	deviceCmdMsgRelayHdl.Start()
 	processesCmdMsgRelayHdl.Start()
-	deviceEventMsgRelayHdl.Start()
 	deviceCmdRespMsgRelayHdl.Start()
 	processesStateMsgRelayHdl.Start()
 	deviceConnectorErrMsgRelayHdl.Start()
@@ -233,6 +281,7 @@ func main() {
 		return nil
 	})
 	wtchdg.RegisterStopFunc(func() error {
+		msgRelayHdlCf()
 		localMqttClient.Disconnect(1000)
 		cloudMqttClient.Disconnect(1000)
 		return nil
@@ -240,7 +289,6 @@ func main() {
 	wtchdg.RegisterStopFunc(func() error {
 		deviceCmdMsgRelayHdl.Stop()
 		processesCmdMsgRelayHdl.Stop()
-		deviceEventMsgRelayHdl.Stop()
 		deviceCmdRespMsgRelayHdl.Stop()
 		processesStateMsgRelayHdl.Stop()
 		deviceConnectorErrMsgRelayHdl.Stop()

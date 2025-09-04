@@ -17,7 +17,7 @@ func TestHandleUpstreamDeviceEvent(t *testing.T) {
 	DeviceEventMaxAge = time.Second * 5
 	LocalDeviceIDPrefix = "123"
 	a := CloudDeviceEventMsg{Data: "test"}
-	rt, rb, err := HandleUpstreamDeviceEvent(&mockMessage{
+	rt, rb, err := HandleUpstreamDeviceEventAgeLimit(&mockMessage{
 		topic:     "event/a/b",
 		payload:   []byte("test"),
 		timestamp: time.Now(),
@@ -37,7 +37,7 @@ func TestHandleUpstreamDeviceEvent(t *testing.T) {
 		t.Error("expected", a, "got", b)
 	}
 	t.Run("no message", func(t *testing.T) {
-		_, _, err = HandleUpstreamDeviceEvent(&mockMessage{
+		_, _, err = HandleUpstreamDeviceEventAgeLimit(&mockMessage{
 			topic:   "event/a/b",
 			payload: []byte("test"),
 		})
@@ -46,7 +46,7 @@ func TestHandleUpstreamDeviceEvent(t *testing.T) {
 		}
 	})
 	t.Run("error", func(t *testing.T) {
-		_, _, err = HandleUpstreamDeviceEvent(&mockMessage{
+		_, _, err = HandleUpstreamDeviceEventAgeLimit(&mockMessage{
 			topic:     "test",
 			timestamp: time.Now(),
 		})
