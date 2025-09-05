@@ -40,6 +40,9 @@ func (h *Handler) LastPosition(ctx context.Context) (dayHour int64, msgNum int64
 	defer h.rwMu.RUnlock()
 	row := h.db.QueryRowContext(ctx, lastPositionStmt)
 	if err = row.Scan(&dayHour, &msgNum); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = persistent_msg_relay_hdl.NoResultsErr
+		}
 		return
 	}
 	return

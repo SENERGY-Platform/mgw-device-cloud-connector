@@ -2,7 +2,6 @@ package persistent_msg_relay_hdl
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
@@ -59,7 +58,7 @@ func (h *Handler) Init(ctx context.Context) error {
 		return err
 	}
 	dayHour, msgNum, err := h.storageHdl.LastPosition(ctx)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil && !errors.Is(err, NoResultsErr) {
 		return err
 	}
 	h.msgDayHour = dayHour

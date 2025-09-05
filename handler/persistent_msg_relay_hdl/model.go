@@ -48,3 +48,4 @@ func (e *FullErr) Is(target error) bool {
 }
 
 var ExceedsSizeConstraintErr = errors.New("exceeds size constraint")
+var NoResultsErr = errors.New("no results")
