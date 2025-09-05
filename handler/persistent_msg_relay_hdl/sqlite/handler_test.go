@@ -374,3 +374,112 @@ func TestHandler_NoEntries(t *testing.T) {
 		}
 	})
 }
+
+func TestHandler_DeleteMessages(t *testing.T) {
+	m := persistent_msg_relay_hdl.StorageMessage{
+		ID:           "C",
+		DayHour:      2,
+		Number:       1,
+		MsgTopic:     "test",
+		MsgPayload:   []byte("test"),
+		MsgTimestamp: time.Now().Truncate(0),
+	}
+	t.Run("multiple rows", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			{
+				ID:           "B",
+				DayHour:      1,
+				Number:       2,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			m,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.DeleteMessages(t.Context(), []string{"A", "B"})
+		if err != nil {
+			t.Error(err)
+		}
+		a := []persistent_msg_relay_hdl.StorageMessage{
+			m,
+		}
+		b, err := h.ReadMessages(t.Context(), 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(a, b) {
+			t.Errorf("expected %v, got %v", a, b)
+		}
+	})
+	t.Run("single row", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			m,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.DeleteMessages(t.Context(), []string{"A"})
+		if err != nil {
+			t.Error(err)
+		}
+		a := []persistent_msg_relay_hdl.StorageMessage{
+			m,
+		}
+		b, err := h.ReadMessages(t.Context(), 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(a, b) {
+			t.Errorf("expected %v, got %v", a, b)
+		}
+	})
+	t.Run("no rows", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.DeleteMessages(t.Context(), []string{"A", "B"})
+		if err != nil {
+			t.Error(err)
+		}
+	})
+}
