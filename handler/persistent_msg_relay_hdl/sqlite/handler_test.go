@@ -38,7 +38,7 @@ func TestHandler_CreateAndReadMessages(t *testing.T) {
 		MsgPayload:   []byte("test"),
 		MsgTimestamp: time.Now().Truncate(0),
 	}
-	t.Run("ok", func(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
 		h, err := New(path.Join(t.TempDir(), "test.db"))
 		if err != nil {
 			t.Fatal(err)
@@ -46,7 +46,6 @@ func TestHandler_CreateAndReadMessages(t *testing.T) {
 		err = h.Init(t.Context(), 1048576)
 		if err != nil {
 			t.Fatal(err)
-			return
 		}
 		t.Run("empty", func(t *testing.T) {
 			messages, err := h.ReadMessages(t.Context(), 10)
