@@ -483,3 +483,150 @@ func TestHandler_DeleteMessages(t *testing.T) {
 		}
 	})
 }
+
+func TestHandler_DeleteFirstNMessages(t *testing.T) {
+	t.Run("number of rows larger than limit", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := persistent_msg_relay_hdl.StorageMessage{
+			ID:           "C",
+			DayHour:      2,
+			Number:       1,
+			MsgTopic:     "test",
+			MsgPayload:   []byte("test"),
+			MsgTimestamp: time.Now().Truncate(0),
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			{
+				ID:           "B",
+				DayHour:      1,
+				Number:       2,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			m,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.DeleteFirstNMessages(t.Context(), 2)
+		if err != nil {
+			t.Error(err)
+		}
+		a := []persistent_msg_relay_hdl.StorageMessage{
+			m,
+		}
+		b, err := h.ReadMessages(t.Context(), 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(a, b) {
+			t.Errorf("expected %v, got %v", a, b)
+		}
+	})
+	t.Run("number of rows equal to limit", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			{
+				ID:           "B",
+				DayHour:      1,
+				Number:       2,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.DeleteFirstNMessages(t.Context(), 2)
+		if err != nil {
+			t.Error(err)
+		}
+		messages, err := h.ReadMessages(t.Context(), 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(messages) > 0 {
+			t.Errorf("expected no messages")
+		}
+	})
+	t.Run("number of rows less than limit", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.DeleteFirstNMessages(t.Context(), 2)
+		if err != nil {
+			t.Error(err)
+		}
+		messages, err := h.ReadMessages(t.Context(), 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(messages) > 0 {
+			t.Errorf("expected no messages")
+		}
+	})
+	t.Run("no rows", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.DeleteFirstNMessages(t.Context(), 2)
+		if err != nil {
+			t.Error(err)
+		}
+	})
+}
