@@ -287,7 +287,7 @@ func TestHandler_LastPosition(t *testing.T) {
 	})
 }
 
-func TestHandler_NoRows(t *testing.T) {
+func TestHandler_NoEntries(t *testing.T) {
 	t.Run("multiple rows", func(t *testing.T) {
 		h, err := New(path.Join(t.TempDir(), "test.db"))
 		if err != nil {
