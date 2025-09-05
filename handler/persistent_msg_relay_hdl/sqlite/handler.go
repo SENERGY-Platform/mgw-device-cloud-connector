@@ -32,7 +32,6 @@ func New(filePath string) (*Handler, error) {
 }
 
 func (h *Handler) Close() error {
-	<-h.doneChan
 	return h.db.Close()
 }
 
@@ -58,6 +57,10 @@ func (h *Handler) Init(ctx context.Context, size int64) error {
 
 func (h *Handler) PeriodicOptimization(ctx context.Context, interval time.Duration) {
 	go h.periodicOptimization(ctx, interval)
+}
+
+func (h *Handler) Stop() {
+	<-h.doneChan
 }
 
 func (h *Handler) optimize(ctx context.Context, init bool) error {
