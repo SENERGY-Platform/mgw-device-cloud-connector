@@ -43,6 +43,12 @@ func (h *Handler) Init(ctx context.Context, size int64) error {
 	if err != nil {
 		return err
 	}
+	for _, index := range messagesIndexes {
+		_, err = h.db.ExecContext(ctx, index)
+		if err != nil {
+			return err
+		}
+	}
 	_, err = h.db.ExecContext(ctx, fmt.Sprintf("PRAGMA max_page_count=%d", size/pageSize))
 	if err != nil {
 		return err
