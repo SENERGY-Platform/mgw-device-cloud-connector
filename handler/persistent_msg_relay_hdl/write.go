@@ -69,7 +69,7 @@ func (h *Handler) write(messages []handler.Message) error {
 			if ok {
 				return ExceedsSizeConstraintErr
 			}
-			err = h.storageHdl.DeleteFirstNMessages(h.writerCtx, len(messages))
+			err = h.storageHdl.DeleteFirstNMessages(h.writerCtx, messagesLen)
 			if err != nil {
 				return err
 			}
