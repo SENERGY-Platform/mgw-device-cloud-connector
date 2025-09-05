@@ -62,7 +62,7 @@ func (h *Handler) write(messages []handler.Message) error {
 			if !errors.Is(err, &FullErr{}) {
 				return err
 			}
-			ok, err := h.storageHdl.NoRows(h.writerCtx)
+			ok, err := h.storageHdl.NoEntries(h.writerCtx)
 			if err != nil {
 				return err
 			}

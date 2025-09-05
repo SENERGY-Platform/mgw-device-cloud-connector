@@ -10,5 +10,5 @@ type storageHandler interface {
 	DeleteMessages(ctx context.Context, ids []string) error
 	DeleteFirstNMessages(ctx context.Context, limit int) error
 	LastPosition(ctx context.Context) (dayHour int64, msgNum int64, err error)
-	NoRows(ctx context.Context) (bool, error)
+	NoEntries(ctx context.Context) (bool, error)
 }

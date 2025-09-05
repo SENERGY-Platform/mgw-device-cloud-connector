@@ -50,7 +50,7 @@ func (h *Handler) LastPosition(ctx context.Context) (dayHour int64, msgNum int64
 
 const countRowsStmt = "SELECT count(*) FROM messages;"
 
-func (h *Handler) NoRows(ctx context.Context) (bool, error) {
+func (h *Handler) NoEntries(ctx context.Context) (bool, error) {
 	h.rwMu.RLock()
 	defer h.rwMu.RUnlock()
 	row := h.db.QueryRowContext(ctx, countRowsStmt)
