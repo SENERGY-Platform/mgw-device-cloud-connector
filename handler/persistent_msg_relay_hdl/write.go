@@ -81,7 +81,7 @@ func (h *Handler) write(messages []handler.Message) error {
 }
 
 func (h *Handler) advanceDayHourAndNumber() {
-	dayHour := getDayHourUnix()
+	dayHour := getDayHourUnix(time.Now().UTC())
 	if h.msgDayHour != dayHour {
 		h.msgDayHour = dayHour
 		h.msgNumber = 0

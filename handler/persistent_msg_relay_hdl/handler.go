@@ -140,7 +140,6 @@ func (h *Handler) createCleanupFile(msgIDs []string) error {
 	return json.NewEncoder(file).Encode(msgIDs)
 }
 
-func getDayHourUnix() int64 {
-	timeNow := time.Now().UTC()
-	return timeNow.Add(-time.Duration(int64(timeNow.Minute())*int64(time.Minute) + int64(timeNow.Second())*int64(time.Second) + int64(timeNow.Nanosecond()))).Unix()
+func getDayHourUnix(t time.Time) int64 {
+	return t.Add(-time.Duration(int64(t.Minute())*int64(time.Minute) + int64(t.Second())*int64(time.Second) + int64(t.Nanosecond()))).Unix()
 }
