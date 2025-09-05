@@ -15,7 +15,10 @@ func (h *Handler) ReadMessages(ctx context.Context, limit int) ([]persistent_msg
 	h.rwMu.RLock()
 	defer h.rwMu.RUnlock()
 	rows, err := h.db.QueryContext(ctx, fmt.Sprintf(readMessagesStmt, limit))
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, persistent_msg_relay_hdl.NoResultsErr
+		}
 		return nil, err
 	}
 	defer rows.Close()
