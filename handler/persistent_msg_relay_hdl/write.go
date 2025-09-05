@@ -99,3 +99,7 @@ func newStorageMessage(dayHour, number int64, m handler.Message) StorageMessage 
 		MsgTimestamp: m.Timestamp(),
 	}
 }
+
+func getDayHourUnix(t time.Time) int64 {
+	return t.Add(-time.Duration(int64(t.Minute())*int64(time.Minute) + int64(t.Second())*int64(time.Second) + int64(t.Nanosecond()))).Unix()
+}
