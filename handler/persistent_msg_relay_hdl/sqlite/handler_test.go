@@ -286,3 +286,91 @@ func TestHandler_LastPosition(t *testing.T) {
 		}
 	})
 }
+
+func TestHandler_NoRows(t *testing.T) {
+	t.Run("multiple rows", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			{
+				ID:           "B",
+				DayHour:      1,
+				Number:       2,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ok, err := h.NoEntries(t.Context())
+		if err != nil {
+			t.Error(err)
+		}
+		if ok {
+			t.Error("expected false")
+		}
+	})
+	t.Run("single row", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ok, err := h.NoEntries(t.Context())
+		if err != nil {
+			t.Error(err)
+		}
+		if ok {
+			t.Error("expected false")
+		}
+	})
+	t.Run("no rows", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ok, err := h.NoEntries(t.Context())
+		if err != nil {
+			t.Error(err)
+		}
+		if !ok {
+			t.Error("expected true")
+		}
+	})
+}
