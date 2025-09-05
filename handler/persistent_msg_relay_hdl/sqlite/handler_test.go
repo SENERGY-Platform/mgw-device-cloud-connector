@@ -192,3 +192,97 @@ func TestHandler_CreateAndReadMessages(t *testing.T) {
 		})
 	})
 }
+
+func TestHandler_LastPosition(t *testing.T) {
+	t.Run("multiple rows", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+			{
+				ID:           "B",
+				DayHour:      1,
+				Number:       2,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		dayHour, number, err := h.LastPosition(t.Context())
+		if err != nil {
+			t.Error(err)
+		}
+		if dayHour != 1 {
+			t.Errorf("expected 1, got %d", dayHour)
+		}
+		if number != 2 {
+			t.Errorf("expected 2, got %d", number)
+		}
+	})
+	t.Run("single row", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.CreateMessages(t.Context(), []persistent_msg_relay_hdl.StorageMessage{
+			{
+				ID:           "A",
+				DayHour:      1,
+				Number:       1,
+				MsgTopic:     "test",
+				MsgPayload:   []byte("test"),
+				MsgTimestamp: time.Now().Truncate(0),
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		dayHour, number, err := h.LastPosition(t.Context())
+		if err != nil {
+			t.Error(err)
+		}
+		if dayHour != 1 {
+			t.Errorf("expected 1, got %d", dayHour)
+		}
+		if number != 1 {
+			t.Errorf("expected 1, got %d", number)
+		}
+	})
+	t.Run("no rows", func(t *testing.T) {
+		h, err := New(path.Join(t.TempDir(), "test.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = h.Init(t.Context(), 1048576)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _, err = h.LastPosition(t.Context())
+		if err == nil {
+			t.Error("expected error")
+		}
+		if !errors.Is(err, persistent_msg_relay_hdl.NoResultsErr) {
+			t.Errorf("expected %T, got %T", persistent_msg_relay_hdl.NoResultsErr, err)
+		}
+	})
+}
