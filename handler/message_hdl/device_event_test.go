@@ -10,17 +10,22 @@ import (
 	"time"
 )
 
-func TestHandleUpstreamDeviceEvent(t *testing.T) {
+func TestHandleUpstreamDeviceEventAgeLimit(t *testing.T) {
 	t.Cleanup(clearVars)
 	util.InitLogger(util.LoggerConfig{Terminal: true, Level: 4})
 	topic.InitTopicHandler("usrID", "netID")
 	DeviceEventMaxAge = time.Second * 5
 	LocalDeviceIDPrefix = "123"
-	a := CloudDeviceEventMsg{Data: "test"}
+	timestamp := time.Now()
+	mb, err := json.Marshal(CSEMetadata{Timestamp: timestamp.Format(time.RFC3339Nano)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := CloudDeviceEventMsg{Metadata: string(mb), Data: "test"}
 	rt, rb, err := HandleUpstreamDeviceEventAgeLimit(&mockMessage{
 		topic:     "event/a/b",
 		payload:   []byte("test"),
-		timestamp: time.Now(),
+		timestamp: timestamp,
 	})
 	if err != nil {
 		t.Error(err)
