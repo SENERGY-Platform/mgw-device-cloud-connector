@@ -219,8 +219,18 @@ func main() {
 			return
 		}
 		storageHdl.PeriodicOptimization(msgRelayHdlCtx, time.Hour)
-		defer storageHdl.Stop()
-		deviceEventPersistentMsgRelayHdl := persistent_msg_relay_hdl.New(config.RelayHandler.EventMessagePersistentWorkspacePath, config.RelayHandler.EventMessageBuffer, storageHdl, message_hdl.HandleUpstreamDeviceEvent, cloudMqttClientPubF, 100)
+		wtchdg.RegisterStopFunc(func() error {
+			storageHdl.Stop()
+			return nil
+		})
+		deviceEventPersistentMsgRelayHdl := persistent_msg_relay_hdl.New(
+			config.RelayHandler.EventMessagePersistentWorkspacePath,
+			config.RelayHandler.EventMessageBuffer,
+			storageHdl,
+			message_hdl.HandleUpstreamDeviceEvent,
+			cloudMqttClientPubF,
+			config.RelayHandler.EventMessagePersistentReadLimit,
+		)
 		err = deviceEventPersistentMsgRelayHdl.Init(msgRelayHdlCtx)
 		if err != nil {
 			util.Logger.Error(err)
