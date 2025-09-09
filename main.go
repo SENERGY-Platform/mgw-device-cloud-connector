@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	sb_logger "github.com/SENERGY-Platform/go-service-base/logger"
-	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib/client"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_device_hdl"
@@ -29,6 +29,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"syscall"
 	"time"
 )
@@ -190,7 +191,7 @@ func main() {
 			ec = 1
 			return
 		}
-		storageHdl, err := sqlite.New(config.RelayHandler.EventMessagePersistentWorkspacePath)
+		storageHdl, err := sqlite.New(path.Join(config.RelayHandler.EventMessagePersistentWorkspacePath, "messages.db"))
 		if err != nil {
 			util.Logger.Error(err)
 			ec = 1
