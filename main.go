@@ -7,6 +7,7 @@ import (
 	"fmt"
 	sb_logger "github.com/SENERGY-Platform/go-service-base/logger"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
+	"github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib/client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_device_hdl"
@@ -16,7 +17,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/persistent_msg_relay_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/persistent_msg_relay_hdl/sqlite"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
-	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/auth_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/dm_client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/paho_mqtt"
@@ -24,8 +24,6 @@ import (
 	"github.com/SENERGY-Platform/mgw-go-service-base/srv-info-hdl"
 	sb_util "github.com/SENERGY-Platform/mgw-go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-go-service-base/watchdog"
-	dep_adv_client "github.com/SENERGY-Platform/mgw-module-manager/clients/dep-adv-client"
-	mm_model "github.com/SENERGY-Platform/mgw-module-manager/lib/model"
 	"github.com/eclipse/paho.mqtt.golang"
 	"net"
 	"net/http"
@@ -112,9 +110,9 @@ func main() {
 		},
 	}
 
-	cloutAuthClient := auth_client.New(cloudHttpClient, config.HttpClient.CloudAuthBaseUrl, config.CloudAuth.User, config.CloudAuth.Password.Value(), config.CloudAuth.ClientID)
-	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl, cloutAuthClient)
-	cloudHdl := cloud_hdl.New(cloudClient, cloutAuthClient, time.Duration(config.CloudHandler.SyncInterval), config.CloudHandler.WrkSpcPath, config.CloudHandler.AttributeOrigin)
+	cloudClient := cloud_client.New(cloudHttpClient, config.HttpClient.CloudApiBaseUrl)
+	certManagerClient := client.New(localHttpClient, config.HttpClient.LocalCmBaseUrl)
+	cloudHdl := cloud_hdl.New(cloudClient, certManagerClient, time.Duration(config.CloudHandler.SyncInterval), config.CloudHandler.AttributeOrigin)
 
 	wtchdg.Start()
 
@@ -125,24 +123,11 @@ func main() {
 		return nil
 	})
 
-	networkID, userID, err := cloudHdl.Init(chCtx, config.CloudHandler.NetworkID, config.CloudHandler.DefaultNetworkName, time.Duration(config.CloudHandler.NetworkInitDelay))
+	networkID, userID, err := cloudHdl.Init(chCtx, time.Duration(config.CloudHandler.NetworkInitDelay))
 	if err != nil {
 		util.Logger.Error(err)
 		ec = 1
 		return
-	}
-
-	depAdvClient := dep_adv_client.New(localHttpClient, config.HttpClient.LocalMmBaseUrl)
-	daCtx, cf2 := context.WithCancel(context.Background())
-	defer cf2()
-	err = depAdvClient.PutDepAdvertisement(daCtx, config.MGWDeploymentID, mm_model.DepAdvertisementBase{
-		Ref: "network",
-		Items: map[string]string{
-			"id": networkID,
-		},
-	})
-	if err != nil {
-		util.Logger.Error(err)
 	}
 
 	topic.InitTopicHandler(userID, networkID)
@@ -181,7 +166,7 @@ func main() {
 		util.Logger.Warningf("%s connection lost: %s", cloud_mqtt_hdl.LogPrefix, err)
 		cloudMqttHdl.HandleOnDisconnect()
 	})
-	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, networkID, config.CloudMqttClient, &config.CloudAuth, nil)
+	paho_mqtt.SetCloudClientOptions(cloudMqttClientOpt, networkID, config.CloudMqttClient)
 	cloudMqttClient := paho_mqtt.NewWrapper(mqtt.NewClient(cloudMqttClientOpt), time.Duration(config.CloudMqttClient.WaitTimeout))
 	cloudMqttClientPubF := func(topic string, data []byte) error {
 		return cloudMqttClient.Publish(topic, config.CloudMqttClient.PublishQOSLevel, false, data)

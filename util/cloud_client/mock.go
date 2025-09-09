@@ -33,26 +33,6 @@ type Mock struct {
 	GetAccessPoliciesC int
 }
 
-func (m *Mock) CreateHub(_ context.Context, hub models.Hub) (string, error) {
-	m.CreateHubC += 1
-	if m.HubErr != nil {
-		return "", m.HubErr
-	}
-	if m.Err != nil {
-		return "", m.Err
-	}
-	for _, lID := range hub.DeviceLocalIds {
-		rID, ok := m.DeviceIDMap[lID]
-		if !ok {
-			return "", newBadRequestError(errors.New("device not found"))
-		}
-		hub.DeviceIds = append(hub.DeviceIds, rID)
-	}
-	hub.Id = strconv.FormatInt(int64(len(m.Hubs))+1, 10)
-	m.Hubs[hub.Id] = hub
-	return hub.Id, nil
-}
-
 func (m *Mock) GetHub(_ context.Context, id string) (models.Hub, error) {
 	m.GetHubC += 1
 	if m.HubErr != nil {

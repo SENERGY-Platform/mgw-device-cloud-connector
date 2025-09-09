@@ -12,28 +12,26 @@ import (
 const logPrefix = "[cloud-hdl]"
 
 type Handler struct {
-	cloudClient     cloud_client.ClientItf
-	subjectProvider handler.SubjectProvider
-	wrkSpacePath    string
-	attrOrigin      string
-	userID          string
-	data            data
-	syncOK          bool
-	syncedIDs       map[string]string
-	lastSync        time.Time
-	syncInterval    time.Duration
-	noNetwork       bool
-	stateSyncFunc   func(ctx context.Context, devices map[string]model.Device, missingIDs, onlineIDs, offlineIDs []string)
-	mu              sync.RWMutex
+	cloudClient       cloud_client.ClientItf
+	certManagerClient handler.CertManagerClient
+	attrOrigin        string
+	userID            string
+	networkID         string
+	syncOK            bool
+	syncedIDs         map[string]string
+	lastSync          time.Time
+	syncInterval      time.Duration
+	noNetwork         bool
+	stateSyncFunc     func(ctx context.Context, devices map[string]model.Device, missingIDs, onlineIDs, offlineIDs []string)
+	mu                sync.RWMutex
 }
 
-func New(cloudClient cloud_client.ClientItf, subjectProvider handler.SubjectProvider, syncInterval time.Duration, wrkSpacePath, attrOrigin string) *Handler {
+func New(cloudClient cloud_client.ClientItf, certManagerClient handler.CertManagerClient, syncInterval time.Duration, attrOrigin string) *Handler {
 	return &Handler{
-		cloudClient:     cloudClient,
-		subjectProvider: subjectProvider,
-		syncInterval:    syncInterval,
-		wrkSpacePath:    wrkSpacePath,
-		attrOrigin:      attrOrigin,
+		cloudClient:       cloudClient,
+		certManagerClient: certManagerClient,
+		syncInterval:      syncInterval,
+		attrOrigin:        attrOrigin,
 	}
 }
 

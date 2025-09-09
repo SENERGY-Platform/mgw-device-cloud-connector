@@ -18,7 +18,6 @@ package util
 
 import (
 	"github.com/SENERGY-Platform/go-service-base/config-hdl"
-	cfg_types "github.com/SENERGY-Platform/go-service-base/config-hdl/types"
 	sb_logger "github.com/SENERGY-Platform/go-service-base/logger"
 	envldr "github.com/y-du/go-env-loader"
 	"github.com/y-du/go-log-level/level"
@@ -49,27 +48,17 @@ type LocalMqttClientConfig struct {
 }
 
 type HttpClientConfig struct {
-	LocalMmBaseUrl   string `json:"local_mm_base_url" env_var:"LOCAL_MM_BASE_URL"`
-	LocalDmBaseUrl   string `json:"local_dm_base_url" env_var:"LOCAL_DM_BASE_URL"`
-	CloudApiBaseUrl  string `json:"cloud_api_base_url" env_var:"CLOUD_API_BASE_URL"`
-	CloudAuthBaseUrl string `json:"cloud_auth_base_url" env_var:"CLOUD_AUTH_BASE_URL"`
-	LocalTimeout     int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
-	CloudTimeout     int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
-}
-
-type CloudAuthConfig struct {
-	User     string           `json:"user" env_var:"CLOUD_USER"`
-	Password cfg_types.Secret `json:"password" env_var:"CLOUD_PASSWORD"`
-	ClientID string           `json:"client_id" env_var:"CLOUD_CLIENT_ID"`
+	LocalDmBaseUrl  string `json:"local_dm_base_url" env_var:"LOCAL_DM_BASE_URL"`
+	LocalCmBaseUrl  string `json:"local_cm_base_url" env_var:"LOCAL_CM_BASE_URL"`
+	CloudApiBaseUrl string `json:"cloud_api_base_url" env_var:"CLOUD_API_BASE_URL"`
+	LocalTimeout    int64  `json:"local_timeout" env_var:"HTTP_LOCAL_TIMEOUT"`
+	CloudTimeout    int64  `json:"cloud_timeout" env_var:"HTTP_CLOUD_TIMEOUT"`
 }
 
 type CloudHandlerConfig struct {
-	NetworkID          string `json:"network_id" env_var:"CH_NETWORK_ID"`
-	DefaultNetworkName string `json:"default_network_name" env_var:"CH_DEFAULT_NETWORK_NAME"`
-	WrkSpcPath         string `json:"wrk_spc_path" env_var:"CH_WRK_SPC_PATH"`
-	AttributeOrigin    string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
-	SyncInterval       int64  `json:"sync_interval" env_var:"CH_SYNC_INTERVAL"`
-	NetworkInitDelay   int64  `json:"network_init_delay" env_var:"CH_NETWORK_INIT_DELAY"`
+	AttributeOrigin  string `json:"attribute_origin" env_var:"CH_ATTRIBUTE_ORIGIN"`
+	SyncInterval     int64  `json:"sync_interval" env_var:"CH_SYNC_INTERVAL"`
+	NetworkInitDelay int64  `json:"network_init_delay" env_var:"CH_NETWORK_INIT_DELAY"`
 }
 
 type LocalDeviceHandlerConfig struct {
@@ -103,7 +92,6 @@ type Config struct {
 	CloudMqttClient    CloudMqttClientConfig    `json:"cloud_mqtt_client" env_var:"CLOUD_MQTT_CLIENT_CONFIG"`
 	LocalMqttClient    LocalMqttClientConfig    `json:"local_mqtt_client" env_var:"LOCAL_MQTT_CLIENT_CONFIG"`
 	HttpClient         HttpClientConfig         `json:"http_client" env_var:"HTTP_CLIENT_CONFIG"`
-	CloudAuth          CloudAuthConfig          `json:"cloud_auth" env_var:"CLOUD_AUTH_CONFIG"`
 	CloudHandler       CloudHandlerConfig       `json:"cloud_handler" env_var:"CLOUD_HANDLER_CONFIG"`
 	LocalDeviceHandler LocalDeviceHandlerConfig `json:"local_device_handler" env_var:"LOCAL_DEVICE_HANDLER_CONFIG"`
 	RelayHandler       RelayHandlerConfig       `json:"relay_handler" env_var:"RELAY_HANDLER_CONFIG"`
@@ -144,12 +132,10 @@ func NewConfig(path string) (*Config, error) {
 		CloudMqttClient: defaultCloudMqttClientConfig,
 		LocalMqttClient: defaultLocalMqttClientConfig,
 		HttpClient: HttpClientConfig{
-			LocalMmBaseUrl: "http://module-manager",
-			LocalTimeout:   10000000000, // 10s
-			CloudTimeout:   30000000000, // 30s
+			LocalTimeout: 10000000000, // 10s
+			CloudTimeout: 30000000000, // 30s
 		},
 		CloudHandler: CloudHandlerConfig{
-			WrkSpcPath:       "/opt/connector/ch-data",
 			AttributeOrigin:  "dcc",
 			SyncInterval:     1800000000000, // 30m
 			NetworkInitDelay: 10000000000,   // 10s

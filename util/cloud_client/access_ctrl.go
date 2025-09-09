@@ -85,9 +85,6 @@ func (c *Client) GetAccessPolicies(ctx context.Context) (EndpointAccPolItf, erro
 	if err != nil {
 		return endpointAccPol{}, err
 	}
-	if err = c.setAuthHeader(ctx, req); err != nil {
-		return endpointAccPol{}, err
-	}
 	var res accPolRespData
 	err = c.baseClient.ExecRequestJSON(req, &res)
 	if err != nil {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	cm_models_service "github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib/models/service"
 	"time"
 )
 
@@ -23,6 +24,6 @@ type MqttClient interface {
 	Publish(topic string, qos byte, retained bool, payload any) error
 }
 
-type SubjectProvider interface {
-	GetUserID(ctx context.Context) (string, error)
+type CertManagerClient interface {
+	NetworkInfo(ctx context.Context, cloudStatus bool, token string) (cm_models_service.NetworkInfo, error)
 }
