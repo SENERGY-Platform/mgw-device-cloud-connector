@@ -175,7 +175,7 @@ func main() {
 
 	msgRelayHdlCtx, msgRelayHdlCf := context.WithCancel(context.Background())
 	var deviceEventMessageRelayHdl handler.MessageRelayHandler
-	if config.RelayHandler.EventMessagePersistent {
+	if !config.RelayHandler.EventMessagePersistent {
 		message_hdl.DeviceEventMaxAge = time.Duration(config.RelayHandler.MaxDeviceEventAge)
 		deviceEventMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.EventMessageBuffer, message_hdl.HandleUpstreamDeviceEventAgeLimit, cloudMqttClientPubF)
 		deviceEventMsgRelayHdl.Start()
