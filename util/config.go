@@ -158,10 +158,13 @@ func NewConfig(path string) (*Config, error) {
 			RefreshInterval: 5000000000, // 5s
 		},
 		RelayHandler: RelayHandlerConfig{
-			MessageBuffer:      50000,
-			EventMessageBuffer: 100000,
-			MaxDeviceCmdAge:    30000000000,  // 30s
-			MaxDeviceEventAge:  300000000000, // 5m
+			MessageBuffer:                       50000,
+			EventMessageBuffer:                  100000,
+			EventMessagePersistentWorkspacePath: "/opt/connector/event-data",
+			EventMessagePersistentStorageSize:   "4GB",
+			EventMessagePersistentReadLimit:     100,
+			MaxDeviceCmdAge:                     30000000000,  // 30s
+			MaxDeviceEventAge:                   300000000000, // 5m
 		},
 	}
 	err := config_hdl.Load(&cfg, nil, map[reflect.Type]envldr.Parser{reflect.TypeOf(level.Off): sb_logger.LevelParser}, nil, path)
