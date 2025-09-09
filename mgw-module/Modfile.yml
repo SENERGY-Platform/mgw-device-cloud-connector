@@ -4,7 +4,7 @@ name: Device Cloud-Connector
 description: Connect local devices to the Cloud.
 license: Apache-2.0 license
 author: InfAI (CC SES)
-version: v0.5.8
+version: v0.6.0
 type: add-on
 deploymentType: single
 dependencies:
@@ -27,10 +27,14 @@ dependencies:
 services:
   connector:
     name: Connector
-    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.4.8
+    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.5.3
 volumes:
   ch-data:
     - mountPoint: /opt/connector/ch-data
+      services:
+        - connector
+  event-data:
+    - mountPoint: /opt/connector/event-data
       services:
         - connector
 inputGroups:
@@ -256,6 +260,44 @@ configs:
     userInput:
       type: number
       name: Event message buffer size
+      group: msg-relay
+    optional: true
+  relay-event-msg-persistent:
+    dataType: int
+    value: 1
+    options:
+      - 0
+      - 1
+    targets:
+      - refVar: RH_EVENT_MESSAGE_PERSISTENT
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Event message persistent storage
+      group: msg-relay
+    optional: true
+  relay-event-msg-persistent-storage-size:
+    value: "4GB"
+    targets:
+      - refVar: RH_EVENT_MESSAGE_PERSISTENT_STORAGE_SIZE
+        services:
+          - connector
+    userInput:
+      type: text
+      name: Event message persistent storage size
+      group: msg-relay
+    optional: true
+  relay-event-msg-persistent-storage-read-limit:
+    dataType: int
+    value: 100
+    targets:
+      - refVar: RH_EVENT_MESSAGE_PERSISTENT_READ_LIMIT
+        services:
+          - connector
+    userInput:
+      type: number
+      name: Event message persistent storage read limit
       group: msg-relay
     optional: true
   max-device-cmd-age:
