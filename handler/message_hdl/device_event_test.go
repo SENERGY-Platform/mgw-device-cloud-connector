@@ -17,11 +17,10 @@ func TestHandleUpstreamDeviceEventAgeLimit(t *testing.T) {
 	DeviceEventMaxAge = time.Second * 5
 	LocalDeviceIDPrefix = "123"
 	timestamp := time.Now()
-	mb, err := json.Marshal(CSEMetadata{Timestamp: timestamp.Format(time.RFC3339Nano)})
-	if err != nil {
-		t.Fatal(err)
+	a := CloudDeviceEventMsg{
+		CloudStandardEnvelope: CloudStandardEnvelope{Data: "test"},
+		Timestamp:             timestamp.Format(time.RFC3339Nano),
 	}
-	a := CloudDeviceEventMsg{Metadata: string(mb), Data: "test"}
 	rt, rb, err := HandleUpstreamDeviceEventAgeLimit(&mockMessage{
 		topic:     "event/a/b",
 		payload:   []byte("test"),
@@ -69,11 +68,10 @@ func TestHandleUpstreamDeviceEvent(t *testing.T) {
 	topic.InitTopicHandler("usrID", "netID")
 	LocalDeviceIDPrefix = "123"
 	timestamp := time.Now()
-	mb, err := json.Marshal(CSEMetadata{Timestamp: timestamp.Format(time.RFC3339Nano)})
-	if err != nil {
-		t.Fatal(err)
+	a := CloudDeviceEventMsg{
+		CloudStandardEnvelope: CloudStandardEnvelope{Data: "test"},
+		Timestamp:             timestamp.Format(time.RFC3339Nano),
 	}
-	a := CloudDeviceEventMsg{Metadata: string(mb), Data: "test"}
 	rt, rb, err := HandleUpstreamDeviceEvent(&mockMessage{
 		topic:     "event/a/b",
 		payload:   []byte("test"),

@@ -7,11 +7,10 @@ type CloudStandardEnvelope struct {
 	Data     string `json:"data"`
 }
 
-type CSEMetadata struct {
+type CloudDeviceEventMsg struct {
+	CloudStandardEnvelope
 	Timestamp string `json:"timestamp_rfc3339nano"`
 }
-
-type CloudDeviceEventMsg = CloudStandardEnvelope
 
 type CloudDeviceCmdMsg struct {
 	CorrelationID      string                `json:"correlation_id"`
