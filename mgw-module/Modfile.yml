@@ -4,7 +4,7 @@ name: Device Cloud-Connector
 description: Connect local devices to the Cloud.
 license: Apache-2.0 license
 author: InfAI (CC SES)
-version: v0.6.5
+version: v0.6.6
 type: add-on
 deploymentType: single
 dependencies:
@@ -208,7 +208,7 @@ configs:
         services:
           - connector
     userInput:
-      type: number
+      type: text
       name: Relay handler type
       group: msg-relay-events
     optional: true
