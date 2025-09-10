@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o connector -ldflags="-X 'main.version=$V
 
 FROM alpine:3.20
 
-RUN mkdir -p /opt/connector /opt/connector/ch-data /opt/connector/event-data
+RUN mkdir -p /opt/connector /opt/connector/event-data
 WORKDIR /opt/connector
 COPY --from=builder /go/src/app/connector connector
 
