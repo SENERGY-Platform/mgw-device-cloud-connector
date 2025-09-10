@@ -4,7 +4,7 @@ name: Device Cloud-Connector
 description: Connect local devices to the Cloud.
 license: Apache-2.0 license
 author: InfAI (CC SES)
-version: v0.6.4
+version: v0.6.5
 type: add-on
 deploymentType: single
 dependencies:
@@ -43,7 +43,7 @@ dependencies:
 services:
   connector:
     name: Connector
-    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.5.4
+    image: ghcr.io/senergy-platform/mgw-device-cloud-connector:0.5.5
 volumes:
   event-data:
     - mountPoint: /opt/connector/event-data
