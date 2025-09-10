@@ -24,6 +24,11 @@ import (
 	"reflect"
 )
 
+const (
+	EventMsgRelayHdlInMemory   = "in-memory"
+	EventMsgRelayHdlPersistent = "persistent"
+)
+
 type CloudMqttClientConfig struct {
 	Server            string `json:"server" env_var:"CLOUD_MQTT_SERVER"`
 	KeepAlive         int64  `json:"keep_alive" env_var:"CLOUD_MQTT_KEEP_ALIVE"`
@@ -69,7 +74,7 @@ type LocalDeviceHandlerConfig struct {
 type RelayHandlerConfig struct {
 	MessageBuffer                       int    `json:"message_buffer" env_var:"RH_MESSAGE_BUFFER"`
 	EventMessageBuffer                  int    `json:"event_message_buffer" env_var:"RH_EVENT_MESSAGE_BUFFER"`
-	EventMessagePersistent              bool   `json:"event_message_persistent" env_var:"RH_EVENT_MESSAGE_PERSISTENT"`
+	EventMessageHandlerType             string `json:"event_message_handler_type" env_var:"RH_EVENT_MESSAGE_HANDLER_TYPE"`
 	EventMessagePersistentWorkspacePath string `json:"event_message_persistent_workspace_path" env_var:"RH_EVENT_MESSAGE_PERSISTENT_WORKSPACE_PATH"`
 	EventMessagePersistentStorageSize   string `json:"event_message_persistent_storage_size" env_var:"RH_EVENT_MESSAGE_PERSISTENT_STORAGE_SIZE"`
 	EventMessagePersistentReadLimit     int    `json:"event_message_persistent_read_limit" env_var:"RH_EVENT_MESSAGE_PERSISTENT_READ_LIMIT"`
@@ -145,6 +150,7 @@ func NewConfig(path string) (*Config, error) {
 		},
 		RelayHandler: RelayHandlerConfig{
 			MessageBuffer:                       50000,
+			EventMessageHandlerType:             EventMsgRelayHdlInMemory,
 			EventMessageBuffer:                  100000,
 			EventMessagePersistentWorkspacePath: "/opt/connector/event-data",
 			EventMessagePersistentStorageSize:   "4GB",

@@ -175,7 +175,8 @@ func main() {
 
 	msgRelayHdlCtx, msgRelayHdlCf := context.WithCancel(context.Background())
 	var deviceEventMessageRelayHdl handler.MessageRelayHandler
-	if !config.RelayHandler.EventMessagePersistent {
+	switch config.RelayHandler.EventMessageHandlerType {
+	case util.EventMsgRelayHdlInMemory:
 		message_hdl.DeviceEventMaxAge = time.Duration(config.RelayHandler.MaxDeviceEventAge)
 		deviceEventMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.EventMessageBuffer, message_hdl.HandleUpstreamDeviceEventAgeLimit, cloudMqttClientPubF)
 		deviceEventMsgRelayHdl.Start()
@@ -184,7 +185,7 @@ func main() {
 			return nil
 		})
 		deviceEventMessageRelayHdl = deviceEventMsgRelayHdl
-	} else {
+	case util.EventMsgRelayHdlPersistent:
 		size, err := util.ParseSize(config.RelayHandler.EventMessagePersistentStorageSize)
 		if err != nil {
 			util.Logger.Error(err)
@@ -230,6 +231,10 @@ func main() {
 			return nil
 		})
 		deviceEventMessageRelayHdl = deviceEventPersistentMsgRelayHdl
+	default:
+		util.Logger.Errorf("unknown event message relay handler: %s", config.RelayHandler.EventMessageHandlerType)
+		ec = 1
+		return
 	}
 
 	message_hdl.DeviceCommandIDPrefix = fmt.Sprintf("%s_%s_", srvInfoHdl.GetName(), config.MGWDeploymentID)
