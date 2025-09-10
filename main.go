@@ -177,6 +177,7 @@ func main() {
 	var deviceEventMessageRelayHdl handler.MessageRelayHandler
 	switch config.RelayHandler.EventMessageHandlerType {
 	case util.EventMsgRelayHdlInMemory:
+		util.Logger.Infof("event message relay handler: %s", util.EventMsgRelayHdlInMemory)
 		message_hdl.DeviceEventMaxAge = time.Duration(config.RelayHandler.MaxDeviceEventAge)
 		deviceEventMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.EventMessageBuffer, message_hdl.HandleUpstreamDeviceEventAgeLimit, cloudMqttClientPubF)
 		deviceEventMsgRelayHdl.Start()
@@ -186,6 +187,7 @@ func main() {
 		})
 		deviceEventMessageRelayHdl = deviceEventMsgRelayHdl
 	case util.EventMsgRelayHdlPersistent:
+		util.Logger.Infof("event message relay handler: %s", util.EventMsgRelayHdlPersistent)
 		size, err := util.ParseSize(config.RelayHandler.EventMessagePersistentStorageSize)
 		if err != nil {
 			util.Logger.Error(err)
