@@ -59,6 +59,14 @@ inputGroups:
     group: cloud-settings
   msg-relay:
     name: Message relay settings
+  msg-relay-events:
+    name: Event message relay settings
+  msg-relay-events-in-memory:
+    name: In-Memory
+    group: msg-relay-events
+  msg-relay-events-persistent:
+    name: Persistent
+    group: msg-relay-events
 configs:
   log-level:
     value: "warning"
@@ -174,7 +182,8 @@ configs:
           - connector
     userInput:
       type: number
-      name: Message buffer size
+      name: Receive buffer size
+      description: Set buffer size for device command, processes and error message relay handlers.
       group: msg-relay
     optional: true
   relay-event-msg-buffer:
@@ -186,23 +195,22 @@ configs:
           - connector
     userInput:
       type: number
-      name: Event message buffer size
-      group: msg-relay
+      name: Receive buffer size
+      group: msg-relay-events
     optional: true
-  relay-event-msg-persistent:
-    dataType: int
-    value: 1
+  relay-event-msg-handler-type:
+    value: "persistent"
     options:
-      - 0
-      - 1
+      - "persistent"
+      - "in-memory"
     targets:
-      - refVar: RH_EVENT_MESSAGE_PERSISTENT
+      - refVar: RH_EVENT_MESSAGE_HANDLER_TYPE
         services:
           - connector
     userInput:
       type: number
-      name: Event message persistent storage
-      group: msg-relay
+      name: Relay handler type
+      group: msg-relay-events
     optional: true
   relay-event-msg-persistent-storage-size:
     value: "4GB"
@@ -212,8 +220,8 @@ configs:
           - connector
     userInput:
       type: text
-      name: Event message persistent storage size
-      group: msg-relay
+      name: Storage size
+      group: msg-relay-events-persistent
     optional: true
   relay-event-msg-persistent-storage-read-limit:
     dataType: int
@@ -224,8 +232,9 @@ configs:
           - connector
     userInput:
       type: number
-      name: Event message persistent storage read limit
-      group: msg-relay
+      name: Read limit
+      description: Specifies the number of messages that can be read from the database. Can be used to tune performance, as messages can be grouped and sent in parallel.
+      group: msg-relay-events-persistent
     optional: true
   max-device-cmd-age:
     dataType: int
@@ -251,5 +260,5 @@ configs:
       type: number
       name: Maximum device event age
       description: "Set the maximum age for device events in nanoseconds."
-      group: msg-relay
+      group: msg-relay-events-in-memory
     optional: true
