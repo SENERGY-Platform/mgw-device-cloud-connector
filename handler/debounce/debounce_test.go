@@ -257,6 +257,7 @@ func testDebouncerStorageProvider(debouncer *Debouncer, testRelayHandler *testMe
 	// overwrite storage provider for test sync
 	testWrappedStorageProvider := &testWrappedStorageProvider{
 		storageProvider: debouncer.storageProvider,
+		stored:          make(chan bool),
 	}
 	debouncer.storageProvider = testWrappedStorageProvider
 
@@ -268,6 +269,7 @@ func testDebouncerStorageProvider(debouncer *Debouncer, testRelayHandler *testMe
 	if err != nil {
 		return err
 	}
+	<-testWrappedStorageProvider.stored
 	<-testRelayHandler.c
 
 	states, err := debouncer.storageProvider.getAllStates()
@@ -285,7 +287,6 @@ func testDebouncerStorageProvider(debouncer *Debouncer, testRelayHandler *testMe
 		return fmt.Errorf("stored message state nextForward incorrect")
 	}
 
-	testWrappedStorageProvider.stored = make(chan bool)
 	err = debouncer.Put(util.Message{
 		TopicVal:   "event/device1/service1",
 		PayloadVal: "test2",
