@@ -5,11 +5,20 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"syscall"
+	"time"
+
 	sb_logger "github.com/SENERGY-Platform/go-service-base/logger"
 	"github.com/SENERGY-Platform/mgw-cloud-proxy/cert-manager/lib/client"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_mqtt_hdl"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/debounce"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_device_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/message_hdl"
@@ -25,13 +34,6 @@ import (
 	sb_util "github.com/SENERGY-Platform/mgw-go-service-base/util"
 	"github.com/SENERGY-Platform/mgw-go-service-base/watchdog"
 	"github.com/eclipse/paho.mqtt.golang"
-	"net"
-	"net/http"
-	"net/url"
-	"os"
-	"path"
-	"syscall"
-	"time"
 )
 
 var version string
@@ -251,9 +253,16 @@ func main() {
 	deviceErrMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandlerUpstreamDeviceErr, cloudMqttClientPubF)
 	deviceCmdErrMsgRelayHdl := msg_relay_hdl.New(config.RelayHandler.MessageBuffer, message_hdl.HandlerUpstreamDeviceCmdErr, cloudMqttClientPubF)
 
+	debouncer, err := debounce.New(cloudHdl, deviceEventMessageRelayHdl, config.DebouncerConfig, msgRelayHdlCtx)
+	if err != nil {
+		util.Logger.Error(err)
+		ec = 1
+		return
+	}
+
 	localMqttHdl.SetMqttClient(localMqttClient)
 	localMqttHdl.SetMessageRelayHdl(
-		deviceEventMessageRelayHdl,
+		debouncer,
 		deviceCmdRespMsgRelayHdl,
 		processesStateMsgRelayHdl,
 		deviceConnectorErrMsgRelayHdl,

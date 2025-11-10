@@ -68,6 +68,9 @@ func (h *Handler) syncDevAndNet(ctx context.Context, devices map[string]model.De
 	if err != nil {
 		return err
 	}
+	h.muCloudDevices.Lock()
+	h.cloudDevices = cloudDevices
+	h.muCloudDevices.Unlock()
 	var syncedIDs map[string]string
 	var ok bool
 	if devSyncAllowed {

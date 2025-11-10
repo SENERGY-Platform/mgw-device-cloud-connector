@@ -92,6 +92,11 @@ type LoggerConfig struct {
 	Prefix       string      `json:"prefix" env_var:"LOGGER_PREFIX"`
 }
 
+type DebouncerConfig struct {
+	PersistencePath               string `json:"persistence_path" env_var:"DEBOUNCER_PERSISTENCE_PATH"`
+	RefreshDebounceConfigInterval string `json:"refresh_debounce_config_interval" env_var:"DEBOUNCER_REFRESH_DEBOUNCE_CONFIG_INTERVAL"`
+}
+
 type Config struct {
 	Logger             LoggerConfig             `json:"logger" env_var:"LOGGER_CONFIG"`
 	CloudMqttClient    CloudMqttClientConfig    `json:"cloud_mqtt_client" env_var:"CLOUD_MQTT_CLIENT_CONFIG"`
@@ -103,6 +108,7 @@ type Config struct {
 	MGWDeploymentID    string                   `json:"mgw_deployment_id" env_var:"MGW_DID"`
 	MQTTLog            bool                     `json:"mqtt_log" env_var:"MQTT_LOG"`
 	MQTTDebugLog       bool                     `json:"mqtt_debug_log" env_var:"MQTT_DEBUG_LOG"`
+	DebouncerConfig    DebouncerConfig          `json:"debouncer_config" env_var:"DEBOUNCER_CONFIG"`
 }
 
 var defaultCloudMqttClientConfig = CloudMqttClientConfig{
@@ -157,6 +163,10 @@ func NewConfig(path string) (*Config, error) {
 			EventMessagePersistentReadLimit:     100,
 			MaxDeviceCmdAge:                     30000000000,  // 30s
 			MaxDeviceEventAge:                   300000000000, // 5m
+		},
+		DebouncerConfig: DebouncerConfig{
+			PersistencePath:               "/opt/connector/event-data/debounce.sqlite",
+			RefreshDebounceConfigInterval: "1m",
 		},
 	}
 	err := config_hdl.Load(&cfg, nil, map[reflect.Type]envldr.Parser{reflect.TypeOf(level.Off): sb_logger.LevelParser}, nil, path)

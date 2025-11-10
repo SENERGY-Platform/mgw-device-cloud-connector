@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
 	"testing"
 	"time"
+
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 )
 
 func TestHandler_writer(t *testing.T) {
@@ -17,7 +19,7 @@ func TestHandler_writer(t *testing.T) {
 		ctx, cf := context.WithCancel(t.Context())
 		go h.writer(ctx)
 		for i := 0; i < 100; i++ {
-			err := h.Put(messageMock{
+			err := h.Put(util.Message{
 				TopicVal: fmt.Sprintf("%d", i),
 			})
 			if err != nil {
@@ -42,7 +44,7 @@ func TestHandler_writer(t *testing.T) {
 		ctx, cf := context.WithCancel(t.Context())
 		go h.writer(ctx)
 		for i := 0; i < 5; i++ {
-			err := h.Put(messageMock{
+			err := h.Put(util.Message{
 				TopicVal: fmt.Sprintf("%d", i),
 			})
 			if err != nil {
@@ -67,7 +69,7 @@ func TestHandler_writer(t *testing.T) {
 		ctx, cf := context.WithCancel(t.Context())
 		go h.writer(ctx)
 		for i := 0; i < 5; i++ {
-			err := h.Put(messageMock{
+			err := h.Put(util.Message{
 				TopicVal: fmt.Sprintf("%d", i),
 			})
 			if err != nil {
@@ -76,7 +78,7 @@ func TestHandler_writer(t *testing.T) {
 		}
 		time.Sleep(time.Second)
 		for i := 5; i < 10; i++ {
-			err := h.Put(messageMock{
+			err := h.Put(util.Message{
 				TopicVal: fmt.Sprintf("%d", i),
 			})
 			if err != nil {
@@ -100,12 +102,12 @@ func TestHandler_writer(t *testing.T) {
 func TestHandler_write(t *testing.T) {
 	timeNow := time.Now()
 	messages := []handler.Message{
-		messageMock{
+		util.Message{
 			TopicVal:   "a/b",
 			PayloadVal: "test1",
 			TimeVal:    timeNow,
 		},
-		messageMock{
+		util.Message{
 			TopicVal:   "c/d",
 			PayloadVal: "test2",
 			TimeVal:    timeNow.Add(time.Second),
@@ -215,22 +217,4 @@ func Test_getDayHourUnix(t *testing.T) {
 	if a != b {
 		t.Errorf("expected %d, got %d", a, b)
 	}
-}
-
-type messageMock struct {
-	TopicVal   string
-	PayloadVal string
-	TimeVal    time.Time
-}
-
-func (m messageMock) Topic() string {
-	return m.TopicVal
-}
-
-func (m messageMock) Payload() []byte {
-	return []byte(m.PayloadVal)
-}
-
-func (m messageMock) Timestamp() time.Time {
-	return m.TimeVal
 }
