@@ -142,6 +142,9 @@ func (d *Debouncer) startWorkersFromStorage() error {
 		}
 		w := newWorker(state.Id, d.child, d.ctx, *dur, state.NextForward, d.storageProvider)
 		d.workers[state.Id] = w
+		if state.BufferedMsg != nil {
+			w.put(state.BufferedMsg)
+		}
 	}
 	return nil
 }
