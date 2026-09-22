@@ -28,6 +28,8 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 )
 
+const defaultDebounceDuration = time.Minute
+
 type CloudDeviceProvider interface {
 	GetCloudDevice(localId string) *models.Device
 }
@@ -115,7 +117,12 @@ func (d *Debouncer) Put(m handler.Message) error {
 		if err != nil {
 			return err
 		}
-		w.debounceFor = *debounceDuration
+		if debounceDuration == nil {
+			util.Logger.Warningf("debouncer: using default debounce duration for %s", m.Topic())
+			w.debounceFor = defaultDebounceDuration
+		} else {
+			w.debounceFor = *debounceDuration
+		}
 		w.debounceForUpdatedAt = time.Now()
 	}
 	return w.put(m)
@@ -159,7 +166,7 @@ func (d *Debouncer) getDebounceDuration(m handler.Message) (*time.Duration, erro
 	}
 	device := d.cloudDeviceProvider.GetCloudDevice(topicsParts[1])
 	if device == nil {
-		util.Logger.Debugf("debouncer: no cloud device found for topic %s", m.Topic())
+		util.Logger.Warningf("debouncer: no cloud device found for topic %s", m.Topic())
 		return nil, nil
 	}
 
@@ -170,7 +177,7 @@ func (d *Debouncer) getDebounceDuration(m handler.Message) (*time.Duration, erro
 
 		dur, err := time.ParseDuration(attr.Value)
 		if err != nil {
-			util.Logger.Warningf("debounce: parse debounce duration for device %s, localServiceId %s: %s", device.Id, topicsParts[2], err)
+			util.Logger.Warningf("debouncer: parse debounce duration for device %s, localServiceId %s: %s", device.Id, topicsParts[2], err)
 			return nil, nil
 		}
 		return &dur, nil
