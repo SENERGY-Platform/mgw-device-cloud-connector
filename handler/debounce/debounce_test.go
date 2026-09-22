@@ -33,6 +33,14 @@ import (
 	"github.com/y-du/go-log-level/level"
 )
 
+// TestMain initialises the package level util.Logger once. Calling
+// util.InitLogger per test races with worker goroutines of preceding tests,
+// which keep logging until their context cancellation is observed.
+func TestMain(m *testing.M) {
+	util.InitLogger(util.LoggerConfig{Terminal: true, Level: level.Debug})
+	os.Exit(m.Run())
+}
+
 type testCloudDeviceProvider struct {
 	devices map[string]models.Device
 }
@@ -55,8 +63,6 @@ func (m *testMessageRelayHandler) Put(msg handler.Message) error {
 }
 
 func TestDebouncer(t *testing.T) {
-	util.InitLogger(util.LoggerConfig{Terminal: true, Level: level.Debug})
-
 	testCloudDeviceProvider, testRelayHandler := setup()
 
 	debouncer, err := New(testCloudDeviceProvider, testRelayHandler, util.DebouncerConfig{RefreshDebounceConfigInterval: "1ms"}, t.Context())
@@ -97,20 +103,22 @@ func TestDebouncer(t *testing.T) {
 	})
 
 	t.Run("Test Debounce for service with debounce attribute", func(t *testing.T) {
-		var start time.Time
+		// the debounce window is anchored at the timestamp of the last forwarded
+		// message, so the first message defines when the next forward is due
+		var windowStart, start time.Time
 		var m handler.Message
 		t.Run("Test no debounce for first message", func(t *testing.T) {
-			start = time.Now()
+			windowStart = time.Now()
 			err := debouncer.Put(util.Message{
 				TopicVal:   "event/device1/service1",
 				PayloadVal: "test1",
-				TimeVal:    start,
+				TimeVal:    windowStart,
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
 			<-testRelayHandler.c
-			elapsed := time.Since(start)
+			elapsed := time.Since(windowStart)
 			if elapsed > 10*time.Millisecond {
 				// No debounce for first message
 				t.Fatal("message was delayed even though no debounce should be applied")
@@ -135,7 +143,7 @@ func TestDebouncer(t *testing.T) {
 				t.Fatal(err)
 			}
 			m = <-testRelayHandler.c
-			elapsed := time.Since(start)
+			elapsed := time.Since(windowStart)
 			if elapsed < 100*time.Millisecond {
 				t.Fatal("message was not delayed even though debounce should be applied")
 			}
@@ -195,8 +203,6 @@ func TestDebouncer(t *testing.T) {
 }
 
 func TestDebouncerInMemoryStorage(t *testing.T) {
-	util.InitLogger(util.LoggerConfig{Terminal: true, Level: level.Debug})
-
 	testCloudDeviceProvider, testRelayHandler := setup()
 
 	debouncer, err := New(testCloudDeviceProvider, testRelayHandler, util.DebouncerConfig{RefreshDebounceConfigInterval: "1ms"}, t.Context())
@@ -211,8 +217,6 @@ func TestDebouncerInMemoryStorage(t *testing.T) {
 }
 
 func TestDebouncerSQLiteStorage(t *testing.T) {
-	util.InitLogger(util.LoggerConfig{Terminal: true, Level: level.Debug})
-
 	testCloudDeviceProvider, testRelayHandler := setup()
 
 	err := os.Remove("/tmp/debounce.sqlite")
@@ -330,8 +334,6 @@ func testDebouncerStorageProvider(debouncer *Debouncer, testRelayHandler *testMe
 }
 
 func setup() (*testCloudDeviceProvider, *testMessageRelayHandler) {
-	util.InitLogger(util.LoggerConfig{Terminal: true, Level: level.Debug})
-
 	testCloudDeviceProvider := &testCloudDeviceProvider{
 		devices: map[string]models.Device{
 			"device1": {
