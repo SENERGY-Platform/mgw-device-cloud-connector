@@ -28,8 +28,6 @@ import (
 	"github.com/SENERGY-Platform/models/go/models"
 )
 
-const defaultDebounceDuration = time.Minute
-
 type CloudDeviceProvider interface {
 	GetCloudDevice(localId string) *models.Device
 }
@@ -84,6 +82,16 @@ func New(cloudDeviceProvider CloudDeviceProvider, child handler.MessageRelayHand
 
 func (d *Debouncer) Put(m handler.Message) error {
 	util.Logger.Debug("debouncer: put called")
+
+	debounceDuration, err := d.getDebounceDuration(m)
+	if err != nil {
+		return err
+	}
+	if debounceDuration == nil {
+		util.Logger.Debugf("debouncer: no debounce duration configured for topic %s", m.Topic())
+		return d.child.Put(m)
+	}
+
 	d.mux.RLock()
 	w, ok := d.workers[m.Topic()]
 	d.mux.RUnlock()
@@ -94,35 +102,13 @@ func (d *Debouncer) Put(m handler.Message) error {
 			// slashes in device_id or service_id are not allowed
 			return fmt.Errorf("invalid topic format: %s", m.Topic())
 		}
-		device := d.cloudDeviceProvider.GetCloudDevice(topicsParts[1])
-		if device == nil {
-			util.Logger.Debugf("debouncer: no cloud device found for topic %s", m.Topic())
-			return d.child.Put(m)
-		}
-		debounceDuration, err := d.getDebounceDuration(m)
-		if err != nil {
-			return err
-		}
-		if debounceDuration == nil {
-			util.Logger.Debugf("debouncer: no debounce duration configured for topic %s", m.Topic())
-			return d.child.Put(m)
-		}
 		w = newWorker(m.Topic(), d.child, d.ctx, *debounceDuration, time.Time{}, d.storageProvider)
 		d.mux.Lock()
 		d.workers[m.Topic()] = w
 		d.mux.Unlock()
 	} else if time.Now().After(w.debounceForUpdatedAt.Add(d.updateInterval)) {
 		// update debounce duration to reflect cloud config changes
-		debounceDuration, err := d.getDebounceDuration(m)
-		if err != nil {
-			return err
-		}
-		if debounceDuration == nil {
-			util.Logger.Warningf("debouncer: using default debounce duration for %s", m.Topic())
-			w.debounceFor = defaultDebounceDuration
-		} else {
-			w.debounceFor = *debounceDuration
-		}
+		w.debounceFor = *debounceDuration
 		w.debounceForUpdatedAt = time.Now()
 	}
 	return w.put(m)
