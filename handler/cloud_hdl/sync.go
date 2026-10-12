@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/model"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/util/cloud_client"
 	context_hdl "github.com/SENERGY-Platform/mgw-go-service-base/context-hdl"
 	"github.com/SENERGY-Platform/models/go/models"
-	"strings"
-	"time"
 )
 
 func (h *Handler) Sync(ctx context.Context, devices map[string]model.Device, newIDs, changedIDs, missingIDs, onlineIDs, offlineIDs []string) {
@@ -109,6 +110,7 @@ func (h *Handler) syncNetwork(ctx context.Context, network models.Hub, syncedIDs
 			deviceIDs = append(deviceIDs, id)
 		}
 		network.DeviceIds = deviceIDs
+		network.DeviceLocalIds = nil
 		ctxWc, cf := context.WithCancel(ctx)
 		defer cf()
 		if err := h.cloudClient.UpdateHub(ctxWc, network); err != nil {
