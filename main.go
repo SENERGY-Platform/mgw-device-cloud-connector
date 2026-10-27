@@ -19,6 +19,7 @@ import (
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/cloud_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/debounce"
+	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/health_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_device_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/local_mqtt_hdl"
 	"github.com/SENERGY-Platform/mgw-device-cloud-connector/handler/message_hdl"
@@ -286,6 +287,30 @@ func main() {
 
 	localMqttClient.Connect()
 	cloudMqttClient.Connect()
+
+	// Not a watchdog health func: an unreachable local endpoint or a bad reporter config must not stop the connector.
+	if config.HealthReporter.ModuleManagerBaseUrl != "" && config.HealthReporter.CoreManagerBaseUrl != "" {
+		healthHdl, err := health_hdl.New(
+			localHttpClient,
+			config.HealthReporter.ModuleManagerBaseUrl,
+			config.HealthReporter.CoreManagerBaseUrl,
+			cloudMqttClientPubF,
+			time.Duration(config.HealthReporter.CheckInterval),
+			time.Duration(config.HealthReporter.HeartbeatInterval),
+			time.Duration(config.HealthReporter.UpdateRunningTimeout),
+		)
+		if err != nil {
+			util.Logger.Errorf("%s disabled: %s", health_hdl.LogPrefix, err)
+		} else {
+			healthHdl.Start()
+			wtchdg.RegisterStopFunc(func() error {
+				healthHdl.Stop()
+				return nil
+			})
+		}
+	} else {
+		util.Logger.Infof("%s disabled: module manager or core manager base url not set", health_hdl.LogPrefix)
+	}
 
 	wtchdg.RegisterHealthFunc(localDeviceHdl.Running)
 	wtchdg.RegisterHealthFunc(cloudHdl.HasNetwork)

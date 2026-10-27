@@ -8,6 +8,7 @@ const (
 	LocalDeviceErrSub          = "error/device/+"  // error/device/{local_device_id}
 	LocalDeviceCmdErrSub       = "error/command/+" // error/command/{correlation_id}
 	CloudDeviceConnectorErrPub = "error"
+	CloudHealthPub             = "health"
 )
 
 type handler struct {

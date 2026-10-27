@@ -97,6 +97,14 @@ type DebouncerConfig struct {
 	RefreshDebounceConfigInterval string `json:"refresh_debounce_config_interval" env_var:"DEBOUNCER_REFRESH_DEBOUNCE_CONFIG_INTERVAL"`
 }
 
+type HealthReporterConfig struct {
+	ModuleManagerBaseUrl string `json:"module_manager_base_url" env_var:"HR_MM_BASE_URL"`
+	CoreManagerBaseUrl   string `json:"core_manager_base_url" env_var:"HR_CM_BASE_URL"`
+	CheckInterval        int64  `json:"check_interval" env_var:"HR_CHECK_INTERVAL"`
+	HeartbeatInterval    int64  `json:"heartbeat_interval" env_var:"HR_HEARTBEAT_INTERVAL"`
+	UpdateRunningTimeout int64  `json:"update_running_timeout" env_var:"HR_UPDATE_RUNNING_TIMEOUT"`
+}
+
 type Config struct {
 	Logger             LoggerConfig             `json:"logger" env_var:"LOGGER_CONFIG"`
 	CloudMqttClient    CloudMqttClientConfig    `json:"cloud_mqtt_client" env_var:"CLOUD_MQTT_CLIENT_CONFIG"`
@@ -109,6 +117,7 @@ type Config struct {
 	MQTTLog            bool                     `json:"mqtt_log" env_var:"MQTT_LOG"`
 	MQTTDebugLog       bool                     `json:"mqtt_debug_log" env_var:"MQTT_DEBUG_LOG"`
 	DebouncerConfig    DebouncerConfig          `json:"debouncer_config" env_var:"DEBOUNCER_CONFIG"`
+	HealthReporter     HealthReporterConfig     `json:"health_reporter" env_var:"HEALTH_REPORTER_CONFIG"`
 }
 
 var defaultCloudMqttClientConfig = CloudMqttClientConfig{
@@ -167,6 +176,11 @@ func NewConfig(path string) (*Config, error) {
 		DebouncerConfig: DebouncerConfig{
 			PersistencePath:               "/opt/connector/event-data/debounce.sqlite",
 			RefreshDebounceConfigInterval: "1m",
+		},
+		HealthReporter: HealthReporterConfig{
+			CheckInterval:        60000000000,   // 1m
+			HeartbeatInterval:    300000000000,  // 5m
+			UpdateRunningTimeout: 3600000000000, // 1h
 		},
 	}
 	err := config_hdl.Load(&cfg, nil, map[reflect.Type]envldr.Parser{reflect.TypeOf(level.Off): sb_logger.LevelParser}, nil, path)
