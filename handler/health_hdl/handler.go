@@ -38,6 +38,7 @@ const (
 	maxBodySize     = 1 << 20
 	modulesPath     = "/health/deployments?auxiliary_deployments=true"
 	corePath        = "/health"
+	moduleVersPath  = "/repository-modules?installed=true"
 	maxErrorTextLen = 200
 )
 
@@ -112,7 +113,7 @@ func (h *Handler) run() {
 	}
 }
 
-// check reads both sources, derives the state and publishes the report if it is due.
+// check reads the sources, derives the state and publishes the report if it is due.
 func (h *Handler) check(ctx context.Context) {
 	now := h.now().UTC()
 	modulesRaw, modules, modulesErr := h.readModules(ctx)
@@ -121,6 +122,8 @@ func (h *Handler) check(ctx context.Context) {
 	if !h.publishDue(state, keys, now) {
 		return
 	}
+	// The module versions are not part of the state or the change keys, so they are read only for a report that is published.
+	moduleVers, moduleVersErr := h.readModuleVersions(ctx)
 	data, err := marshalReport(Report{
 		Version:      reportVersion,
 		Time:         now.Format(time.RFC3339),
@@ -130,6 +133,9 @@ func (h *Handler) check(ctx context.Context) {
 		CoreError:    coreErr,
 		Modules:      modulesRaw,
 		ModulesError: modulesErr,
+
+		ModuleVersions:      moduleVers,
+		ModuleVersionsError: moduleVersErr,
 	})
 	if err != nil {
 		util.Logger.Errorf("%s marshal report: %s", LogPrefix, err)
@@ -189,6 +195,26 @@ func (h *Handler) readCore(ctx context.Context) (raw json.RawMessage, info *core
 		return nil, nil, errorText("invalid response: " + err.Error()), false
 	}
 	return body, &ci, "", false
+}
+
+// readModuleVersions reports 404 and 403 as not available, which a module-manager without the route answers.
+func (h *Handler) readModuleVersions(ctx context.Context) ([]ModuleVersion, string) {
+	body, status, err := h.get(ctx, h.mmBaseUrl+moduleVersPath)
+	if err != nil {
+		return nil, errorText(err.Error())
+	}
+	switch status {
+	case http.StatusOK:
+	case http.StatusNotFound, http.StatusForbidden:
+		return nil, fmt.Sprintf("module versions not available (status %d)", status)
+	default:
+		return nil, fmt.Sprintf("unexpected status %d", status)
+	}
+	var modules []repoModule
+	if err = json.Unmarshal(body, &modules); err != nil {
+		return nil, errorText("invalid response: " + err.Error())
+	}
+	return moduleVersions(modules), ""
 }
 
 func (h *Handler) get(ctx context.Context, url string) ([]byte, int, error) {

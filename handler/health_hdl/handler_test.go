@@ -34,6 +34,14 @@ import (
 const (
 	healthyModules = `{"deployments":[],"total_enabled_deployments":3}`
 	healthyCore    = `{"state":1,"version":"v0.32.0","services":[{"name":"a","ok":true}],"update":null}`
+
+	repoModulesPath = "/module-manager/repository-modules"
+	repoModulesNone = `[]`
+	repoModulesOk   = `[
+{"id":"github.com/SENERGY-Platform/mgw-mqtt-dc","name":"MQTT Device Connector","description":"d","version":"v1.2.0","repository_variants":[],"is_installed":true,"installed_variant":{"source":"s1","channel":"stable","version":"v1.1.0","next_version":"v1.2.0"}},
+{"id":"github.com/SENERGY-Platform/a-module","name":"A","version":"v0.1.0","is_installed":true,"installed_variant":{"source":"s2","channel":"dev","version":"v0.1.0","next_version":""}},
+{"id":"github.com/SENERGY-Platform/not-installed","name":"N","version":"v9.9.9","is_installed":false}
+]`
 )
 
 type fakeEndpoint struct {
@@ -41,6 +49,22 @@ type fakeEndpoint struct {
 	status int
 	body   string
 	paths  []string
+	byPath map[string]fakeResponse
+}
+
+type fakeResponse struct {
+	status int
+	body   string
+}
+
+// setPath overrides the response for a request path (without query).
+func (f *fakeEndpoint) setPath(path string, status int, body string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.byPath == nil {
+		f.byPath = map[string]fakeResponse{}
+	}
+	f.byPath[path] = fakeResponse{status, body}
 }
 
 func (f *fakeEndpoint) set(status int, body string) {
@@ -52,6 +76,9 @@ func (f *fakeEndpoint) set(status int, body string) {
 func (f *fakeEndpoint) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	status, body := f.status, f.body
+	if o, ok := f.byPath[r.URL.Path]; ok {
+		status, body = o.status, o.body
+	}
 	f.paths = append(f.paths, r.URL.RequestURI())
 	f.mu.Unlock()
 	w.WriteHeader(status)
@@ -112,6 +139,7 @@ func newFixture(t *testing.T) *fixture {
 		pub:   &publishRecorder{},
 		clock: time.Date(2026, 10, 27, 14, 0, 0, 0, time.UTC),
 	}
+	f.mm.setPath(repoModulesPath, 200, repoModulesNone)
 	mmSrv := httptest.NewServer(f.mm)
 	cmSrv := httptest.NewServer(f.cm)
 	t.Cleanup(mmSrv.Close)
@@ -210,6 +238,53 @@ func TestReadCore(t *testing.T) {
 	}
 }
 
+func TestReadModuleVersions(t *testing.T) {
+	big := `[{"id":"m","is_installed":true,"pad":"` + strings.Repeat("x", maxBodySize) + `"}]`
+	cases := []struct {
+		name    string
+		status  int
+		body    string
+		wantErr string
+		want    []ModuleVersion
+	}{
+		{name: "none installed", status: 200, body: `[]`, want: []ModuleVersion{}},
+		{name: "null body", status: 200, body: `null`, want: []ModuleVersion{}},
+		{name: "with and without update, sorted, not installed filtered", status: 200, body: repoModulesOk, want: []ModuleVersion{
+			{Id: "github.com/SENERGY-Platform/a-module", Name: "A", Source: "s2", Channel: "dev", Version: "v0.1.0", NextVersion: ""},
+			{Id: "github.com/SENERGY-Platform/mgw-mqtt-dc", Name: "MQTT Device Connector", Source: "s1", Channel: "stable", Version: "v1.1.0", NextVersion: "v1.2.0"},
+		}},
+		{name: "installed without variant", status: 200, body: `[{"id":"m","name":"M","is_installed":true}]`, want: []ModuleVersion{{Id: "m", Name: "M"}}},
+		{name: "old module-manager 404", status: 404, body: "not found", wantErr: "module versions not available (status 404)"},
+		{name: "forbidden 403", status: 403, body: "forbidden", wantErr: "module versions not available (status 403)"},
+		{name: "server error", status: 500, body: "{}", wantErr: "unexpected status 500"},
+		{name: "unavailable", status: 503, body: "", wantErr: "unexpected status 503"},
+		{name: "malformed", status: 200, body: `[{"id":`, wantErr: "invalid response: "},
+		{name: "not an array", status: 200, body: `{"id":"m"}`, wantErr: "invalid response: "},
+		{name: "oversized", status: 200, body: big, wantErr: "response too large"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.mm.setPath(repoModulesPath, c.status, c.body)
+			got, errTxt := f.hdl.readModuleVersions(context.Background())
+			if !strings.HasPrefix(errTxt, c.wantErr) || (c.wantErr == "" && errTxt != "") {
+				t.Errorf("expected error %q, got %q", c.wantErr, errTxt)
+			}
+			if c.wantErr != "" && got != nil {
+				t.Errorf("expected nil versions on error, got %v", got)
+			}
+			if c.wantErr == "" && !reflect.DeepEqual(got, c.want) {
+				t.Errorf("expected %v, got %v", c.want, got)
+			}
+			f.mm.mu.Lock()
+			defer f.mm.mu.Unlock()
+			if len(f.mm.paths) != 1 || f.mm.paths[0] != "/module-manager/repository-modules?installed=true" {
+				t.Errorf("unexpected request path %q", f.mm.paths)
+			}
+		})
+	}
+}
+
 func TestReadUnreachable(t *testing.T) {
 	f := newFixture(t)
 	closed := httptest.NewServer(http.NotFoundHandler())
@@ -221,6 +296,9 @@ func TestReadUnreachable(t *testing.T) {
 	}
 	if _, _, errTxt, unavailable := f.hdl.readCore(context.Background()); errTxt == "" || unavailable {
 		t.Errorf("expected core error, got %q unavailable=%v", errTxt, unavailable)
+	}
+	if versions, errTxt := f.hdl.readModuleVersions(context.Background()); errTxt == "" || versions != nil {
+		t.Errorf("expected module versions error, got %q versions=%v", errTxt, versions)
 	}
 }
 
@@ -240,6 +318,46 @@ func TestCheckReport(t *testing.T) {
 		}
 		if !strings.Contains(string(f.pub.data[0]), `"reasons":[]`) {
 			t.Errorf("reasons must be an empty array: %s", f.pub.data[0])
+		}
+	})
+	t.Run("module versions", func(t *testing.T) {
+		f := newFixture(t)
+		f.mm.setPath(repoModulesPath, 200, repoModulesOk)
+		f.hdl.check(context.Background())
+		r := f.pub.lastReport(t)
+		if r.State != 1 || r.ModuleVersionsError != "" || len(r.ModuleVersions) != 2 || r.ModuleVersions[1].NextVersion != "v1.2.0" {
+			t.Errorf("unexpected report %+v", r)
+		}
+		if !strings.HasSuffix(string(f.pub.data[0]), `"module_versions_error":""}`) {
+			t.Errorf("module versions must be appended after modules_error: %s", f.pub.data[0])
+		}
+	})
+	t.Run("module versions none installed", func(t *testing.T) {
+		f := newFixture(t)
+		f.hdl.check(context.Background())
+		if !strings.Contains(string(f.pub.data[0]), `"module_versions":[],"module_versions_error":""`) {
+			t.Errorf("module_versions must be an empty array: %s", f.pub.data[0])
+		}
+	})
+	t.Run("module versions not available", func(t *testing.T) {
+		f := newFixture(t)
+		f.mm.setPath(repoModulesPath, 404, "nope")
+		f.hdl.check(context.Background())
+		r := f.pub.lastReport(t)
+		if r.State != 1 || r.ModuleVersionsError != "module versions not available (status 404)" || r.ModuleVersions != nil {
+			t.Errorf("unexpected report %+v", r)
+		}
+		if !strings.Contains(string(f.pub.data[0]), `"module_versions":null`) {
+			t.Errorf("module_versions must be null: %s", f.pub.data[0])
+		}
+	})
+	t.Run("module versions server error", func(t *testing.T) {
+		f := newFixture(t)
+		f.mm.setPath(repoModulesPath, 500, "")
+		f.hdl.check(context.Background())
+		r := f.pub.lastReport(t)
+		if r.State != 1 || r.ModuleVersionsError != "unexpected status 500" || r.ModuleVersions != nil {
+			t.Errorf("unexpected report %+v", r)
 		}
 	})
 	t.Run("old core", func(t *testing.T) {
@@ -331,6 +449,28 @@ func TestPublishDecision(t *testing.T) {
 	f.tick(time.Minute)
 	if f.pub.count() != 4 {
 		t.Errorf("changed restart count or last error alone must not publish, got %d", f.pub.count())
+	}
+	f.mm.setPath(repoModulesPath, 200, repoModulesOk)
+	f.tick(time.Minute)
+	if f.pub.count() != 4 {
+		t.Errorf("changed module versions alone must not publish, got %d", f.pub.count())
+	}
+	f.mm.setPath(repoModulesPath, 500, "")
+	f.tick(time.Minute)
+	if f.pub.count() != 4 {
+		t.Errorf("a module versions read failure alone must not publish, got %d", f.pub.count())
+	}
+	f.mm.setPath(repoModulesPath, 200, strings.Replace(repoModulesOk, `"next_version":"v1.2.0"`, `"next_version":"v1.3.0"`, 1))
+	f.tick(time.Minute)
+	if f.pub.count() != 4 {
+		t.Errorf("changed next_version alone must not publish, got %d", f.pub.count())
+	}
+	f.tick(time.Minute) // 5m since last publish: the heartbeat carries the current versions
+	if f.pub.count() != 5 {
+		t.Fatalf("heartbeat must publish, got %d", f.pub.count())
+	}
+	if r := f.pub.lastReport(t); len(r.ModuleVersions) != 2 || r.ModuleVersions[1].NextVersion != "v1.3.0" {
+		t.Errorf("heartbeat must carry the current module versions, got %+v", r.ModuleVersions)
 	}
 }
 

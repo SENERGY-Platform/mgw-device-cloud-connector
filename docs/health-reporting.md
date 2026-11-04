@@ -19,10 +19,21 @@ values reaches all three.
 |---|---|---|
 | module-manager | `GET {HR_MM_BASE_URL}/health/deployments?auxiliary_deployments=true` | `modules` null, `modules_error` set |
 | core-manager | `GET {HR_CM_BASE_URL}/health` | `core` null, `core_error` set |
+| module-manager | `GET {HR_MM_BASE_URL}/repository-modules?installed=true` | `module_versions` null, `module_versions_error` set |
 
 A core-manager answering `404` or `403` has no health route (installer older
 than v0.32.0). That is recorded in `core_error` but does not affect the state,
 so such gateways still report their modules.
+
+The module versions are neither part of the state nor of the reasons, and a
+change of them does not cause a report. They are read only when a report is
+published, for another reason or as a heartbeat, and ride along with it. A
+module-manager answering `404` or `403` has no such route for
+modules (older release); that is recorded as `module versions not available
+(status 404)` in `module_versions_error` and does not affect the state. While
+the module-manager runs a repository job, such as its daily refresh, it answers
+`503`; the report of that moment carries `unexpected status 503` and `null`,
+and the next one has the list again.
 
 ## Payload
 
@@ -37,13 +48,33 @@ Topic `health` on the cloud broker:
   "core": {"...": "core-manager response, verbatim"},
   "core_error": "",
   "modules": {"...": "module-manager response, verbatim"},
-  "modules_error": ""
+  "modules_error": "",
+  "module_versions": [
+    {"id": "github.com/SENERGY-Platform/mgw-mqtt-dc", "name": "MQTT Device Connector", "source": "<source>", "channel": "stable", "version": "v1.1.0", "next_version": "v1.2.0"}
+  ],
+  "module_versions_error": ""
 }
 ```
 
+`module_versions` lists all installed modules sorted by `id`, with the
+installed variant's source, channel and version. `next_version` is empty if the
+channel offers no other version. If the read fails, `module_versions` is `null`
+and `module_versions_error` holds the reason.
+
 The payload stays below 60 KiB: the raw `modules` body is dropped first, then
-`core`, each replaced by `"omitted: report too large"` in its error field.
+`core`, then `module_versions`, each only if the report is still too large and
+each replaced by `"omitted: report too large"` in its error field.
 The platform rejects reports above 64 KiB.
+
+## Known limits of `next_version`
+
+- It is only as fresh as the module-manager's repository cache, which is
+  refreshed daily from the module-manager's versions with the periodic refresh
+  and otherwise only by hand.
+- A module installed from a repository the module-manager no longer has never
+  gets a `next_version`.
+- The module-manager compares versions by string inequality, so a lower version
+  in the channel also shows as `next_version`.
 
 ## State
 

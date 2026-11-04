@@ -71,6 +71,31 @@ type updateInfo struct {
 	Step        string `json:"step"`
 }
 
+// repoModule is the subset of the module-manager repository module response needed for the module versions.
+type repoModule struct {
+	Id               string            `json:"id"`
+	Name             string            `json:"name"`
+	IsInstalled      bool              `json:"is_installed"`
+	InstalledVariant *installedVariant `json:"installed_variant"`
+}
+
+type installedVariant struct {
+	Source      string `json:"source"`
+	Channel     string `json:"channel"`
+	Version     string `json:"version"`
+	NextVersion string `json:"next_version"`
+}
+
+// ModuleVersion is the installed version of a module and the version offered by its channel, if any.
+type ModuleVersion struct {
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	Source      string `json:"source"`
+	Channel     string `json:"channel"`
+	Version     string `json:"version"`
+	NextVersion string `json:"next_version"`
+}
+
 // Report is the payload published on the health topic.
 type Report struct {
 	Version      int             `json:"version"`
@@ -81,6 +106,9 @@ type Report struct {
 	CoreError    string          `json:"core_error"`
 	Modules      json.RawMessage `json:"modules"`
 	ModulesError string          `json:"modules_error"`
+
+	ModuleVersions      []ModuleVersion `json:"module_versions"`
+	ModuleVersionsError string          `json:"module_versions_error"`
 }
 
 // Reason priorities: the cap keeps update and core reasons, which name the cause, before per-module reasons.
@@ -201,7 +229,26 @@ func truncate(s string, n int) string {
 	return s
 }
 
-// marshalReport drops the raw module and then the raw core body if the report exceeds maxReportSize.
+// moduleVersions returns the installed modules sorted by id; the result is never nil.
+func moduleVersions(modules []repoModule) []ModuleVersion {
+	versions := []ModuleVersion{}
+	for _, m := range modules {
+		if !m.IsInstalled {
+			continue
+		}
+		v := ModuleVersion{Id: m.Id, Name: m.Name}
+		if iv := m.InstalledVariant; iv != nil {
+			v.Source, v.Channel, v.Version, v.NextVersion = iv.Source, iv.Channel, iv.Version, iv.NextVersion
+		}
+		versions = append(versions, v)
+	}
+	slices.SortFunc(versions, func(a, b ModuleVersion) int {
+		return strings.Compare(a.Id, b.Id)
+	})
+	return versions
+}
+
+// marshalReport drops the raw module body, then the raw core body and then the module versions if the report exceeds maxReportSize.
 func marshalReport(r Report) ([]byte, error) {
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -217,6 +264,13 @@ func marshalReport(r Report) ([]byte, error) {
 	if len(data) > maxReportSize && r.Core != nil {
 		r.Core = nil
 		r.CoreError = omittedTooLarge
+		if data, err = json.Marshal(r); err != nil {
+			return nil, err
+		}
+	}
+	if len(data) > maxReportSize && r.ModuleVersions != nil {
+		r.ModuleVersions = nil
+		r.ModuleVersionsError = omittedTooLarge
 		if data, err = json.Marshal(r); err != nil {
 			return nil, err
 		}

@@ -242,6 +242,51 @@ func TestMarshalReportSizeCap(t *testing.T) {
 			t.Errorf("unexpected errors %q %q", r.ModulesError, r.CoreError)
 		}
 	})
+	t.Run("module versions dropped last", func(t *testing.T) {
+		versions := []ModuleVersion{{Id: "a"}}
+		data, err := marshalReport(Report{Reasons: []string{}, Core: small, Modules: big, ModuleVersions: versions})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var r Report
+		if err = json.Unmarshal(data, &r); err != nil {
+			t.Fatal(err)
+		}
+		if r.ModulesError != omittedTooLarge || r.CoreError != "" || r.ModuleVersionsError != "" || len(r.ModuleVersions) != 1 {
+			t.Errorf("only modules may be dropped: %s", data)
+		}
+		data, err = marshalReport(Report{Reasons: []string{}, Core: big, Modules: big, ModuleVersions: versions})
+		if err != nil {
+			t.Fatal(err)
+		}
+		r = Report{}
+		if err = json.Unmarshal(data, &r); err != nil {
+			t.Fatal(err)
+		}
+		if r.ModulesError != omittedTooLarge || r.CoreError != omittedTooLarge || r.ModuleVersionsError != "" || len(r.ModuleVersions) != 1 {
+			t.Errorf("module versions must stay while dropping core helps: %s", data)
+		}
+	})
+	t.Run("module versions dropped if still too large", func(t *testing.T) {
+		var versions []ModuleVersion
+		for i := 0; i < 1000; i++ {
+			versions = append(versions, ModuleVersion{Id: fmt.Sprintf("m%04d", i), Name: strings.Repeat("n", 100)})
+		}
+		data, err := marshalReport(Report{Reasons: []string{}, Core: big, Modules: big, ModuleVersions: versions})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(data) > maxReportSize {
+			t.Errorf("report still too large: %d", len(data))
+		}
+		var r Report
+		if err = json.Unmarshal(data, &r); err != nil {
+			t.Fatal(err)
+		}
+		if r.ModulesError != omittedTooLarge || r.CoreError != omittedTooLarge || r.ModuleVersionsError != omittedTooLarge || r.ModuleVersions != nil {
+			t.Errorf("unexpected report %s", data)
+		}
+	})
 	t.Run("only core too large", func(t *testing.T) {
 		data, err := marshalReport(Report{Reasons: []string{}, Core: big, Modules: small})
 		if err != nil {
@@ -277,5 +322,25 @@ func TestDeriveHealthKeysIgnoreVolatileDetails(t *testing.T) {
 	}
 	if !reflect.DeepEqual(keys1, keys2) || !reflect.DeepEqual(keys1, []string{"module m: unhealthy"}) {
 		t.Errorf("keys must not depend on restarts or last error: %q vs %q", keys1, keys2)
+	}
+}
+
+func TestModuleVersions(t *testing.T) {
+	in := []repoModule{
+		{Id: "b", Name: "B", IsInstalled: true, InstalledVariant: &installedVariant{Source: "s", Channel: "stable", Version: "v1", NextVersion: "v2"}},
+		{Id: "x", Name: "X", IsInstalled: false, InstalledVariant: &installedVariant{Version: "v9"}},
+		{Id: "a", Name: "A", IsInstalled: true, InstalledVariant: &installedVariant{Source: "t", Channel: "dev", Version: "v3"}},
+		{Id: "c", Name: "C", IsInstalled: true},
+	}
+	want := []ModuleVersion{
+		{Id: "a", Name: "A", Source: "t", Channel: "dev", Version: "v3", NextVersion: ""},
+		{Id: "b", Name: "B", Source: "s", Channel: "stable", Version: "v1", NextVersion: "v2"},
+		{Id: "c", Name: "C"},
+	}
+	if got := moduleVersions(in); !reflect.DeepEqual(got, want) {
+		t.Errorf("expected %v, got %v", want, got)
+	}
+	if got := moduleVersions(nil); got == nil || len(got) != 0 {
+		t.Errorf("expected an empty non-nil list, got %#v", got)
 	}
 }
