@@ -71,6 +71,21 @@ type updateInfo struct {
 	Step        string `json:"step"`
 }
 
+// autoUpdateInfo is the subset of the module-manager auto-update status response needed for the state.
+type autoUpdateInfo struct {
+	Enabled bool           `json:"enabled"`
+	LastRun *autoUpdateRun `json:"last_run"`
+}
+
+type autoUpdateRun struct {
+	Failed []autoUpdateFailed `json:"failed"`
+}
+
+type autoUpdateFailed struct {
+	Id    string `json:"id"`
+	Error string `json:"error"`
+}
+
 // repoModule is the subset of the module-manager repository module response needed for the module versions.
 type repoModule struct {
 	Id               string            `json:"id"`
@@ -109,12 +124,16 @@ type Report struct {
 
 	ModuleVersions      []ModuleVersion `json:"module_versions"`
 	ModuleVersionsError string          `json:"module_versions_error"`
+
+	AutoUpdate      json.RawMessage `json:"auto_update"`
+	AutoUpdateError string          `json:"auto_update_error"`
 }
 
 // Reason priorities: the cap keeps update and core reasons, which name the cause, before per-module reasons.
 const (
 	reasonPrioUpdate = iota
 	reasonPrioCore
+	reasonPrioAutoUpdate
 	reasonPrioModule
 )
 
@@ -128,9 +147,10 @@ type reason struct {
 
 // deriveHealth returns the state, the reasons for an unhealthy state and their keys for change detection.
 // A failed source only yields state 0 if the other source shows no problem. A nil core with coreFailed
-// false means the core-manager has no health route (old installer) and is ignored. An update that is
+// false means the core-manager has no health route (old installer) and is ignored. A nil autoUpdate (failed read)
+// and a disabled auto-update add no reasons. An update that is
 // still running within the timeout yields state 0, since stopped services are expected then.
-func deriveHealth(modules *modulesInfo, modulesFailed bool, core *coreInfo, coreFailed bool, now time.Time, runningTimeout time.Duration) (int, []string, []string) {
+func deriveHealth(modules *modulesInfo, modulesFailed bool, core *coreInfo, coreFailed bool, autoUpdate *autoUpdateInfo, now time.Time, runningTimeout time.Duration) (int, []string, []string) {
 	if core != nil && core.Update != nil && core.Update.Result == updateRunning && !updateTimedOut(core.Update, now, runningTimeout) {
 		return stateUndetermined, []string{}, []string{}
 	}
@@ -180,6 +200,12 @@ func deriveHealth(modules *modulesInfo, modulesFailed bool, core *coreInfo, core
 				unhealthy = true
 				reasons = append(reasons, newReason(reasonPrioUpdate, fmt.Sprintf("update %s -> %s running since %s", u.FromVersion, u.ToVersion, u.Started)))
 			}
+		}
+	}
+	if autoUpdate != nil && autoUpdate.Enabled && autoUpdate.LastRun != nil {
+		for _, f := range autoUpdate.LastRun.Failed {
+			unhealthy = true
+			reasons = append(reasons, newReason(reasonPrioAutoUpdate, fmt.Sprintf("auto-update of %s failed: %s", f.Id, f.Error)))
 		}
 	}
 	switch {
@@ -248,7 +274,7 @@ func moduleVersions(modules []repoModule) []ModuleVersion {
 	return versions
 }
 
-// marshalReport drops the raw module body, then the raw core body and then the module versions if the report exceeds maxReportSize.
+// marshalReport drops the raw module body, then the raw core body, the auto-update status and then the module versions if the report exceeds maxReportSize.
 func marshalReport(r Report) ([]byte, error) {
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -264,6 +290,13 @@ func marshalReport(r Report) ([]byte, error) {
 	if len(data) > maxReportSize && r.Core != nil {
 		r.Core = nil
 		r.CoreError = omittedTooLarge
+		if data, err = json.Marshal(r); err != nil {
+			return nil, err
+		}
+	}
+	if len(data) > maxReportSize && r.AutoUpdate != nil {
+		r.AutoUpdate = nil
+		r.AutoUpdateError = omittedTooLarge
 		if data, err = json.Marshal(r); err != nil {
 			return nil, err
 		}

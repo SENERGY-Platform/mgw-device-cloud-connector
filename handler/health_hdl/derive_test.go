@@ -37,6 +37,7 @@ func TestDeriveHealth(t *testing.T) {
 		modulesFailed bool
 		core          *coreInfo
 		coreFailed    bool
+		autoUpdate    *autoUpdateInfo
 		state         int
 		reasons       []string
 	}{
@@ -146,6 +147,61 @@ func TestDeriveHealth(t *testing.T) {
 			reasons:    []string{"module m: unhealthy, 1 restarts"},
 		},
 		{
+			name:       "auto-update failed module",
+			modules:    &modulesInfo{},
+			core:       okCore(),
+			autoUpdate: autoUpdateFailedRun("github.com/x/y", "boom"),
+			state:      2,
+			reasons:    []string{"auto-update of github.com/x/y failed: boom"},
+		},
+		{
+			name:       "auto-update failed modules sorted",
+			modules:    &modulesInfo{},
+			core:       okCore(),
+			autoUpdate: autoUpdateFailedRun("z", "e1", "a", "e2"),
+			state:      2,
+			reasons:    []string{"auto-update of a failed: e2", "auto-update of z failed: e1"},
+		},
+		{
+			name:       "auto-update disabled with old failed run",
+			modules:    &modulesInfo{},
+			core:       okCore(),
+			autoUpdate: &autoUpdateInfo{Enabled: false, LastRun: &autoUpdateRun{Failed: []autoUpdateFailed{{Id: "m", Error: "e"}}}},
+			state:      1,
+			reasons:    []string{},
+		},
+		{
+			name:       "auto-update enabled without run",
+			modules:    &modulesInfo{},
+			core:       okCore(),
+			autoUpdate: &autoUpdateInfo{Enabled: true},
+			state:      1,
+			reasons:    []string{},
+		},
+		{
+			name:       "auto-update enabled, run without failures",
+			modules:    &modulesInfo{},
+			core:       okCore(),
+			autoUpdate: &autoUpdateInfo{Enabled: true, LastRun: &autoUpdateRun{}},
+			state:      1,
+			reasons:    []string{},
+		},
+		{
+			name:    "auto-update status unavailable adds nothing",
+			modules: &modulesInfo{},
+			core:    okCore(),
+			state:   1,
+			reasons: []string{},
+		},
+		{
+			name:       "auto-update reasons between core and module",
+			modules:    &modulesInfo{Deployments: []deploymentInfo{{ModuleId: "m"}}},
+			core:       &coreInfo{State: 1, Services: []coreService{{Name: "b", Ok: false}}},
+			autoUpdate: autoUpdateFailedRun("x", "e"),
+			state:      2,
+			reasons:    []string{"core service b not ok", "auto-update of x failed: e", "module m: unhealthy"},
+		},
+		{
 			name:    "reasons sorted",
 			modules: &modulesInfo{Deployments: []deploymentInfo{{ModuleId: "z"}, {ModuleId: "a"}}},
 			core:    okCore(),
@@ -155,7 +211,7 @@ func TestDeriveHealth(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			state, reasons, _ := deriveHealth(c.modules, c.modulesFailed, c.core, c.coreFailed, now, timeout)
+			state, reasons, _ := deriveHealth(c.modules, c.modulesFailed, c.core, c.coreFailed, c.autoUpdate, now, timeout)
 			if state != c.state {
 				t.Errorf("expected state %d, got %d", c.state, state)
 			}
@@ -166,12 +222,20 @@ func TestDeriveHealth(t *testing.T) {
 	}
 }
 
+func autoUpdateFailedRun(idErr ...string) *autoUpdateInfo {
+	run := &autoUpdateRun{}
+	for i := 0; i+1 < len(idErr); i += 2 {
+		run.Failed = append(run.Failed, autoUpdateFailed{Id: idErr[i], Error: idErr[i+1]})
+	}
+	return &autoUpdateInfo{Enabled: true, LastRun: run}
+}
+
 func TestDeriveHealthReasonLimits(t *testing.T) {
 	var deployments []deploymentInfo
 	for i := 0; i < 30; i++ {
 		deployments = append(deployments, deploymentInfo{ModuleId: fmt.Sprintf("m%02d", i), LastError: strings.Repeat("ä", 500)})
 	}
-	state, reasons, _ := deriveHealth(&modulesInfo{Deployments: deployments}, false, nil, false, time.Now(), time.Hour)
+	state, reasons, _ := deriveHealth(&modulesInfo{Deployments: deployments}, false, nil, false, nil, time.Now(), time.Hour)
 	if state != 2 {
 		t.Fatal(state)
 	}
@@ -287,6 +351,32 @@ func TestMarshalReportSizeCap(t *testing.T) {
 			t.Errorf("unexpected report %s", data)
 		}
 	})
+	t.Run("auto-update dropped after core, before module versions", func(t *testing.T) {
+		au := json.RawMessage(`{"enabled":true}`)
+		versions := []ModuleVersion{{Id: "a"}}
+		data, err := marshalReport(Report{Reasons: []string{}, Core: big, Modules: big, AutoUpdate: au, ModuleVersions: versions})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var r Report
+		if err = json.Unmarshal(data, &r); err != nil {
+			t.Fatal(err)
+		}
+		if r.CoreError != omittedTooLarge || r.AutoUpdateError != "" || string(r.AutoUpdate) != string(au) || len(r.ModuleVersions) != 1 {
+			t.Errorf("auto-update must stay while dropping core helps: %s", data)
+		}
+		data, err = marshalReport(Report{Reasons: []string{}, Core: big, Modules: big, AutoUpdate: big, ModuleVersions: versions})
+		if err != nil {
+			t.Fatal(err)
+		}
+		r = Report{}
+		if err = json.Unmarshal(data, &r); err != nil {
+			t.Fatal(err)
+		}
+		if r.AutoUpdateError != omittedTooLarge || (r.AutoUpdate != nil && string(r.AutoUpdate) != "null") || r.ModuleVersionsError != "" || len(r.ModuleVersions) != 1 {
+			t.Errorf("auto-update must be dropped before module versions: %s", data)
+		}
+	})
 	t.Run("only core too large", func(t *testing.T) {
 		data, err := marshalReport(Report{Reasons: []string{}, Core: big, Modules: small})
 		if err != nil {
@@ -308,15 +398,34 @@ func TestDeriveHealthUpdateReasonSurvivesCap(t *testing.T) {
 		deployments = append(deployments, deploymentInfo{ModuleId: fmt.Sprintf("m%02d", i)})
 	}
 	core := &coreInfo{State: 1, Update: &updateInfo{FromVersion: "a", ToVersion: "b", Result: "failed", Step: "starting components"}}
-	_, reasons, _ := deriveHealth(&modulesInfo{Deployments: deployments}, false, core, false, time.Now(), time.Hour)
+	_, reasons, _ := deriveHealth(&modulesInfo{Deployments: deployments}, false, core, false, nil, time.Now(), time.Hour)
 	if len(reasons) != 20 || reasons[0] != "update a -> b failed at starting components" {
 		t.Errorf("expected the update reason first within the cap, got %d reasons starting with %q", len(reasons), reasons[0])
 	}
 }
 
+func TestDeriveHealthAutoUpdateReasonOrderUnderCap(t *testing.T) {
+	var deployments []deploymentInfo
+	for i := 0; i < 30; i++ {
+		deployments = append(deployments, deploymentInfo{ModuleId: fmt.Sprintf("m%02d", i)})
+	}
+	core := &coreInfo{State: 1, Update: &updateInfo{FromVersion: "a", ToVersion: "b", Result: "failed"}}
+	_, reasons, _ := deriveHealth(&modulesInfo{Deployments: deployments}, false, core, false, autoUpdateFailedRun("x", "e"), time.Now(), time.Hour)
+	if len(reasons) != 20 || reasons[0] != "update a -> b failed" || reasons[1] != "auto-update of x failed: e" {
+		t.Errorf("expected core update reason first, auto-update second within the cap, got %q", reasons[:2])
+	}
+}
+
+func TestDeriveHealthAutoUpdateReasonTruncated(t *testing.T) {
+	_, reasons, _ := deriveHealth(&modulesInfo{}, false, nil, false, autoUpdateFailedRun("x", strings.Repeat("ä", 500)), time.Now(), time.Hour)
+	if len(reasons) != 1 || len([]rune(reasons[0])) != 200 {
+		t.Errorf("expected one reason of 200 characters, got %q", reasons)
+	}
+}
+
 func TestDeriveHealthKeysIgnoreVolatileDetails(t *testing.T) {
-	_, reasons1, keys1 := deriveHealth(&modulesInfo{Deployments: []deploymentInfo{{ModuleId: "m", Restarts: 4, LastError: "x"}}}, false, nil, false, time.Now(), time.Hour)
-	_, reasons2, keys2 := deriveHealth(&modulesInfo{Deployments: []deploymentInfo{{ModuleId: "m", Restarts: 9, LastError: "y"}}}, false, nil, false, time.Now(), time.Hour)
+	_, reasons1, keys1 := deriveHealth(&modulesInfo{Deployments: []deploymentInfo{{ModuleId: "m", Restarts: 4, LastError: "x"}}}, false, nil, false, nil, time.Now(), time.Hour)
+	_, reasons2, keys2 := deriveHealth(&modulesInfo{Deployments: []deploymentInfo{{ModuleId: "m", Restarts: 9, LastError: "y"}}}, false, nil, false, nil, time.Now(), time.Hour)
 	if reflect.DeepEqual(reasons1, reasons2) {
 		t.Fatalf("reasons must carry the details: %q", reasons1)
 	}

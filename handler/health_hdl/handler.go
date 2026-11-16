@@ -39,6 +39,7 @@ const (
 	modulesPath     = "/health/deployments?auxiliary_deployments=true"
 	corePath        = "/health"
 	moduleVersPath  = "/repository-modules?installed=true"
+	autoUpdatePath  = "/auto-update/status"
 	maxErrorTextLen = 200
 )
 
@@ -118,7 +119,8 @@ func (h *Handler) check(ctx context.Context) {
 	now := h.now().UTC()
 	modulesRaw, modules, modulesErr := h.readModules(ctx)
 	coreRaw, core, coreErr, coreUnavailable := h.readCore(ctx)
-	state, reasons, keys := deriveHealth(modules, modulesErr != "", core, coreErr != "" && !coreUnavailable, now, h.runningTimeout)
+	autoUpdateRaw, autoUpdate, autoUpdateErr := h.readAutoUpdate(ctx)
+	state, reasons, keys := deriveHealth(modules, modulesErr != "", core, coreErr != "" && !coreUnavailable, autoUpdate, now, h.runningTimeout)
 	if !h.publishDue(state, keys, now) {
 		return
 	}
@@ -136,6 +138,9 @@ func (h *Handler) check(ctx context.Context) {
 
 		ModuleVersions:      moduleVers,
 		ModuleVersionsError: moduleVersErr,
+
+		AutoUpdate:      autoUpdateRaw,
+		AutoUpdateError: autoUpdateErr,
 	})
 	if err != nil {
 		util.Logger.Errorf("%s marshal report: %s", LogPrefix, err)
@@ -215,6 +220,27 @@ func (h *Handler) readModuleVersions(ctx context.Context) ([]ModuleVersion, stri
 		return nil, errorText("invalid response: " + err.Error())
 	}
 	return moduleVersions(modules), ""
+}
+
+// readAutoUpdate reports 404 and 403 as not available, which a module-manager without the route answers.
+// The body is passed through verbatim; only the subset in autoUpdateInfo is parsed.
+func (h *Handler) readAutoUpdate(ctx context.Context) (json.RawMessage, *autoUpdateInfo, string) {
+	body, status, err := h.get(ctx, h.mmBaseUrl+autoUpdatePath)
+	if err != nil {
+		return nil, nil, errorText(err.Error())
+	}
+	switch status {
+	case http.StatusOK:
+	case http.StatusNotFound, http.StatusForbidden:
+		return nil, nil, fmt.Sprintf("auto-update not available (status %d)", status)
+	default:
+		return nil, nil, fmt.Sprintf("unexpected status %d", status)
+	}
+	var info autoUpdateInfo
+	if err = json.Unmarshal(body, &info); err != nil {
+		return nil, nil, errorText("invalid response: " + err.Error())
+	}
+	return body, &info, ""
 }
 
 func (h *Handler) get(ctx context.Context, url string) ([]byte, int, error) {

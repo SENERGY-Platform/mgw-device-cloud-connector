@@ -35,6 +35,10 @@ const (
 	healthyModules = `{"deployments":[],"total_enabled_deployments":3}`
 	healthyCore    = `{"state":1,"version":"v0.32.0","services":[{"name":"a","ok":true}],"update":null}`
 
+	autoUpdateTestPath   = "/module-manager/auto-update/status"
+	autoUpdateOff        = `{"enabled":false,"level":"patch","window_start":"02:00","window_end":"05:00","time_zone":"Europe/Berlin","last_run":null}`
+	autoUpdateFailedBody = `{"enabled":true,"level":"minor","window_start":"02:00","window_end":"05:00","time_zone":"Europe/Berlin","last_run":{"start":"2026-10-27T02:00:00Z","end":"2026-10-27T02:10:00Z","updated":[],"skipped":[{"id":"s","version":"v1","next_version":"v2","reason":"needs_input","missing":[]}],"failed":[{"id":"github.com/x/y","error":"deploy failed"}]}}`
+
 	repoModulesPath = "/module-manager/repository-modules"
 	repoModulesNone = `[]`
 	repoModulesOk   = `[
@@ -140,6 +144,7 @@ func newFixture(t *testing.T) *fixture {
 		clock: time.Date(2026, 10, 27, 14, 0, 0, 0, time.UTC),
 	}
 	f.mm.setPath(repoModulesPath, 200, repoModulesNone)
+	f.mm.setPath(autoUpdateTestPath, 200, autoUpdateOff)
 	mmSrv := httptest.NewServer(f.mm)
 	cmSrv := httptest.NewServer(f.cm)
 	t.Cleanup(mmSrv.Close)
@@ -285,6 +290,48 @@ func TestReadModuleVersions(t *testing.T) {
 	}
 }
 
+func TestReadAutoUpdate(t *testing.T) {
+	big := `{"enabled":true,"pad":"` + strings.Repeat("x", maxBodySize) + `"}`
+	cases := []struct {
+		name        string
+		status      int
+		body        string
+		wantErr     string
+		wantEnabled bool
+	}{
+		{name: "disabled", status: 200, body: autoUpdateOff},
+		{name: "enabled with failed run", status: 200, body: autoUpdateFailedBody, wantEnabled: true},
+		{name: "old module-manager 404", status: 404, body: "not found", wantErr: "auto-update not available (status 404)"},
+		{name: "forbidden 403", status: 403, body: "forbidden", wantErr: "auto-update not available (status 403)"},
+		{name: "server error", status: 500, body: "{}", wantErr: "unexpected status 500"},
+		{name: "unavailable", status: 503, body: "", wantErr: "unexpected status 503"},
+		{name: "malformed", status: 200, body: `{"enabled":`, wantErr: "invalid response: "},
+		{name: "not an object", status: 200, body: `[1]`, wantErr: "invalid response: "},
+		{name: "oversized", status: 200, body: big, wantErr: "response too large"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.mm.setPath(autoUpdateTestPath, c.status, c.body)
+			raw, info, errTxt := f.hdl.readAutoUpdate(context.Background())
+			if !strings.HasPrefix(errTxt, c.wantErr) || (c.wantErr == "" && errTxt != "") {
+				t.Errorf("expected error %q, got %q", c.wantErr, errTxt)
+			}
+			if c.wantErr != "" && (raw != nil || info != nil) {
+				t.Errorf("expected nil results on error, got %s %v", raw, info)
+			}
+			if c.wantErr == "" && (string(raw) != c.body || info == nil || info.Enabled != c.wantEnabled) {
+				t.Errorf("unexpected result %s %+v", raw, info)
+			}
+			f.mm.mu.Lock()
+			defer f.mm.mu.Unlock()
+			if len(f.mm.paths) != 1 || f.mm.paths[0] != "/module-manager/auto-update/status" {
+				t.Errorf("unexpected request path %q", f.mm.paths)
+			}
+		})
+	}
+}
+
 func TestReadUnreachable(t *testing.T) {
 	f := newFixture(t)
 	closed := httptest.NewServer(http.NotFoundHandler())
@@ -299,6 +346,9 @@ func TestReadUnreachable(t *testing.T) {
 	}
 	if versions, errTxt := f.hdl.readModuleVersions(context.Background()); errTxt == "" || versions != nil {
 		t.Errorf("expected module versions error, got %q versions=%v", errTxt, versions)
+	}
+	if raw, info, errTxt := f.hdl.readAutoUpdate(context.Background()); errTxt == "" || raw != nil || info != nil {
+		t.Errorf("expected auto-update error, got %q raw=%s info=%v", errTxt, raw, info)
 	}
 }
 
@@ -328,7 +378,7 @@ func TestCheckReport(t *testing.T) {
 		if r.State != 1 || r.ModuleVersionsError != "" || len(r.ModuleVersions) != 2 || r.ModuleVersions[1].NextVersion != "v1.2.0" {
 			t.Errorf("unexpected report %+v", r)
 		}
-		if !strings.HasSuffix(string(f.pub.data[0]), `"module_versions_error":""}`) {
+		if !strings.Contains(string(f.pub.data[0]), `"modules_error":"","module_versions":[`) {
 			t.Errorf("module versions must be appended after modules_error: %s", f.pub.data[0])
 		}
 	})
@@ -357,6 +407,47 @@ func TestCheckReport(t *testing.T) {
 		f.hdl.check(context.Background())
 		r := f.pub.lastReport(t)
 		if r.State != 1 || r.ModuleVersionsError != "unexpected status 500" || r.ModuleVersions != nil {
+			t.Errorf("unexpected report %+v", r)
+		}
+	})
+	t.Run("auto-update disabled", func(t *testing.T) {
+		f := newFixture(t)
+		f.hdl.check(context.Background())
+		r := f.pub.lastReport(t)
+		if r.State != 1 || r.AutoUpdateError != "" || string(r.AutoUpdate) != autoUpdateOff {
+			t.Errorf("unexpected report %+v", r)
+		}
+		if !strings.HasSuffix(string(f.pub.data[0]), `,"auto_update_error":""}`) {
+			t.Errorf("auto_update must be appended after module_versions_error: %s", f.pub.data[0])
+		}
+	})
+	t.Run("auto-update failed module", func(t *testing.T) {
+		f := newFixture(t)
+		f.mm.setPath(autoUpdateTestPath, 200, autoUpdateFailedBody)
+		f.hdl.check(context.Background())
+		r := f.pub.lastReport(t)
+		if r.State != 2 || !reflect.DeepEqual(r.Reasons, []string{"auto-update of github.com/x/y failed: deploy failed"}) || string(r.AutoUpdate) != autoUpdateFailedBody {
+			t.Errorf("unexpected report %+v", r)
+		}
+	})
+	t.Run("auto-update not available", func(t *testing.T) {
+		f := newFixture(t)
+		f.mm.setPath(autoUpdateTestPath, 404, "nope")
+		f.hdl.check(context.Background())
+		r := f.pub.lastReport(t)
+		if r.State != 1 || r.AutoUpdateError != "auto-update not available (status 404)" || (r.AutoUpdate != nil && string(r.AutoUpdate) != "null") {
+			t.Errorf("unexpected report %+v", r)
+		}
+		if !strings.Contains(string(f.pub.data[0]), `"auto_update":null`) {
+			t.Errorf("auto_update must be null: %s", f.pub.data[0])
+		}
+	})
+	t.Run("auto-update unavailable", func(t *testing.T) {
+		f := newFixture(t)
+		f.mm.setPath(autoUpdateTestPath, 503, "")
+		f.hdl.check(context.Background())
+		r := f.pub.lastReport(t)
+		if r.State != 1 || r.AutoUpdateError != "unexpected status 503" || (r.AutoUpdate != nil && string(r.AutoUpdate) != "null") {
 			t.Errorf("unexpected report %+v", r)
 		}
 	})
@@ -450,23 +541,39 @@ func TestPublishDecision(t *testing.T) {
 	if f.pub.count() != 4 {
 		t.Errorf("changed restart count or last error alone must not publish, got %d", f.pub.count())
 	}
-	f.mm.setPath(repoModulesPath, 200, repoModulesOk)
+	f.mm.setPath(autoUpdateTestPath, 200, strings.Replace(autoUpdateOff, `"level":"patch"`, `"level":"major"`, 1))
 	f.tick(time.Minute)
 	if f.pub.count() != 4 {
+		t.Errorf("changed auto-update content alone must not publish, got %d", f.pub.count())
+	}
+	f.mm.setPath(autoUpdateTestPath, 200, autoUpdateFailedBody)
+	f.tick(time.Minute)
+	if f.pub.count() != 5 || len(f.pub.lastReport(t).Reasons) != 3 {
+		t.Fatalf("an auto-update failure must publish, got %d", f.pub.count())
+	}
+	f.mm.setPath(autoUpdateTestPath, 503, "")
+	f.tick(time.Minute)
+	if f.pub.count() != 6 || len(f.pub.lastReport(t).Reasons) != 2 {
+		t.Fatalf("a failed status read must drop the auto-update reasons and publish, got %d", f.pub.count())
+	}
+	f.mm.setPath(autoUpdateTestPath, 200, autoUpdateOff)
+	f.mm.setPath(repoModulesPath, 200, repoModulesOk)
+	f.tick(time.Minute)
+	if f.pub.count() != 6 {
 		t.Errorf("changed module versions alone must not publish, got %d", f.pub.count())
 	}
 	f.mm.setPath(repoModulesPath, 500, "")
 	f.tick(time.Minute)
-	if f.pub.count() != 4 {
+	if f.pub.count() != 6 {
 		t.Errorf("a module versions read failure alone must not publish, got %d", f.pub.count())
 	}
 	f.mm.setPath(repoModulesPath, 200, strings.Replace(repoModulesOk, `"next_version":"v1.2.0"`, `"next_version":"v1.3.0"`, 1))
 	f.tick(time.Minute)
-	if f.pub.count() != 4 {
+	if f.pub.count() != 6 {
 		t.Errorf("changed next_version alone must not publish, got %d", f.pub.count())
 	}
-	f.tick(time.Minute) // 5m since last publish: the heartbeat carries the current versions
-	if f.pub.count() != 5 {
+	f.tick(2 * time.Minute) // at least 5m since last publish: the heartbeat carries the current versions
+	if f.pub.count() != 7 {
 		t.Fatalf("heartbeat must publish, got %d", f.pub.count())
 	}
 	if r := f.pub.lastReport(t); len(r.ModuleVersions) != 2 || r.ModuleVersions[1].NextVersion != "v1.3.0" {

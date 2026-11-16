@@ -20,6 +20,7 @@ values reaches all three.
 | module-manager | `GET {HR_MM_BASE_URL}/health/deployments?auxiliary_deployments=true` | `modules` null, `modules_error` set |
 | core-manager | `GET {HR_CM_BASE_URL}/health` | `core` null, `core_error` set |
 | module-manager | `GET {HR_MM_BASE_URL}/repository-modules?installed=true` | `module_versions` null, `module_versions_error` set |
+| module-manager | `GET {HR_MM_BASE_URL}/auto-update/status` | `auto_update` null, `auto_update_error` set |
 
 A core-manager answering `404` or `403` has no health route (installer older
 than v0.32.0). That is recorded in `core_error` but does not affect the state,
@@ -34,6 +35,16 @@ modules (older release); that is recorded as `module versions not available
 the module-manager runs a repository job, such as its daily refresh, it answers
 `503`; the report of that moment carries `unexpected status 503` and `null`,
 and the next one has the list again.
+
+The auto-update status is read on every check. The response is passed through
+verbatim as `auto_update`, so its content follows the module-manager without a
+connector release; only `enabled` and `last_run.failed` are parsed. A
+module-manager answering `404` or `403` has no such route (older release); that
+is recorded as `auto-update not available (status 404)` in `auto_update_error`.
+`503` while the module-manager runs a job is recorded as `unexpected status
+503`. A failed read adds no reasons and does not affect the state. A change of
+the `auto_update` content alone does not cause a report; it rides along with the
+next one.
 
 ## Payload
 
@@ -52,7 +63,9 @@ Topic `health` on the cloud broker:
   "module_versions": [
     {"id": "github.com/SENERGY-Platform/mgw-mqtt-dc", "name": "MQTT Device Connector", "source": "<source>", "channel": "stable", "version": "v1.1.0", "next_version": "v1.2.0"}
   ],
-  "module_versions_error": ""
+  "module_versions_error": "",
+  "auto_update": {"...": "module-manager response, verbatim"},
+  "auto_update_error": ""
 }
 ```
 
@@ -61,8 +74,12 @@ installed variant's source, channel and version. `next_version` is empty if the
 channel offers no other version. If the read fails, `module_versions` is `null`
 and `module_versions_error` holds the reason.
 
+`auto_update` is the module-manager's auto-update status (settings and the
+outcome of the last run). If the read fails, it is `null` and
+`auto_update_error` holds the reason. The field is additive; `version` stays `1`.
+
 The payload stays below 60 KiB: the raw `modules` body is dropped first, then
-`core`, then `module_versions`, each only if the report is still too large and
+`core`, then `auto_update`, then `module_versions`, each only if the report is still too large and
 each replaced by `"omitted: report too large"` in its error field.
 The platform rejects reports above 64 KiB.
 
@@ -81,15 +98,20 @@ The platform rejects reports above 64 KiB.
 | State | When |
 |---|---|
 | `0` undetermined | an update is running and has not exceeded `HR_UPDATE_RUNNING_TIMEOUT`, or a source failed (or core reports state 0) and nothing unhealthy was found |
-| `2` unhealthy | core state 2, a core service not ok, a listed deployment, an update with result `failed`, or an update still `running` after the timeout |
+| `2` unhealthy | core state 2, a core service not ok, a listed deployment, an update with result `failed`, an update still `running` after the timeout, or an enabled auto-update whose last run has failed modules |
 | `1` healthy | otherwise |
 
 A running update reports `0` because stopped services are expected then. A
 failed update stays unhealthy until a later update succeeds; the daily update
 cron retries it.
 
-Reasons are sorted update first, then core, then modules, and capped at 20, so
-the cause survives the cap.
+An enabled auto-update with failed modules in its last run adds the reason
+`auto-update of <id> failed: <error>` per module. Skipped modules never affect
+the state, and a disabled auto-update never does, even with an old failed run
+stored. The reason stays until a later run no longer lists the module as failed.
+
+Reasons are sorted update first, then core, then auto-update, then modules, and
+capped at 20, so the cause survives the cap.
 
 ## Sending
 
