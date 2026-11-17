@@ -289,11 +289,12 @@ func main() {
 	cloudMqttClient.Connect()
 
 	// Not a watchdog health func: an unreachable local endpoint or a bad reporter config must not stop the connector.
-	if config.HealthReporter.ModuleManagerBaseUrl != "" && config.HealthReporter.CoreManagerBaseUrl != "" {
+	if config.HealthReporter.ModuleManagerBaseUrl != "" && config.HealthReporter.CoreHealthUrl != "" {
 		healthHdl, err := health_hdl.New(
 			localHttpClient,
 			config.HealthReporter.ModuleManagerBaseUrl,
-			config.HealthReporter.CoreManagerBaseUrl,
+			config.HealthReporter.CoreHealthUrl,
+			config.HealthReporter.CoreHealthDeprecatedUrl,
 			cloudMqttClientPubF,
 			time.Duration(config.HealthReporter.CheckInterval),
 			time.Duration(config.HealthReporter.HeartbeatInterval),
@@ -309,7 +310,7 @@ func main() {
 			})
 		}
 	} else {
-		util.Logger.Infof("%s disabled: module manager or core manager base url not set", health_hdl.LogPrefix)
+		util.Logger.Infof("%s disabled: module manager base url or core health url not set", health_hdl.LogPrefix)
 	}
 
 	wtchdg.RegisterHealthFunc(localDeviceHdl.Running)

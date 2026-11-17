@@ -8,7 +8,8 @@ Reads the health endpoints of the module manager (`/health/deployments?auxiliary
 | Env var | Default | Description |
 |---|---|---|
 | `HR_MM_BASE_URL` | empty | Module manager base URL, e.g. `http://core-api/module-manager` |
-| `HR_CM_BASE_URL` | empty | Core manager base URL, e.g. `http://core-api/core-manager` |
+| `HR_CORE_HEALTH_URL` | empty | The core-manager's health route, e.g. `http://core-api/core-health` |
+| `HR_CORE_HEALTH_DEPRECATED_URL` | empty | The health route of installers before v0.40.0, asked when `HR_CORE_HEALTH_URL` answers `404` or `403`, e.g. `http://core-api/core-manager/health` |
 | `HR_CHECK_INTERVAL` | 1m (ns) | Interval of the local checks |
 | `HR_HEARTBEAT_INTERVAL` | 5m (ns) | Maximum time between two reports |
 | `HR_UPDATE_RUNNING_TIMEOUT` | 1h (ns) | Age after which a core update still running counts as unhealthy; before that the state is undetermined |

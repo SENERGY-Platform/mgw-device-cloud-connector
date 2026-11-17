@@ -37,7 +37,6 @@ const LogPrefix = "[health-hdl]"
 const (
 	maxBodySize     = 1 << 20
 	modulesPath     = "/health/deployments?auxiliary_deployments=true"
-	corePath        = "/health"
 	moduleVersPath  = "/repository-modules?installed=true"
 	autoUpdatePath  = "/auto-update/status"
 	maxErrorTextLen = 200
@@ -56,7 +55,8 @@ type published struct {
 type Handler struct {
 	httpClient        httpClient
 	mmBaseUrl         string
-	cmBaseUrl         string
+	coreUrl           string
+	coreDeprecatedUrl string
 	publishFunc       func(topic string, data []byte) error
 	checkInterval     time.Duration
 	heartbeatInterval time.Duration
@@ -70,7 +70,9 @@ type Handler struct {
 	wg                sync.WaitGroup
 }
 
-func New(httpClient httpClient, mmBaseUrl, cmBaseUrl string, publishFunc func(topic string, data []byte) error, checkInterval, heartbeatInterval, updateRunningTimeout time.Duration) (*Handler, error) {
+// New creates the reporter. coreUrl is the core-manager's health route; coreDeprecatedUrl, if not empty, the route
+// of installers before v0.40.0, asked when coreUrl answers 404 or 403.
+func New(httpClient httpClient, mmBaseUrl, coreUrl, coreDeprecatedUrl string, publishFunc func(topic string, data []byte) error, checkInterval, heartbeatInterval, updateRunningTimeout time.Duration) (*Handler, error) {
 	if checkInterval <= 0 || heartbeatInterval <= 0 || updateRunningTimeout <= 0 {
 		return nil, fmt.Errorf("invalid intervals: check %s, heartbeat %s, update running timeout %s", checkInterval, heartbeatInterval, updateRunningTimeout)
 	}
@@ -78,7 +80,8 @@ func New(httpClient httpClient, mmBaseUrl, cmBaseUrl string, publishFunc func(to
 	return &Handler{
 		httpClient:        httpClient,
 		mmBaseUrl:         strings.TrimRight(mmBaseUrl, "/"),
-		cmBaseUrl:         strings.TrimRight(cmBaseUrl, "/"),
+		coreUrl:           coreUrl,
+		coreDeprecatedUrl: coreDeprecatedUrl,
 		publishFunc:       publishFunc,
 		checkInterval:     checkInterval,
 		heartbeatInterval: heartbeatInterval,
@@ -182,9 +185,14 @@ func (h *Handler) readModules(ctx context.Context) (json.RawMessage, *modulesInf
 	return body, &info, ""
 }
 
-// readCore reports unavailable for 404 and 403, which an installer without the health route answers.
+// readCore asks the health route, and the deprecated one if the health route answers 404 or 403 (an installer
+// before v0.40.0). It reports unavailable for 404 and 403 from the last route asked, which an installer without a
+// health route answers.
 func (h *Handler) readCore(ctx context.Context) (raw json.RawMessage, info *coreInfo, errTxt string, unavailable bool) {
-	body, status, err := h.get(ctx, h.cmBaseUrl+corePath)
+	body, status, err := h.get(ctx, h.coreUrl)
+	if err == nil && (status == http.StatusNotFound || status == http.StatusForbidden) && h.coreDeprecatedUrl != "" {
+		body, status, err = h.get(ctx, h.coreDeprecatedUrl)
+	}
 	if err != nil {
 		return nil, nil, errorText(err.Error()), false
 	}

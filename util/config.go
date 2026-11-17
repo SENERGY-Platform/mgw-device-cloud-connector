@@ -99,10 +99,13 @@ type DebouncerConfig struct {
 
 type HealthReporterConfig struct {
 	ModuleManagerBaseUrl string `json:"module_manager_base_url" env_var:"HR_MM_BASE_URL"`
-	CoreManagerBaseUrl   string `json:"core_manager_base_url" env_var:"HR_CM_BASE_URL"`
-	CheckInterval        int64  `json:"check_interval" env_var:"HR_CHECK_INTERVAL"`
-	HeartbeatInterval    int64  `json:"heartbeat_interval" env_var:"HR_HEARTBEAT_INTERVAL"`
-	UpdateRunningTimeout int64  `json:"update_running_timeout" env_var:"HR_UPDATE_RUNNING_TIMEOUT"`
+	// CoreHealthUrl is the core-manager's health route on the gateway; CoreHealthDeprecatedUrl the route of
+	// installers before v0.40.0, asked when CoreHealthUrl answers 404 or 403.
+	CoreHealthUrl           string `json:"core_health_url" env_var:"HR_CORE_HEALTH_URL"`
+	CoreHealthDeprecatedUrl string `json:"core_health_deprecated_url" env_var:"HR_CORE_HEALTH_DEPRECATED_URL"`
+	CheckInterval           int64  `json:"check_interval" env_var:"HR_CHECK_INTERVAL"`
+	HeartbeatInterval       int64  `json:"heartbeat_interval" env_var:"HR_HEARTBEAT_INTERVAL"`
+	UpdateRunningTimeout    int64  `json:"update_running_timeout" env_var:"HR_UPDATE_RUNNING_TIMEOUT"`
 }
 
 type Config struct {

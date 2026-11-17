@@ -73,6 +73,20 @@ func TestDeriveHealth(t *testing.T) {
 			reasons: []string{"update v0.31.1 -> v0.32.0 failed at updating binaries"},
 		},
 		{
+			name:    "failed update the core was restored from since",
+			modules: &modulesInfo{},
+			core:    &coreInfo{State: 1, Update: &updateInfo{FromVersion: "a", ToVersion: "b", Result: "failed", Step: "starting b", Restored: true}},
+			state:   1,
+			reasons: []string{},
+		},
+		{
+			name:    "restored, but a core service not ok",
+			modules: &modulesInfo{},
+			core:    &coreInfo{State: 2, Services: []coreService{{Name: "s"}}, Update: &updateInfo{FromVersion: "a", ToVersion: "b", Result: "failed", Restored: true}},
+			state:   2,
+			reasons: []string{"core service s not ok"},
+		},
+		{
 			name:    "failed update without step",
 			modules: &modulesInfo{},
 			core:    &coreInfo{State: 1, Update: &updateInfo{FromVersion: "a", ToVersion: "b", Result: "failed"}},

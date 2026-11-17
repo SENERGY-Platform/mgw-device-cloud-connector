@@ -18,13 +18,18 @@ values reaches all three.
 | Source | Request | On failure |
 |---|---|---|
 | module-manager | `GET {HR_MM_BASE_URL}/health/deployments?auxiliary_deployments=true` | `modules` null, `modules_error` set |
-| core-manager | `GET {HR_CM_BASE_URL}/health` | `core` null, `core_error` set |
+| core-manager | `GET {HR_CORE_HEALTH_URL}`, on `404`/`403` `GET {HR_CORE_HEALTH_DEPRECATED_URL}` | `core` null, `core_error` set |
 | module-manager | `GET {HR_MM_BASE_URL}/repository-modules?installed=true` | `module_versions` null, `module_versions_error` set |
 | module-manager | `GET {HR_MM_BASE_URL}/auto-update/status` | `auto_update` null, `auto_update_error` set |
 
-A core-manager answering `404` or `403` has no health route (installer older
-than v0.32.0). That is recorded in `core_error` but does not affect the state,
-so such gateways still report their modules.
+The gateway serves the core-manager's health at `/core-health` from installer
+v0.40.0 on, and at `/core-manager/health` from v0.32.0 on (kept for
+compatibility). The connector asks `HR_CORE_HEALTH_URL` first; an installer
+before v0.40.0 answers it with `404`, then the connector asks
+`HR_CORE_HEALTH_DEPRECATED_URL` (if set). A `404` or `403` there, or from
+`HR_CORE_HEALTH_URL` without a deprecated URL, means no health route (installer
+older than v0.32.0). That is recorded in `core_error` but does not affect the
+state, so such gateways still report their modules.
 
 The module versions are neither part of the state nor of the reasons, and a
 change of them does not cause a report. They are read only when a report is
@@ -98,12 +103,16 @@ The platform rejects reports above 64 KiB.
 | State | When |
 |---|---|
 | `0` undetermined | an update is running and has not exceeded `HR_UPDATE_RUNNING_TIMEOUT`, or a source failed (or core reports state 0) and nothing unhealthy was found |
-| `2` unhealthy | core state 2, a core service not ok, a listed deployment, an update with result `failed`, an update still `running` after the timeout, or an enabled auto-update whose last run has failed modules |
+| `2` unhealthy | core state 2, a core service not ok, a listed deployment, an update with result `failed` the core wasn't restored from since, an update still `running` after the timeout, or an enabled auto-update whose last run has failed modules |
 | `1` healthy | otherwise |
 
 A running update reports `0` because stopped services are expected then. A
-failed update stays unhealthy until a later update succeeds; the daily update
-cron retries it.
+failed update stays unhealthy until a later update succeeds or the core is
+repaired with `restore.sh`. The installer's record keeps the failed update's
+cause after a restore and marks it `restored`; such a record adds no reason.
+The daily update retries a failed version, but only `update_retry_limit` times
+(default 3); after that the gateway stays unhealthy until a newer release, a
+manual update or a restore.
 
 An enabled auto-update with failed modules in its last run adds the reason
 `auto-update of <id> failed: <error>` per module. Skipped modules never affect

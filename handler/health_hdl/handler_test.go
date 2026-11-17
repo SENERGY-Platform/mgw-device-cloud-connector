@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -149,7 +150,7 @@ func newFixture(t *testing.T) *fixture {
 	cmSrv := httptest.NewServer(f.cm)
 	t.Cleanup(mmSrv.Close)
 	t.Cleanup(cmSrv.Close)
-	hdl, err := New(http.DefaultClient, mmSrv.URL+"/module-manager/", cmSrv.URL+"/core-manager", f.pub.publish, time.Minute, 5*time.Minute, time.Hour)
+	hdl, err := New(http.DefaultClient, mmSrv.URL+"/module-manager/", cmSrv.URL+"/core-health", cmSrv.URL+"/core-manager/health", f.pub.publish, time.Minute, 5*time.Minute, time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,14 +212,15 @@ func TestReadCore(t *testing.T) {
 		wantErr         string
 		wantUnavailable bool
 		wantRaw         bool
+		wantPaths       []string
 	}{
-		{name: "ok", status: 200, body: healthyCore, wantRaw: true},
-		{name: "old installer 404", status: 404, body: "not found", wantErr: "core health not available (status 404)", wantUnavailable: true},
-		{name: "old installer 403", status: 403, body: "forbidden", wantErr: "core health not available (status 403)", wantUnavailable: true},
-		{name: "server error", status: 500, body: "{}", wantErr: "unexpected status 500"},
-		{name: "unavailable", status: 503, body: "", wantErr: "unexpected status 503"},
-		{name: "malformed", status: 200, body: `[1,`, wantErr: "invalid response: "},
-		{name: "oversized", status: 200, body: big, wantErr: "response too large"},
+		{name: "ok", status: 200, body: healthyCore, wantRaw: true, wantPaths: []string{"/core-health"}},
+		{name: "old installer 404", status: 404, body: "not found", wantErr: "core health not available (status 404)", wantUnavailable: true, wantPaths: []string{"/core-health", "/core-manager/health"}},
+		{name: "old installer 403", status: 403, body: "forbidden", wantErr: "core health not available (status 403)", wantUnavailable: true, wantPaths: []string{"/core-health", "/core-manager/health"}},
+		{name: "server error", status: 500, body: "{}", wantErr: "unexpected status 500", wantPaths: []string{"/core-health"}},
+		{name: "unavailable", status: 503, body: "", wantErr: "unexpected status 503", wantPaths: []string{"/core-health"}},
+		{name: "malformed", status: 200, body: `[1,`, wantErr: "invalid response: ", wantPaths: []string{"/core-health"}},
+		{name: "oversized", status: 200, body: big, wantErr: "response too large", wantPaths: []string{"/core-health"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -236,10 +238,33 @@ func TestReadCore(t *testing.T) {
 			}
 			f.cm.mu.Lock()
 			defer f.cm.mu.Unlock()
-			if len(f.cm.paths) != 1 || f.cm.paths[0] != "/core-manager/health" {
-				t.Errorf("unexpected request path %q", f.cm.paths)
+			if !slices.Equal(f.cm.paths, c.wantPaths) {
+				t.Errorf("unexpected request paths %q, want %q", f.cm.paths, c.wantPaths)
 			}
 		})
+	}
+}
+
+func TestReadCoreDeprecatedRoute(t *testing.T) {
+	// an installer before v0.40.0: only the deprecated route answers
+	f := newFixture(t)
+	f.cm.setPath("/core-health", 404, "not found")
+	raw, info, errTxt, unavailable := f.hdl.readCore(context.Background())
+	if errTxt != "" || unavailable || raw == nil || info == nil || info.State != 1 {
+		t.Fatalf("expected the deprecated route's health, got err %q unavailable=%v info=%v", errTxt, unavailable, info)
+	}
+	// without a deprecated route the 404 means no health route
+	f = newFixture(t)
+	f.cm.setPath("/core-health", 404, "not found")
+	f.hdl.coreDeprecatedUrl = ""
+	_, info, errTxt, unavailable = f.hdl.readCore(context.Background())
+	if errTxt != "core health not available (status 404)" || !unavailable || info != nil {
+		t.Errorf("expected unavailable, got err %q unavailable=%v info=%v", errTxt, unavailable, info)
+	}
+	f.cm.mu.Lock()
+	defer f.cm.mu.Unlock()
+	if !slices.Equal(f.cm.paths, []string{"/core-health"}) {
+		t.Errorf("unexpected request paths %q", f.cm.paths)
 	}
 }
 
@@ -337,7 +362,7 @@ func TestReadUnreachable(t *testing.T) {
 	closed := httptest.NewServer(http.NotFoundHandler())
 	closed.Close()
 	f.hdl.mmBaseUrl = closed.URL
-	f.hdl.cmBaseUrl = closed.URL
+	f.hdl.coreUrl = closed.URL + "/core-health"
 	if _, _, errTxt := f.hdl.readModules(context.Background()); errTxt == "" {
 		t.Error("expected modules error")
 	}
@@ -583,7 +608,7 @@ func TestPublishDecision(t *testing.T) {
 
 func TestNewRejectsInvalidIntervals(t *testing.T) {
 	for _, d := range [][3]time.Duration{{0, time.Minute, time.Minute}, {time.Minute, -1, time.Minute}, {time.Minute, time.Minute, 0}} {
-		if _, err := New(http.DefaultClient, "http://mm", "http://cm", nil, d[0], d[1], d[2]); err == nil {
+		if _, err := New(http.DefaultClient, "http://mm", "http://cm/core-health", "", nil, d[0], d[1], d[2]); err == nil {
 			t.Errorf("expected an error for intervals %v", d)
 		}
 	}

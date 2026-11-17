@@ -69,6 +69,8 @@ type updateInfo struct {
 	Started     string `json:"started"`
 	Result      string `json:"result"`
 	Step        string `json:"step"`
+	// Restored: the core was repaired with restore.sh after this update failed; the record keeps the cause.
+	Restored bool `json:"restored"`
 }
 
 // autoUpdateInfo is the subset of the module-manager auto-update status response needed for the state.
@@ -149,7 +151,8 @@ type reason struct {
 // A failed source only yields state 0 if the other source shows no problem. A nil core with coreFailed
 // false means the core-manager has no health route (old installer) and is ignored. A nil autoUpdate (failed read)
 // and a disabled auto-update add no reasons. An update that is
-// still running within the timeout yields state 0, since stopped services are expected then.
+// still running within the timeout yields state 0, since stopped services are expected then. A failed update the
+// core was restored from since (restore.sh) adds no reason.
 func deriveHealth(modules *modulesInfo, modulesFailed bool, core *coreInfo, coreFailed bool, autoUpdate *autoUpdateInfo, now time.Time, runningTimeout time.Duration) (int, []string, []string) {
 	if core != nil && core.Update != nil && core.Update.Result == updateRunning && !updateTimedOut(core.Update, now, runningTimeout) {
 		return stateUndetermined, []string{}, []string{}
@@ -190,6 +193,9 @@ func deriveHealth(modules *modulesInfo, modulesFailed bool, core *coreInfo, core
 		if u := core.Update; u != nil {
 			switch u.Result {
 			case updateFailed:
+				if u.Restored {
+					break
+				}
 				unhealthy = true
 				text := fmt.Sprintf("update %s -> %s failed", u.FromVersion, u.ToVersion)
 				if u.Step != "" {
